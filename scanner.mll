@@ -3,9 +3,9 @@
 }
 
 (* Definitions: optional *)
-let digits = [0-9]
-let letters = [A-Za-z]
-let 
+let digits = ['0'-'9']
+let letters = ['A'-'Z' 'a'-'z']
+
 (* Rules: mandatory *)
 rule token = 
 parse [ ' ' '\t' '\r' '\n']	{ token lexbuf }
@@ -14,6 +14,7 @@ parse [ ' ' '\t' '\r' '\n']	{ token lexbuf }
 | ',' { COMMA }
 | ';' { SEMI }
 | '\'' { SINGLEQUOTE }
+| '\"' { DOUBLEQUOTE }
 | ['0'-'9']+ as lit		{ LITERAL(int_of_string lit) }
 | eof	{ EOF }
 (* scoping *)
