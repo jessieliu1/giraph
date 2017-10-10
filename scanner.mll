@@ -57,7 +57,7 @@ parse [ ' ' '\t' '\r' '\n']	{ token lexbuf }
 | "+=" { PLUSEQ }
 | "-=" { MINUSEQ }
 | "*=" { TIMESEQ }
-| "\=" { DIVEQ }
+| "/=" { DIVEQ }
 | '%' { MOD }
 | "&&" { AND }
 | "||" { OR }
