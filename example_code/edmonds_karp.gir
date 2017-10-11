@@ -1,0 +1,79 @@
+function dag augment(dag flow, dag path) {
+	/* Get bottleneck capacity of path. */
+	int min = path.edges()[0].weight;
+	for (edge e: path.edges()) {
+		if (min > e.weight) {
+			min = e.weight;
+		}
+	}
+
+	/* Augment flow. */
+	for(edge e : path.edges()) {
+		if (flow.has_edge(e.from, e.to)) {
+			int current_flow = flow.get_edge(e.from, e.to).weight;
+			/* Add bottleneck capacity to current flow. */
+			flow.add_edge(e.from, e.to, current_flow + min);
+		} else {
+			int current_flow = flow.get_edge(e.to, e.from).weight;
+			/* Subtract bottleneck capacity from current flow. */
+			flow.add_edge(e.to, e.from, current_flow - min);
+		}
+	}
+	return flow;
+}
+
+function digraph make_residual_graph(dag flow, dag network) {
+	digraph residual_graph;
+	for (edge e : flow.edges()) {
+		int forward = network.get_edge(e.from, e.to).weight - e.weight;
+		int backward = e.weight;
+		if (forward > 0) {
+			residual_graph.add_edge(e.from, e.to, forward);
+		}
+		if (backward > 0) {
+			residual_graph.add_edge(e.to, e.from, backward);
+		}
+	}
+	return residual_graph;
+}
+
+function dag edmonds_karp(dag network) {
+	/* The argument “network” contains the capacities as weights on edges.
+	   Flow is represented with a graph exactly equivalent to network, but 
+	   with the flow on each edge as the weight instead of the capacity.
+	   First, set up initial flow of 0 on every edge. */
+	dag flow;
+	for (edge e : network.edges()) {
+		flow.add_edge(e.from, e.to, 0);
+	}
+	dag residual = make_residual_graph(flow, network);
+	while (true) {
+		map parents;
+		/* Find shortest s-t path with BFS. */
+		bfs(residual, network.source, 
+		lambda((node n) {
+			for (node neighbor : residual.get_neighbors(n)) {
+				parents[neighbor] = n;
+			}
+		}));
+		/* If we didn’t reach the sink, there is no s-t path in residual */
+		if (!parents.contains_key(i)) {
+			break;
+		}
+		dag path; 
+		node i = network.sink;
+		while (i != network.source) {
+			path.add_edge(parents[i], i, residual.get_edge(parents[i], i).weight);
+			i = parents[i];
+		}
+		flow = augment(flow, path);
+	}
+	return flow;
+}
+
+function void main() {
+	dag network = A -[100]-> (B -[100]-> D, C -[100]-> D)
+				  B -[1]-> C;
+	dag max_flow = edmonds_karp(network);
+	render(max_flow);
+}

@@ -1,0 +1,8 @@
+function void main() {
+	dag hello_world = A:'h' -> B:'e' -> C:'l'
+					-> D:'l' -> E:'o' -> F:' '
+					-> G:'w' -> H:'o' -> I:'r'
+					-> J:'l' -> K:'d';
+
+	bfs(hello_world, A, lambda (node n) {print(n.data);});
+}
