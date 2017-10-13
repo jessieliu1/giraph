@@ -40,12 +40,12 @@ rule token = parse
     | "int" { INT }
     | "string" { STRING }
     | "char" { CHAR }
-    | "graph" { TYPE_GRAPH }
-    | "wegraph" { TYPE_WEGRAPH }
-    | "digraph" { TYPE_DIGRAPH }
-    | "wedigraph" { TYPE_WEDIGRAPH }
-    | "break" { BREAK }
-    | "continue" { CONTINUE }
+    | "graph" { GRAPH }
+    | "wegraph" { WEGRAPH }
+    | "digraph" { DIGRAPH }
+    | "wedigraph" { WEDIGRAPH }
+(*  | "break" { BREAK }
+    | "continue" { CONTINUE } *)
     | "function" { FUNCTION }
     | "return" { RETURN }
     | "void" { VOID }
@@ -57,16 +57,16 @@ rule token = parse
     | '*'	{ TIMES }
     | '/'	{ DIVIDE }
     | '=' { ASSIGN }
-    | "+=" { PLUSEQ }
+(*  | "+=" { PLUSEQ }
     | "-=" { MINUSEQ }
     | "*=" { TIMESEQ }
-    | "/=" { DIVEQ }
+    | "/=" { DIVEQ } *)
     | '%' { MOD }
-    | "&&" { AND }
+(*  | "&&" { AND }
     | "||" { OR }
     | '&' { INTERSECTION }
-    | '|' { UNION }
-    | '!' { BANG }
+    | '|' { UNION } *)
+    | '!' { NOT }
     | "==" { EQ }
     | ">=" { GEQ }
     | "<=" { LEQ }
