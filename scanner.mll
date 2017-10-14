@@ -41,6 +41,8 @@ rule token = parse
     | "string" { STRING }
     | "char" { CHAR }
     | "graph" { GRAPH }
+    | "edge" { EDGE }
+    | "node" { NODE }
     | "wegraph" { WEGRAPH }
     | "digraph" { DIGRAPH }
     | "wedigraph" { WEDIGRAPH }

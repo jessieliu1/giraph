@@ -1,7 +1,7 @@
 type binop = Add | Sub | Mult | Div | Mod | Eq | Neq | 
           Less | Leq | Greater | Geq | And | Or
 type unop = Neg | Not
-type typ = Int | Float | Bool | Void | Char | Str | Node | Graph
+type typ = Int | Float | Bool | Void | Char | Str | Node | Graph | Edge
 type bind = typ * string
 
 type expr = Literal of int
