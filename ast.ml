@@ -4,15 +4,16 @@ type unop = Neg | Not
 type typ = Int | Float | Bool | Void | Char | Str | Node | Graph | Edge
 type bind = typ * string
 
-type expr = Literal of int
-        | Id of string
-        | Binop of expr * binop * expr
-        | Unop of unop * expr
-        | Assign of string * expr
-        | Bool_Lit of bool
-        | Int_Lit of int
-        | Access of expr * expr
-        | Noexpr
+type expr =
+    Literal of int
+  | Id of string
+  | Binop of expr * binop * expr
+  | Unop of unop * expr
+  | Assign of string * expr
+  | Bool_Lit of bool
+  | Int_Lit of int
+  | Access of expr * expr
+  | Noexpr
 
 type vdecl = {
         v_name : string;
@@ -20,12 +21,17 @@ type vdecl = {
         v_init : expr;
 }
 
-type stmt = Block of stmt list
-        | If of expr * stmt * stmt
-        | For of expr * expr * expr * stmt
-        | While of expr * stmt
-        | Expr of expr
-        | Vdecl of vdecl
+type stmt =
+    Block of stmt list
+  | If of expr * stmt * stmt
+  | For of expr * expr * expr * stmt
+  | While of expr * stmt
+  | For_Node of expr * expr * stmt
+  | For_Edge of expr * expr * stmt
+  | Bfs of expr * expr * expr * stmt
+  | Dfs of expr * expr * expr * stmt
+  | Expr of expr
+  | Vdecl of vdecl
 
 
 type fdecl = {

@@ -30,6 +30,10 @@ rule token = parse
     (* keywords *)
     | "for" { FOR }
     | "while" { WHILE }
+	| "for_node" {FOR_NODE}
+	| "for_edge" {FOR_EDGE}
+	| "bfs" {BFS}
+	| "dfs" {DFS}
     | "if" { IF }
     | "then" { THEN }
     | "else" { ELSE }

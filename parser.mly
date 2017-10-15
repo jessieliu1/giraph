@@ -4,7 +4,7 @@
 %token LPAREN RPAREN LBRACK RBRACK LBRACE RBRACE COMMA SEMI
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT MOD
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
-%token RETURN IF THEN ELSE FOR WHILE
+%token RETURN IF THEN ELSE FOR WHILE FOR_NODE FOR_EDGE BFS DFS
 %token INT BOOL VOID FLOAT CHAR STRING NODE EDGE GRAPH WEGRAPH DIGRAPH WEDIGRAPH FUNCTION
 %token COLON RARROW LARROW DIARROW 
 %token SINGLEQUOTE DOUBLEQUOTE
@@ -80,6 +80,10 @@ stmt:
 | IF LPAREN expr RPAREN stmt %prec NOELSE { If($3, $5, Block([])) }
 | IF LPAREN expr RPAREN stmt ELSE stmt    { If($3, $5, $7) }
 | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt { For($3, $5, $7, $9) }
+| FOR_NODE LPAREN expr COLON expr RPAREN stmt { For_Node($3, $5, $7) }
+| FOR_EDGE LPAREN expr COLON expr RPAREN stmt { For_Edge($3, $5, $7) }
+| BFS LPAREN expr COLON expr SEMI expr RPAREN stmt { Bfs($3, $5, $7, $9) }
+| DFS LPAREN expr COLON expr SEMI expr RPAREN stmt { Dfs($3, $5, $7, $9) }
 | WHILE LPAREN expr RPAREN stmt         { While($3, $5) }
 
 expr:
