@@ -1,14 +1,14 @@
 function dag augment(dag flow, dag path) {
 	/* Get bottleneck capacity of path. */
-	int min = path.edges()[0].weight;
-	for (edge e: path.edges()) {
+	int min = -1;
+	for_edge (e : path) {
 		if (min > e.weight) {
 			min = e.weight;
 		}
 	}
 
 	/* Augment flow. */
-	for(edge e : path.edges()) {
+	for_edge (e : path) {
 		if (flow.has_edge(e.from, e.to)) {
 			int current_flow = flow.get_edge(e.from, e.to).weight;
 			/* Add bottleneck capacity to current flow. */
@@ -24,7 +24,7 @@ function dag augment(dag flow, dag path) {
 
 function digraph make_residual_graph(dag flow, dag network) {
 	digraph residual_graph;
-	for (edge e : flow.edges()) {
+	for_edge (e : flow) {
 		int forward = network.get_edge(e.from, e.to).weight - e.weight;
 		int backward = e.weight;
 		if (forward > 0) {
@@ -43,19 +43,21 @@ function dag edmonds_karp(dag network) {
 	   with the flow on each edge as the weight instead of the capacity.
 	   First, set up initial flow of 0 on every edge. */
 	dag flow;
-	for (edge e : network.edges()) {
+	for_edge (e : network) {
 		flow.add_edge(e.from, e.to, 0);
 	}
 	dag residual = make_residual_graph(flow, network);
 	while (true) {
 		map parents;
 		/* Find shortest s-t path with BFS. */
-		bfs(residual, network.source, 
-		lambda((node n) {
-			for (node neighbor : residual.get_neighbors(n)) {
-				parents[neighbor] = n;
+		bfs (n : residual ; network.source) {
+			for_node (neighbor : residual.get_neighbors(n)) {
+				/* ^ this means get_neighbors returns an edgeless graph! woah!*/
+				if (!parents.contains_key(neighbor)) {
+					parents[neighbor] = n;
+				}
 			}
-		}));
+		}
 		/* If we didn’t reach the sink, there is no s-t path in residual */
 		if (!parents.contains_key(i)) {
 			break;
