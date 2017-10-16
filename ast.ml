@@ -10,6 +10,7 @@ type expr =
   | Binop of expr * binop * expr
   | Unop of unop * expr
   | Assign of string * expr
+  | Call of string * expr list
   | Bool_Lit of bool
   | Int_Lit of int
   | Access of expr * expr

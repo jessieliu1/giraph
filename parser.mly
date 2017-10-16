@@ -64,10 +64,10 @@ formal_list: typ ID { [($1, $2)] }
 | formal_list COMMA typ ID { ($3,$4) :: $1 } 
 
 vdecl_list: /* nothing */ { [] }
-| vdecl_list SEMI vdecl { $3 :: $1 }  
+| vdecl_list vdecl { $2 :: $1 }  
 
-vdecl: typ ID { ($1, $2, 0) }
-| typ ID EQ expr { ($1, $2, $4) }
+vdecl: typ ID SEMI { ($1, $2, 0) }
+| typ ID ASSIGN expr SEMI { ($1, $2, $4) }
 
 stmt_list: { [] }
 | stmt_list stmt { $2 :: $1 }
@@ -101,12 +101,20 @@ LITERAL  { Literal($1) }
 | MINUS expr %prec NEG { Unop(Neg, $2) }
 | NOT expr              { Unop(Not, $2) }
 | ID ASSIGN expr { Assign($1, $3) }
+| ID LPAREN actuals_opt RPAREN { Call($1, $3) }
 | LPAREN expr RPAREN { $2 }
-
 
 expr_opt: 
 /* nothing */ { Noexpr }
 | expr { $1 }
 
+
+actuals_opt:
+    /* nothing */ { [] }
+  | actuals_list  { List.rev $1 }
+
+actuals_list:
+    expr                    { [$1] }
+  | actuals_list COMMA expr { $3 :: $1 }
 
 
