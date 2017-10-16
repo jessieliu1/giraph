@@ -50,8 +50,8 @@ rule token = parse
     | "wegraph" { WEGRAPH }
     | "digraph" { DIGRAPH }
     | "wedigraph" { WEDIGRAPH }
-(*  | "break" { BREAK }
-    | "continue" { CONTINUE } *)
+    | "break" { BREAK }
+    | "continue" { CONTINUE }
     | "function" { FUNCTION }
     | "return" { RETURN }
     | "void" { VOID }

@@ -31,6 +31,8 @@ type stmt =
   | For_Edge of expr * expr * stmt
   | Bfs of expr * expr * expr * stmt
   | Dfs of expr * expr * expr * stmt
+  | Break
+  | Continue
   | Expr of expr
   | Vdecl of vdecl
 
