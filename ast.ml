@@ -17,9 +17,9 @@ type expr =
   | Noexpr
 
 type vdecl = {
-        v_name : string;
-        v_type : typ;
-        v_init : expr;
+  v_typ : typ;
+  v_name : string;
+  v_init : expr;
 }
 
 type stmt =
@@ -35,6 +35,7 @@ type stmt =
   | Continue
   | Expr of expr
   | Vdecl of vdecl
+  | Return of expr
 
 
 type fdecl = {

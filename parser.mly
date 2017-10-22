@@ -73,8 +73,8 @@ vdecl_list:
 | vdecl_list vdecl { $2 :: $1 }  
 
 vdecl: 
-typ ID SEMI { ($1, $2, 0) }
-| typ ID ASSIGN expr SEMI { ($1, $2, $4) }
+typ ID SEMI { { v_typ = $1; v_name = $2; v_init = Noexpr} }
+| typ ID ASSIGN expr SEMI { { v_typ = $1; v_name = $2; v_init = $4} }
 
 stmt_list: { [] }
 | stmt_list stmt { $2 :: $1 }
