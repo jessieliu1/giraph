@@ -38,15 +38,7 @@ decls:
   /* nothing */     { [], [] }
   | decls vdecl { ($2 :: fst $1), snd $1 }
   | decls fdecl { fst $1, ($2 :: snd $1) }
-
-/** FUNCTIONS **/
-functions:
-    /* nothing */       { [] }
-  | fn_list           { List.rev $1 }
-
-fn_list:
-    fdecl               { [$1] }  /* returns a list */
-   | fn_list fdecl      { $2 :: $1 }
+  
   
 fdecl: typ ID LPAREN formals_opt RPAREN LBRACE vdecl_list stmt_list RBRACE
         { { f_typ = $1; f_name = $2; f_formals = $4;
