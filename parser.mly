@@ -32,7 +32,12 @@
 %%
  
 program:
-      vdecl_list functions EOF { $1 }
+  decls EOF { $1 }
+
+decls:
+  /* nothing */     { [], [] }
+  | decls vdecl { ($2 :: fst $1), snd $1 }
+  | decls fdecl { fst $1, ($2 :: snd $1) }
 
 /** FUNCTIONS **/
 functions:
@@ -63,10 +68,12 @@ formals_opt: /* nothing */  { [] }
 formal_list: typ ID { [($1, $2)] }
 | formal_list COMMA typ ID { ($3,$4) :: $1 } 
 
-vdecl_list: /* nothing */ { [] }
+vdecl_list: 
+/* nothing */ { [] }
 | vdecl_list vdecl { $2 :: $1 }  
 
-vdecl: typ ID SEMI { ($1, $2, 0) }
+vdecl: 
+typ ID SEMI { ($1, $2, 0) }
 | typ ID ASSIGN expr SEMI { ($1, $2, $4) }
 
 stmt_list: { [] }
