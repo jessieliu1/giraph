@@ -12,7 +12,6 @@ type expr =
   | Assign of string * expr
   | Call of string * expr list
   | Bool_Lit of bool
-  | Int_Lit of int
   | Access of expr * expr
   | Noexpr
 
@@ -39,11 +38,11 @@ type stmt =
 
 
 type fdecl = {
-        f_typ : typ;
-        f_name : string;
-        f_formals : bind list;
-        f_locals : vdecl list;
-        f_body : stmt list;
+    f_typ : typ;
+    f_name : string;
+    f_formals : bind list;
+    f_locals : vdecl list;
+    f_body : stmt list;
 }
 
 
