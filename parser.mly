@@ -65,8 +65,7 @@ vdecl_list:
 | vdecl_list vdecl { $2 :: $1 }  
 
 vdecl: 
-typ ID SEMI { { v_typ = $1; v_name = $2; v_init = Noexpr} }
-| typ ID ASSIGN expr SEMI { { v_typ = $1; v_name = $2; v_init = $4} }
+typ ID SEMI { ($1, $2) }
 
 stmt_list: { [] }
 | stmt_list stmt { $2 :: $1 }
