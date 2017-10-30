@@ -10,9 +10,6 @@ rule token = parse
   | ';' { SEMI }
   | '\'' { SINGLEQUOTE }
   | '\"' { DOUBLEQUOTE }
-  | ['0'-'9']+ as lxm { LITERAL(int_of_string lxm) }
-  | ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { ID(lxm) }
-  | eof	{ EOF }
 
   (* scoping *)
   | '('	{ LPAREN }
@@ -50,7 +47,6 @@ rule token = parse
   | "return" { RETURN }
   | "void" { VOID }
 
-
   (* operators *)
   | '+'	{ PLUS }
   | '-'	{ MINUS }
@@ -77,6 +73,13 @@ rule token = parse
   | "<->" { DIARROW }
   | "--" { EDGE }
   | ':' { COLON }
+
+  (* literals and IDs *)
+  | ['0'-'9']+ as lxm { LITERAL(int_of_string lxm) }
+  | ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { ID(lxm) }
+
+  | eof	{ EOF }
+  | _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
 
 
 and comment = parse
