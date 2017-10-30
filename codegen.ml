@@ -16,7 +16,6 @@ let translate (globals, functions) =
       A.Int -> i32_t
     | A.Bool -> i1_t
     | A.Float -> i32_t
-    | A.Char -> i32_t
     | A.Str -> i32_t
     | A.Node -> i32_t
     | A.Graph -> i32_t

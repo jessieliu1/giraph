@@ -3,7 +3,7 @@ type binop = Add | Sub | Mult | Div | Mod | Eq | Neq |
 
 type unop = Neg | Not
 
-type typ = Int | Float | Bool | Void | Char | Str | Node | Graph | Edge
+type typ = Int | Float | Bool | Void | Str | Node | Graph | Edge
 
 type bind = typ * string
 
@@ -100,7 +100,6 @@ let string_of_typ = function
     Int -> "int"
   | Float -> "float"
   | Bool -> "bool"
-  | Char -> "char"
   | Str -> "str"
   | Node -> "node"
   | Graph -> "graph"

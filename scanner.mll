@@ -38,7 +38,6 @@ rule token = parse
   | "float" { FLOAT }
   | "int" { INT }
   | "string" { STRING }
-  | "char" { CHAR }
   | "graph" { GRAPH }
   | "edge" { EDGE }
   | "node" { NODE }
