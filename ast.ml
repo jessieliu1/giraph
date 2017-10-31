@@ -3,19 +3,20 @@ type binop = Add | Sub | Mult | Div | Mod | Eq | Neq |
 
 type unop = Neg | Not
 
-type typ = Int | Float | Bool | Void | Str | Node | Graph | Edge
+type typ = Int | Float | Bool | Void | String | Node | Graph | Edge
 
 type bind = typ * string
 
 type expr =
-    Literal of int
-  | Id of string
+    Id of string
   | Binop of expr * binop * expr
   | Unop of unop * expr
   | Assign of string * expr
   | Call of string * expr list
   | Bool_Lit of bool
   | Int_Lit of int
+  | Float_Lit of float
+  | String_Lit of string
   | Noexpr
 
 type stmt =
@@ -68,10 +69,11 @@ let string_of_uop = function
   | Not -> "!"
 
 let rec string_of_expr = function
-    Literal(l) -> string_of_int l
-  | Bool_Lit(true) -> "true"
+    Bool_Lit(true) -> "true"
   | Bool_Lit(false) -> "false"
   | Int_Lit(l) -> string_of_int l
+  | String_Lit(l) -> l
+  | Float_Lit(l) -> string_of_float l
   | Id(s) -> s
   | Binop(e1, o, e2) ->
       string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2
@@ -100,7 +102,7 @@ let string_of_typ = function
     Int -> "int"
   | Float -> "float"
   | Bool -> "bool"
-  | Str -> "str"
+  | String -> "str"
   | Node -> "node"
   | Graph -> "graph"
   | Edge -> "edge"

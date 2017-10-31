@@ -16,7 +16,7 @@ let translate (globals, functions) =
       A.Int -> i32_t
     | A.Bool -> i1_t
     | A.Float -> i32_t
-    | A.Str -> i32_t
+    | A.String -> i32_t
     | A.Node -> i32_t
     | A.Graph -> i32_t
     | A.Edge -> i32_t
@@ -76,7 +76,7 @@ let translate (globals, functions) =
 
     (* Construct code for an expression; return its value *)
     let rec expr builder = function
-	A.Literal i -> L.const_int i32_t i
+	A.Int_Lit i -> L.const_int i32_t i
       | A.Bool_Lit b -> L.const_int i1_t (if b then 1 else 0)
       | A.Noexpr -> L.const_int i32_t 0
       | A.Id s -> L.build_load (lookup s) s builder

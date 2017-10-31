@@ -3,23 +3,27 @@
 
 %token LPAREN RPAREN LBRACK RBRACK LBRACE RBRACE COMMA SEMI
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT MOD
-%token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
+%token EQ NEQ LT LEQ GT GEQ AND OR
 %token RETURN IF THEN ELSE FOR WHILE FOR_NODE FOR_EDGE BFS DFS BREAK CONTINUE
 %token INT BOOL VOID FLOAT STRING NODE EDGE GRAPH WEGRAPH DIGRAPH WEDIGRAPH FUNCTION
 %token COLON RARROW LARROW DIARROW 
 %token SINGLEQUOTE DOUBLEQUOTE
-%token <int> LITERAL
+%token <int> INT_LIT
+%token <float> FLOAT_LIT
+%token <bool> BOOL_LIT
+%token <string> STRING_LIT
 %token <string> ID
 %token EOF
 
 /*arithmetic ops*/
+%right ASSIGN
 %left PLUS MINUS
 %left TIMES DIVIDE MOD
-%right NOT NEG
-%right ASSIGN EXP
 %left OR AND 
+%right NOT NEG
+
 %nonassoc EQ NEQ
-%nonassoc  GEQ LEQ GT 
+%nonassoc  GEQ LEQ GT LT
 %nonassoc  NOELSE
 %nonassoc ELSE
 
@@ -49,7 +53,7 @@ typ:
   | FLOAT { Float }
   | BOOL { Bool }
   | VOID { Void }
-  | STRING { Str }
+  | STRING { String }
   | NODE { Node }
   | GRAPH { Graph }
 
@@ -86,10 +90,11 @@ stmt:
 | CONTINUE SEMI 	{Continue}
 
 expr:
-LITERAL  { Literal($1) } 
-| TRUE          { Bool_Lit(true) }
-| FALSE         { Bool_Lit(false) }
-| ID            { Id($1) }
+  INT_LIT           { Int_Lit($1) }
+| BOOL_LIT          { Bool_Lit($1) }
+| STRING_LIT        { String_Lit($1) }
+| FLOAT_LIT         { Float_Lit($1) }
+| ID                { Id($1) }
 | expr PLUS expr { Binop($1, Add, $3)  } 
 | expr MINUS expr { Binop($1, Sub, $3) }
 | expr TIMES expr { Binop($1, Mult, $3) }

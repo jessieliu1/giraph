@@ -1,11 +1,15 @@
 (* Ocammllex scanner for giraph *)
 { open Parser }
 
+(* Definitions *)
+let digit = ['0'-'9']
+let decimal = ((digit+ '.' digit*) | ('.' digit+))
+let letter = ['a'-'z' 'A'-'Z']
+
 (* Rules *)
 rule token = parse 
     [ ' ' '\t' '\r' '\n'] { token lexbuf } (* to ignore whitespace *)
-  | "/*" { comment lexbuf }
-  | "//" { singleline lexbuf }
+  | "!~" { comment lexbuf }
   | ',' { COMMA }
   | ';' { SEMI }
   | '\'' { SINGLEQUOTE }
@@ -29,8 +33,6 @@ rule token = parse
   | "if" { IF }
   | "then" { THEN }
   | "else" { ELSE }
-  | "true" { TRUE }
-  | "false" { FALSE }
   | "bool" { BOOL }
   | "float" { FLOAT }
   | "int" { INT }
@@ -75,17 +77,15 @@ rule token = parse
   | ':' { COLON }
 
   (* literals and IDs *)
-  | ['0'-'9']+ as lxm { LITERAL(int_of_string lxm) }
-  | ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { ID(lxm) }
-
+  | digit+ as lxm                               { INT_LIT(int_of_string lxm) }
+  | decimal as lxm                              { FLOAT_LIT(float_of_string lxm) }
+  | ("true" | "false") as lxm                   { BOOL_LIT(bool_of_string lxm) }
+  | letter (letter | digit | '_')* as lxm       { ID(lxm) }
+  | '\"' ([^'\"']* as lxm) '\"'                 { STRING_LIT(lxm) }
   | eof	{ EOF }
   | _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
 
 
 and comment = parse
-    "*/" { token lexbuf }
+    "~!" { token lexbuf }
   | _    { comment lexbuf }
-
-and singleline = parse
-    '\n' { token lexbuf }
-  | _ { singleline lexbuf }
