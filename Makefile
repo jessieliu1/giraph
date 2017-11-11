@@ -1,7 +1,7 @@
 
 
 .PHONY : all
-all : giraph.native printbig.o
+all : giraph.native
 
 .PHONY : giraph.native
 giraph.native :

@@ -90,7 +90,7 @@ let translate (globals, functions) =
 	    A.Add     -> L.build_add
 	  | A.Sub     -> L.build_sub
 	  | A.Mult    -> L.build_mul
-          | A.Div     -> L.build_sdiv
+    | A.Div     -> L.build_sdiv
 	  | A.And     -> L.build_and
 	  | A.Or      -> L.build_or
 	  | A.Eq   -> L.build_icmp L.Icmp.Eq
@@ -166,7 +166,7 @@ let translate (globals, functions) =
 	  ignore (L.build_cond_br bool_val body_bb merge_bb pred_builder);
 	  L.builder_at_end context merge_bb
 
-      | A.For (e1, e2, e3, body) -> stmt builder
+    | A.For (e1, e2, e3, body) -> stmt builder
 	    ( A.Block [A.Expr e1 ; A.While (e2, A.Block [body ; A.Expr e3]) ] )
     in
 
