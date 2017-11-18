@@ -44,9 +44,8 @@ decls:
   | decls fdecl { fst $1, ($2 :: snd $1) }
   
   
-fdecl: typ ID LPAREN formals_opt RPAREN LBRACE vdecl_list stmt_list RBRACE
-        { { f_typ = $1; f_name = $2; f_formals = $4;
-                f_locals = List.rev $7; f_body = List.rev $8 } } 
+fdecl: typ ID LPAREN formals_opt RPAREN LBRACE stmt_list RBRACE
+        { { f_typ = $1; f_name = $2; f_formals = $4; f_body = List.rev $7 } }
   
 typ:
     INT { Int }
@@ -75,6 +74,7 @@ stmt_list: { [] }
 
 stmt:
   expr SEMI     { Expr $1 }
+| typ ID SEMI { Vdecl($1, $2) }
 | RETURN SEMI   { Return Noexpr }
 | RETURN expr SEMI { Return $2 }
 | LBRACE stmt_list RBRACE { Block(List.rev $2) }

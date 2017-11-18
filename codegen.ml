@@ -62,14 +62,17 @@ let translate (globals, functions) =
 	ignore (L.build_store p local builder);
 	StringMap.add n local m in
 
-
-	let add_local m (t, n) =
-	let local_var = L.build_alloca (ltype_of_typ t) n builder
-	in StringMap.add n local_var m in
+    (* find all local variables declared in function body; ignore other statements *)
+    let add_local m stmt = match stmt with
+        A.Vdecl(t, n) ->
+	    let local_var = L.build_alloca (ltype_of_typ t) n builder in
+          StringMap.add n local_var m
+      | _ -> m
+    in
 
       let formals = List.fold_left2 add_formal StringMap.empty fdecl.A.f_formals
           (Array.to_list (L.params the_function)) in
-      List.fold_left add_local formals fdecl.A.f_locals in
+      List.fold_left add_local formals fdecl.A.f_body in
 
     (* Return the value for a variable or formal argument *)
     let lookup n = try StringMap.find n local_vars
@@ -133,9 +136,10 @@ let translate (globals, functions) =
     let rec stmt builder = function
 	A.Block sl -> List.fold_left stmt builder sl
       | A.Expr e -> ignore (expr builder e); builder
+      | A.Vdecl e -> builder (* vdecls have already been handled above *)
       | A.Return e -> ignore (match fdecl.A.f_typ with
-	  A.Void -> L.build_ret_void builder
-	| _ -> L.build_ret (expr builder e) builder); builder
+	        A.Void -> L.build_ret_void builder
+	      | _ -> L.build_ret (expr builder e) builder); builder
       | A.If (predicate, then_stmt, else_stmt) ->
          let bool_val = expr builder predicate in
 	 let merge_bb = L.append_block context "merge" the_function in

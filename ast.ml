@@ -44,7 +44,6 @@ type fdecl = {
   f_typ : typ;
   f_name : string;
   f_formals : bind list;
-  f_locals : bind list;
   f_body : stmt list;
 }
 
@@ -119,7 +118,6 @@ let string_of_fdecl fdecl =
   string_of_typ fdecl.f_typ ^ " " ^
   fdecl.f_name ^ "(" ^ String.concat ", " (List.map snd fdecl.f_formals) ^
   ")\n{\n" ^
-  String.concat "" (List.map string_of_vdecl fdecl.f_locals) ^
   String.concat "" (List.map string_of_stmt fdecl.f_body) ^
   "}\n"
 
