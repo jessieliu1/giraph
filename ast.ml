@@ -7,6 +7,8 @@ type typ = Int | Float | Bool | Void | String | Node | Graph | Edge
 
 type bind = typ * string
 
+type edge = string * string
+
 type expr =
     Id of string
   | Binop of expr * binop * expr
@@ -17,6 +19,9 @@ type expr =
   | Int_Lit of int
   | Float_Lit of float
   | String_Lit of string
+  | Node of string
+  | Edge of edge
+  | Graph of string list * edge list
   | Noexpr
 
 type stmt =
@@ -39,7 +44,6 @@ type fdecl = {
   f_typ : typ;
   f_name : string;
   f_formals : bind list;
-  f_locals : bind list;
   f_body : stmt list;
 }
 
@@ -114,7 +118,6 @@ let string_of_fdecl fdecl =
   string_of_typ fdecl.f_typ ^ " " ^
   fdecl.f_name ^ "(" ^ String.concat ", " (List.map snd fdecl.f_formals) ^
   ")\n{\n" ^
-  String.concat "" (List.map string_of_vdecl fdecl.f_locals) ^
   String.concat "" (List.map string_of_stmt fdecl.f_body) ^
   "}\n"
 

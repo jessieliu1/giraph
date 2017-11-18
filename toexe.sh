@@ -1,5 +1,3 @@
-# to run: "./toexe tests/testnamewithoutextension" 
-
 # Path to the LLVM interpreter
 #LLI="lli"
 LLI="/usr/local/opt/llvm/bin/lli"
