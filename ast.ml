@@ -7,6 +7,8 @@ type typ = Int | Float | Bool | Void | String | Node | Graph | Edge
 
 type bind = typ * string
 
+type edge = string * string
+
 type expr =
     Id of string
   | Binop of expr * binop * expr
@@ -17,6 +19,9 @@ type expr =
   | Int_Lit of int
   | Float_Lit of float
   | String_Lit of string
+  | Node of string
+  | Edge of edge
+  | Graph of string list * edge list
   | Noexpr
 
 type stmt =

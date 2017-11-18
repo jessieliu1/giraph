@@ -107,6 +107,14 @@ expr:
 | ID ASSIGN expr { Assign($1, $3) }
 | ID LPAREN actuals_opt RPAREN { Call($1, $3) }
 | LPAREN expr RPAREN { $2 }
+| graph_expr  { Graph(fst $1, snd $1) }
+
+graph_expr:
+  ID EDGE ID     { ($3 :: [$1]), [($1, $3)] } /* single node graphs need to be handled later */
+| graph_expr EDGE ID    { ($3 :: fst $1), snd $1 }
+/* ^ this is not adding edges! need to figure out how to get the node "ID"
+is actually connected to... maybe just whatever is at the front of the list?
+(that stops working for digraphs) */
 
 expr_opt: 
 /* nothing */ { Noexpr }
