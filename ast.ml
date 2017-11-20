@@ -72,6 +72,18 @@ let string_of_uop = function
     Neg -> "-"
   | Not -> "!"
 
+
+let string_of_typ = function
+    Int -> "int"
+  | Float -> "float"
+  | Bool -> "bool"
+  | String -> "str"
+  | Node -> "node"
+  | Graph -> "graph"
+  | Edge -> "edge"
+  | Void -> "void"
+
+
 let rec string_of_expr = function
     Bool_Lit(true) -> "true"
   | Bool_Lit(false) -> "false"
@@ -85,13 +97,16 @@ let rec string_of_expr = function
   | Assign(v, e) -> v ^ " = " ^ string_of_expr e
   | Call(f, el) ->
       f ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
+  | Graph(node_l, edge_l) ->
+    "[" ^ String.concat ", " node_l ^ "] " ^
+    "[" ^ String.concat ", " (List.map (fun(a,b) -> "(" ^ a ^ "," ^ b ^ ")") edge_l) ^ "]"
   | Noexpr -> ""
-
 
 let rec string_of_stmt = function
     Block(stmts) ->
       "{\n" ^ String.concat "" (List.map string_of_stmt stmts) ^ "}\n"
   | Expr(expr) -> string_of_expr expr ^ ";\n";
+  | Vdecl(t, id) -> string_of_typ t ^ " " ^ id ^ ";\n"
   | Return(expr) -> "return " ^ string_of_expr expr ^ ";\n";
   | If(e, s, Block([])) -> "if (" ^ string_of_expr e ^ ")\n" ^ string_of_stmt s
   | If(e, s1, s2) ->  "if (" ^ string_of_expr e ^ ")\n" ^
@@ -101,16 +116,6 @@ let rec string_of_stmt = function
       string_of_expr e3  ^ ") " ^ string_of_stmt s
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
 
-
-let string_of_typ = function
-    Int -> "int"
-  | Float -> "float"
-  | Bool -> "bool"
-  | String -> "str"
-  | Node -> "node"
-  | Graph -> "graph"
-  | Edge -> "edge"
-  | Void -> "void"
 
 let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
 
