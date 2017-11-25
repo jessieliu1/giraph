@@ -63,10 +63,6 @@ formal_list:
   typ ID { [($1, $2)] }
 | formal_list COMMA typ ID { ($3,$4) :: $1 } 
 
-vdecl_list: 
-  /* nothing */ { [] }
-| vdecl_list vdecl { $2 :: $1 }  
-
 vdecl: 
   typ ID SEMI { ($1, $2) }
 
@@ -76,7 +72,8 @@ stmt_list:
 
 stmt:
   expr SEMI     { Expr $1 }
-| typ ID SEMI { Vdecl($1, $2) }
+| typ ID SEMI { Vdecl($1, $2, Noexpr) }
+| typ ID ASSIGN expr SEMI { Vdecl($1, $2, Assign($2,$4)) }
 | RETURN SEMI   { Return Noexpr }
 | RETURN expr SEMI { Return $2 }
 | LBRACE stmt_list RBRACE { Block(List.rev $2) }
@@ -109,14 +106,12 @@ expr:
 | ID ASSIGN expr        { Assign($1, $3) }
 | ID LPAREN actuals_opt RPAREN { Call($1, $3) }
 | LPAREN expr RPAREN { $2 }
-| graph_expr  { Graph(fst $1, snd $1) }
+| graph_expr  { Graph(List.rev (fst $1), List.rev(snd $1)) }
 
 graph_expr:
   ID EDGE ID     { ($3 :: [$1]), [($1, $3)] } /* single node graphs need to be handled later */
-| graph_expr EDGE ID    { ($3 :: fst $1), snd $1 }
-/* ^ this is not adding edges! need to figure out how to get the node "ID"
-is actually connected to... maybe just whatever is at the front of the list?
-(that stops working for digraphs) */
+| graph_expr EDGE ID    { ($3 :: fst $1), ((List.hd (fst $1), $3) :: snd $1) }
+/* logic for making the edgelist will be way more complicated for digraphs, not sure yet how */
 
 expr_opt: 
     /* nothing */ { Noexpr }

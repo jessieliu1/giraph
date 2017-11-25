@@ -64,9 +64,9 @@ let translate (globals, functions) =
 
     (* find all local variables declared in function body; ignore other statements *)
     let add_local m stmt = match stmt with
-        A.Vdecl(t, n) ->
+        A.Vdecl(t, n, e) ->
 	    let local_var = L.build_alloca (ltype_of_typ t) n builder in
-          StringMap.add n local_var m
+          StringMap.add n local_var m;
       | _ -> m
     in
 
@@ -86,6 +86,7 @@ let translate (globals, functions) =
       | A.Noexpr -> L.const_int i32_t 0
       | A.Id s -> L.build_load (lookup s) s builder
       | A.String_Lit s -> L.build_global_stringptr s "str" builder
+      | A.Float_Lit f -> L.const_float float_t f
       | A.Binop (e1, op, e2) ->
 	  let e1' = expr builder e1
 	  and e2' = expr builder e2 in
@@ -94,6 +95,7 @@ let translate (globals, functions) =
 	  | A.Sub     -> L.build_sub
 	  | A.Mult    -> L.build_mul
     | A.Div     -> L.build_sdiv
+    | A.Mod     -> L.build_srem
 	  | A.And     -> L.build_and
 	  | A.Or      -> L.build_or
 	  | A.Eq   -> L.build_icmp L.Icmp.Eq
@@ -108,8 +110,11 @@ let translate (globals, functions) =
 	  (match op with
 	    A.Neg     -> L.build_neg
           | A.Not     -> L.build_not) e' "tmp" builder
-      | A.Assign (s, e) -> let e' = expr builder e in
-	                   ignore (L.build_store e' (lookup s) builder); e'
+      | A.Assign(id, e) -> let e' = expr builder e in
+                           ignore (L.build_store e' (lookup id) builder); e'
+      | A.Node v -> L.build_ret_void builder (*not impl*)
+      | A.Edge e -> L.build_ret_void builder (*not impl*)
+      | A.Graph (v,e) -> L.build_ret_void builder (* not impl*)
       | A.Call ("print", [e]) | A.Call ("printb", [e]) ->
 	       L.build_call printf_func [| int_format_str ; (expr builder e) |]
 	       "printf" builder
@@ -136,7 +141,7 @@ let translate (globals, functions) =
     let rec stmt builder = function
 	A.Block sl -> List.fold_left stmt builder sl
       | A.Expr e -> ignore (expr builder e); builder
-      | A.Vdecl e -> builder (* vdecls have already been handled above *)
+      | A.Vdecl(t, n, e) -> ignore (expr builder e); builder
       | A.Return e -> ignore (match fdecl.A.f_typ with
 	        A.Void -> L.build_ret_void builder
 	      | _ -> L.build_ret (expr builder e) builder); builder
@@ -169,9 +174,19 @@ let translate (globals, functions) =
 	  let merge_bb = L.append_block context "merge" the_function in
 	  ignore (L.build_cond_br bool_val body_bb merge_bb pred_builder);
 	  L.builder_at_end context merge_bb
+<<<<<<< HEAD
 
     | A.For (e1, e2, e3, body) -> stmt builder
+=======
+      | A.Break -> builder (*not implemented *)
+      | A.Continue -> builder (*not implemented *)
+      | A.For (e1, e2, e3, body) -> stmt builder
+>>>>>>> d281b537a229ea2c17033db2ea83ac02b7ab911f
 	    ( A.Block [A.Expr e1 ; A.While (e2, A.Block [body ; A.Expr e3]) ] )
+      | A.For_Node (v1, v2, v3) -> builder (*not implemented*)
+      | A.For_Edge (e1, e2, e3) -> builder (*not implemented *)
+      | A.Bfs (e1, e2, e3, s) -> builder (*not implemented *)
+      | A.Dfs (e1, e2, e3, s) -> builder (*not implemented*)
     in
 
     (* Build the code for each statement in the function *)
