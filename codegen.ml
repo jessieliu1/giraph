@@ -174,14 +174,9 @@ let translate (globals, functions) =
 	  let merge_bb = L.append_block context "merge" the_function in
 	  ignore (L.build_cond_br bool_val body_bb merge_bb pred_builder);
 	  L.builder_at_end context merge_bb
-<<<<<<< HEAD
-
-    | A.For (e1, e2, e3, body) -> stmt builder
-=======
       | A.Break -> builder (*not implemented *)
       | A.Continue -> builder (*not implemented *)
       | A.For (e1, e2, e3, body) -> stmt builder
->>>>>>> d281b537a229ea2c17033db2ea83ac02b7ab911f
 	    ( A.Block [A.Expr e1 ; A.While (e2, A.Block [body ; A.Expr e3]) ] )
       | A.For_Node (v1, v2, v3) -> builder (*not implemented*)
       | A.For_Edge (e1, e2, e3) -> builder (*not implemented *)

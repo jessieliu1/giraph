@@ -67,7 +67,7 @@ vdecl:
   typ ID SEMI { ($1, $2) }
 
 stmt_list: 
-  { [] }
+  /* nothing */  { [] }
 | stmt_list stmt { $2 :: $1 }
 
 stmt:
