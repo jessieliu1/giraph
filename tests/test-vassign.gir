@@ -1,0 +1,8 @@
+int main(){
+    int a;
+    a=3;
+    int b = 5;
+    print(a); print(b);
+
+return 0;
+}

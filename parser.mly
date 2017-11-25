@@ -70,7 +70,8 @@ stmt_list: { [] }
 
 stmt:
   expr SEMI     { Expr $1 }
-| typ ID SEMI { Vdecl($1, $2) }
+| typ ID SEMI { Vdecl($1, $2, Noexpr) }
+| typ ID ASSIGN expr SEMI { Vdecl($1, $2, Assign($2,$4)) }
 | RETURN SEMI   { Return Noexpr }
 | RETURN expr SEMI { Return $2 }
 | LBRACE stmt_list RBRACE { Block(List.rev $2) }
