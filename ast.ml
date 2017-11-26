@@ -33,8 +33,8 @@ type stmt =
   | For_Edge of expr * expr * stmt
   | Bfs of expr * expr * expr * stmt
   | Dfs of expr * expr * expr * stmt
-  | Break
-  | Continue
+  | Break of stmt
+  | Continue of stmt
   | Expr of expr
   | Vdecl of typ * string * expr
   | Return of expr
