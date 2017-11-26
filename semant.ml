@@ -51,23 +51,24 @@ let check (globals, functions) =
      { f_typ = Void; f_name = "print"; f_formals = [(Int, "x")];
        f_body = [] } (StringMap.add "printb"
      { f_typ = Void; f_name = "printb"; f_formals = [(Bool, "x")];
+       f_body = [] } (StringMap.add "prints"
+     { f_typ = Void; f_name = "prints"; f_formals = [(String, "x")];
        f_body = [] } (StringMap.singleton "printbig"
      { f_typ = Void; f_name = "printbig"; f_formals = [(Int, "x")];
-       f_body = [] }))
+       f_body = [] })))
    in
      
-  let function_decls = List.fold_left (fun m fd -> StringMap.add fd.f_name fd m)
+  let function_decls = List.fold_left (fun m fd ->  StringMap.add fd.f_name fd m)
                          built_in_decls functions
   in
 
   let function_decl s = try StringMap.find s function_decls
-       with Not_found -> raise (Failure ("unrecognized function " ^ s))
+       with Not_found ->  raise (Failure ("unrecognized function " ^ s))
   in
 
   let _ = function_decl "main" in (* Ensure "main" is defined *)
 
   let check_function func =
-
     List.iter (check_not_void (fun n -> "illegal void formal " ^ n ^
       " in " ^ func.f_name)) func.f_formals;
 
@@ -75,11 +76,11 @@ let check (globals, functions) =
       (List.map snd func.f_formals);
 (*
     List.iter (check_not_void (fun n -> "illegal void local " ^ n ^
-      " in " ^ func.f_name)) func.f_locals;
+      " in " ^ func.f_name)) locals;
 
     report_duplicate (fun n -> "duplicate local " ^ n ^ " in " ^ func.fname)
-      (List.map snd func.f_locals);
-*)
+      (List.map snd func.locals);*)
+
     (* Type of each variable (global, formal, or local *)
     let symbols = List.fold_left (fun m (t, n) -> StringMap.add n t m)
 	StringMap.empty (globals @ func.f_formals)
@@ -171,4 +172,4 @@ let check (globals, functions) =
     stmt (Block func.f_body)
    
   in
-  List.iter check_function functions
+  List.iter check_function functions 
