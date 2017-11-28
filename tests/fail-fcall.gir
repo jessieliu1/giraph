@@ -1,0 +1,3 @@
+int main() {
+    dog(); /* there is no function dog */
+}
