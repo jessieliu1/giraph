@@ -94,11 +94,11 @@ let translate (globals, functions) =
       A.Add     -> L.build_add
     | A.Sub     -> L.build_sub
     | A.Mult    -> L.build_mul
-          | A.Div     -> L.build_sdiv
-          | A.Mod     -> L.build_srem
+    | A.Div     -> L.build_sdiv
+    | A.Mod     -> L.build_srem
     | A.And     -> L.build_and
     | A.Or      -> L.build_or
-    | A.Eq   -> L.build_icmp L.Icmp.Eq
+    | A.Eq      -> L.build_icmp L.Icmp.Eq
     | A.Neq     -> L.build_icmp L.Icmp.Ne
     | A.Less    -> L.build_icmp L.Icmp.Slt
     | A.Leq     -> L.build_icmp L.Icmp.Sle
@@ -109,7 +109,7 @@ let translate (globals, functions) =
     let e' = expr builder e in
     (match op with
       A.Neg     -> L.build_neg
-          | A.Not     -> L.build_not) e' "tmp" builder
+      | A.Not     -> L.build_not) e' "tmp" builder
       | A.Assign(id, e) -> let e' = expr builder e in
                            ignore (L.build_store e' (lookup id) builder); e'
       | A.Node v -> L.build_ret_void builder (*not impl*)
@@ -175,7 +175,7 @@ let translate (globals, functions) =
       (* | A.Break -> builder (*not implemented *) *)
       (* | A.Continue -> builder (*not implemented *) *)
       | A.For (e1, e2, e3, body) -> stmt builder
-      ( A.Block [A.Expr e1 ; A.While (e2, A.Block [body ; A.Expr e3]) ] )
+        ( A.Block [A.Expr e1 ; A.While (e2, A.Block [body ; A.Expr e3]) ] )
       | A.For_Node (v1, v2, v3) -> builder (*not implemented*)
       | A.For_Edge (e1, e2, e3) -> builder (*not implemented *)
       | A.Bfs (e1, e2, e3, s) -> builder (*not implemented *)
