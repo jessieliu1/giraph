@@ -1,64 +1,56 @@
+(* Semantically checked AST *)
+
 open Ast
 
 type sbind = typ * svdecl
 
 type sexpr =
-    SId of svdecl
-  | SBinop of expr * binop * expr
-  | SUnop of unop * expr
-  | SAssign of string * expr
-  | SCall of string * expr list
+    SId of string * typ
+  | SBinop of sexpr * binop * sexpr * typ
+  | SUnop of unop * sexpr * typ
+  | SAssign of string * sexpr * typ
+  | SCall of string * sexpr list * typ
   | SBool_Lit of bool
   | SInt_Lit of int
   | SFloat_Lit of float
   | SString_Lit of string
-  | SNode of string
-  | SEdge of edge
-  | SGraph of string list * edge list
+  (* TODO: graph things *)
+  | SNode of string 
+  | SEdge of edge 
+  | SGraph of string list * edge list 
   | SNoexpr
 
-type expr_det = sexpr * typ
+(* type expr_det = sexpr * typ *) 
+(* remove because will prob want to use sexpr in build 
+in codegen*)
 
 type sstmt =
     SBlock of sstmt list
-  | SIf of expr_det * sstmt * sstmt
-  | SFor of expr_det * expr_det * expr_det * sstmt
-  | SWhile of expr_det * sstmt
-  | SFor_Node of expr_det * expr_det * sstmt
-  | SFor_Edge of expr_det * expr_det * sstmt
+  | SIf of sexpr * sstmt * sstmt
+  | SFor of sexpr * sexpr * sexpr * sstmt
+  | SWhile of sexpr * sstmt
+  | SFor_Node of sexpr * sexpr * sstmt
+  | SFor_Edge of sexpr * sexpr * sstmt
   | SBfs of expr_det * expr_det * expr_det * sstmt
   | SDfs of expr_det * expr_det * expr_det * sstmt
   | SBreak of sstmt
   | SContinue of sstmt
-  | SExpr of expr_det
-  | SVdecl of svdecl * expr_det
+  | SExpr of sexpr * typ
+  | SVdecl of svdecl
   | SReturn of expr_det
+
 type svdecl = {
 (* do we want this *) 
   sv_name : string;
   sv_type : typ;
-  sv_init : expr_det;
+  sv_init : sexpr;
 }
 
 type sfdecl = {
   sf_typ : typ;
   sf_name : string;
-  sf_formals : bind list;
-  sf_body : stmt list;
-}
-
-type translation_env = {
-  scope : sym_tab;
-  break_label : label option;
-  cont_label : label option;
- (* exception_scope: exception_scope;*)
-  labels : label list ref;
-  forward_gotos : label list ref;
-}
-
-type sym_tab = {
-  parent : sym_tab option;
-  variables : vdecl list
+  sf_formals : sbind list; 
+  sf_body : sstmt list;
 }
 
 type sprogram = sbind list * sfdecl list

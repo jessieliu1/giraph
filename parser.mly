@@ -83,8 +83,8 @@ stmt:
 | BFS LPAREN expr COLON expr SEMI expr RPAREN stmt { Bfs($3, $5, $7, $9) }
 | DFS LPAREN expr COLON expr SEMI expr RPAREN stmt { Dfs($3, $5, $7, $9) }
 | WHILE LPAREN expr RPAREN stmt         { While($3, $5) }
-| BREAK SEMI 	{Break}
-| CONTINUE SEMI 	{Continue}
+| BREAK SEMI 	{Break(Block([]))}
+| CONTINUE SEMI 	{Continue(Block([]))}
 
 expr:
   INT_LIT           { Int_Lit($1) }

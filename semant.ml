@@ -1,8 +1,15 @@
-(* Semantic checking for the MicroC compiler *)
+(* Semantic checking for the giraph compiler *)
 
 open Ast
 
 module StringMap = Map.Make(String)
+
+type env = {
+  env_return_type : typ;
+  env_globals : typ StringMap.t;
+  env_locals : typ StringMap.t;
+  env_formals : typ StringMap.t;
+}
 
 (* Semantic checking of a program. Returns void if successful,
    throws an exception if something is wrong.
@@ -14,7 +21,7 @@ let check (globals, functions) =
   (* Raise an exception if the given list has a duplicate *)
   let report_duplicate exceptf list =
     let rec helper = function
-	n1 :: n2 :: _ when n1 = n2 -> raise (Failure (exceptf n1))
+        n1 :: n2 :: _ when n1 = n2 -> raise (Failure (exceptf n1))
       | _ :: t -> helper t
       | [] -> ()
     in helper (List.sort compare list)
@@ -83,7 +90,7 @@ let check (globals, functions) =
 
     (* Type of each variable (global, formal, or local *)
     let symbols = List.fold_left (fun m (t, n) -> StringMap.add n t m)
-	StringMap.empty (globals @ func.f_formals)
+  StringMap.empty (globals @ func.f_formals)
     in
 
     let type_of_identifier s =
@@ -93,7 +100,7 @@ let check (globals, functions) =
 
     (* Return the type of an expression or throw an exception *)
     let rec expr = function
-	Int_Lit _ -> Int
+        Int_Lit _ -> Int
       | Bool_Lit _ -> Bool
       | Float_Lit _ -> Float
       | String_Lit _ -> String
@@ -102,27 +109,27 @@ let check (globals, functions) =
       | Graph _ -> Graph
       | Id s -> type_of_identifier s
       | Binop(e1, op, e2) as e -> let t1 = expr e1 and t2 = expr e2 in
-	(match op with
-          Add | Sub | Mult | Div when t1 = Int && t2 = Int -> Int (*can remove guard? *) 
-        | Mod when t1 = Int && t2 = Int -> Int 
-        | Eq | Neq | Less | Leq | Greater | Geq when t1 = Int && t2 = Int -> Bool
-	| And | Or when t1 = Bool && t2 = Bool -> Bool
-        | _ -> raise (Failure ("illegal binary operator " ^
-              string_of_typ t1 ^ " " ^ string_of_op op ^ " " ^
-              string_of_typ t2 ^ " in " ^ string_of_expr e))
-        )
+        (match op with
+            Add | Sub | Mult | Div when t1 = Int && t2 = Int -> Int (*can remove guard? *) 
+          | Mod when t1 = Int && t2 = Int -> Int 
+          | Eq | Neq | Less | Leq | Greater | Geq when t1 = Int && t2 = Int -> Bool
+          | And | Or when t1 = Bool && t2 = Bool -> Bool
+          | _ -> raise (Failure ("illegal binary operator " ^
+                string_of_typ t1 ^ " " ^ string_of_op op ^ " " ^
+                string_of_typ t2 ^ " in " ^ string_of_expr e))
+          )
       | Unop(op, e) as ex -> let t = expr e in
-	 (match op with
-	   Neg when t = Int -> Int
-	 | Not when t = Bool -> Bool
-         | _ -> raise (Failure ("illegal unary operator " ^ string_of_uop op ^
-	  		   string_of_typ t ^ " in " ^ string_of_expr ex)))
+        (match op with
+            Neg when t = Int -> Int
+          | Not when t = Bool -> Bool
+          | _ -> raise (Failure ("illegal unary operator " ^ string_of_uop op ^
+            string_of_typ t ^ " in " ^ string_of_expr ex)))
       | Noexpr -> Void
       | Assign(var, e) as ex -> let lt = type_of_identifier var
                                 and rt = expr e in
         check_assign lt rt (Failure ("illegal assignment " ^ string_of_typ lt ^
-				     " = " ^ string_of_typ rt ^ " in " ^ 
-				     string_of_expr ex))
+             " = " ^ string_of_typ rt ^ " in " ^ 
+             string_of_expr ex))
       | Call(f_name, actuals) as call -> let fd = function_decl f_name in
          if List.length actuals != List.length fd.f_formals then
            raise (Failure ("expecting " ^ string_of_int
@@ -145,12 +152,12 @@ let check (globals, functions) =
     
     (* Verify a statement or throw an exception *)
     let rec stmt = function
-	Block sl -> let rec check_block = function
-           [Return _ as s] -> stmt s
-         | Return _ :: _ -> raise (Failure "nothing may follow a return")
-         | Block sl :: ss -> check_block (sl @ ss)
-         | s :: ss -> stmt s ; check_block ss
-         | [] -> ()
+    Block sl -> let rec check_block = function
+        [Return _ as s] -> stmt s
+      | Return _ :: _ -> raise (Failure "nothing may follow a return")
+      | Block sl :: ss -> check_block (sl @ ss)
+      | s :: ss -> stmt s ; check_block ss
+      | [] -> ()
         in check_block sl
       | Expr e -> ignore (expr e)
       | Return e -> let t = expr e in if t = func.f_typ then () else
