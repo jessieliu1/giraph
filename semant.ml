@@ -1,14 +1,18 @@
 (* Semantic checking for the giraph compiler *)
 
 open Ast
+open Sast
 
 module StringMap = Map.Make(String)
 
 type env = {
-  env_return_type : typ;
-  env_globals : typ StringMap.t;
-  env_locals : typ StringMap.t;
-  env_formals : typ StringMap.t;
+  env_return_type : typ; (* return type *)
+  env_fmap : typ StringMap.t; (* function map *)
+  env_sfmap : sfdecl StringMap.t; (* do we need this? *)
+  env_globals : typ StringMap.t; (* global vars *)
+  env_flocals : typ StringMap.t; (* function locals *)
+  env_fformals : typ StringMap.t; (* function formals *)
+  (* todo: built in methods? *)
 }
 
 (* Semantic checking of a program. Returns void if successful,
