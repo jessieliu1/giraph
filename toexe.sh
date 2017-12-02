@@ -21,4 +21,4 @@ fi
 
 "$GIRAPH" "$1" > "$BASENAME.ll" &&
 "$LLC" "$BASENAME.ll" > "$BASENAME.s" &&
-"$CC" "-o" "$BASENAME.exe" "$BASENAME.s"
+"$CC" "-o" "$BASENAME.exe" "$BASENAME.s" "graph.o"

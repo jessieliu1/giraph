@@ -32,6 +32,8 @@ void *new_graph() {
 	return (void *) g;
 }
 
+/* Add a new vertex to the end of the vertex list in a graph, and return a
+   pointer to the new vertex. */
 void *add_vertex(void *graph_ptr) {
 	struct vertex_list_node *vertex = malloc(sizeof(struct vertex_list_node));
 	vertex->data = NULL;
@@ -52,7 +54,46 @@ void *add_vertex(void *graph_ptr) {
 	return (void *) vertex;
 }
 
+/* Add a (directed) edge between two vertices. */
+void add_edge(void *from_ptr, void *to_ptr) {
+	/* HOLY SHIT THIS SHIT NEEDS COMMENTING
+	   I WROTE IT LIKE 15 MINUTES AGO AND ALREADY DON'T UNDERSTAND */
+	struct vertex_list_node *from = (struct vertex_list_node *) from_ptr;
+	struct vertex_list_node *to = (struct vertex_list_node *) to_ptr;
+
+	if (from->adjacencies == NULL) {
+		from->adjacencies = malloc(sizeof(struct edge_list_node));
+		from->adjacencies->vertex = to;
+		from->adjacencies->next = NULL;
+	} else {
+		struct edge_list_node *last_node = from->adjacencies;
+		while (last_node->next) {
+			last_node = last_node->next;
+		}
+		last_node->next = malloc(sizeof(struct edge_list_node));
+		last_node->next->vertex = to;
+		last_node->next->next = NULL;
+	}
+}
+
 void print_graph(void *graph_ptr) {
+	struct graph *g = (struct graph *) graph_ptr;
+	struct vertex_list_node *vertex = g->head;
+	while (vertex) {
+		printf("vertex: %p\n", vertex);
+		printf("adjacencies:");
+		struct edge_list_node *adjacency = vertex->adjacencies;
+		while (adjacency) {
+			printf(" %p", adjacency->vertex);
+			adjacency = adjacency->next;
+		}
+		printf("\n\n");
+		vertex = vertex->next;
+	}
+}
+
+
+void print_data(void *graph_ptr) {
 	struct graph *g = (struct graph *) graph_ptr;
 	struct vertex_list_node *vertex = g->head;
 	while (vertex) {
@@ -75,30 +116,16 @@ int main() {
 	struct vertex_list_node *head = (struct vertex_list_node *) add_vertex(g);
 	head->data = malloc(sizeof(int));
 	*head->data = 0;
-	head->adjacencies = malloc(sizeof(struct edge_list_node));
-
-	struct vertex_list_node *last_node = head;
-	struct edge_list_node *head_adj = head->adjacencies;
 
 	for (int i = 1; i < 4; i++) {
 		struct vertex_list_node *vertex = (struct vertex_list_node *) add_vertex(g);
 		vertex->data = malloc(sizeof(int));
 		*vertex->data = i;
-		last_node = last_node->next;
 
-		vertex->adjacencies = malloc(sizeof(struct edge_list_node));
-		vertex->adjacencies->vertex = head;
-		vertex->adjacencies->next = NULL;
-		head_adj->vertex = vertex;
-		if (i < 3) {
-			head_adj->next = malloc(sizeof(struct edge_list_node));
-			head_adj = head_adj->next;
-		} else {
-			head_adj->next = NULL;
-		}
+		add_edge(head, vertex);
+		add_edge(vertex, head);
 	}
 
-
-	print_graph((void *) g);
+	print_data((void *) g);
 }
 */

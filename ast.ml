@@ -20,7 +20,7 @@ type expr =
   | Float_Lit of float
   | String_Lit of string
   | Node of string
-  | Edge of edge
+  | Edge of string * string
   | Graph of string list * edge list
   | Noexpr
 

@@ -40,8 +40,18 @@ let translate (globals, functions) =
 
   (* Declare functions that will be called to construct graphs *)
   let new_graph_t = L.function_type void_ptr_t [||] in
-  let new_graph_func =
-    L.declare_function "new_graph" new_graph_t the_module in
+  let new_graph_func = L.declare_function "new_graph" new_graph_t the_module in
+
+  let add_vertex_t = L.function_type void_ptr_t [| void_ptr_t |] in
+  let add_vertex_func = L.declare_function "add_vertex" add_vertex_t the_module in
+
+  let add_edge_t = L.function_type void_t [| void_ptr_t ; void_ptr_t |] in
+  let add_edge_func = L.declare_function "add_edge" add_edge_t the_module in
+
+  (* TODO: remove this when storing data and iterating works *)
+  let print_graph_t = L.function_type void_t [| void_ptr_t |] in
+  let print_graph_func = L.declare_function "print_graph" print_graph_t the_module in
+
 
   let function_decls =
     let function_decl m fdecl =
@@ -119,8 +129,20 @@ let translate (globals, functions) =
       | A.Assign(id, e) -> let e' = expr builder e in
         ignore (L.build_store e' (lookup id) builder); e'
       | A.Node v -> L.build_ret_void builder (*not impl*)
-      | A.Edge e -> L.build_ret_void builder (*not impl*)
-      | A.Graph (v,e) -> L.build_call new_graph_func [||] "tmp" builder
+      | A.Edge (v1, v2) -> L.build_ret_void builder (*not impl*)
+      | A.Graph (v,e) ->
+        (* create new graph struct, return pointer *)
+        let g = L.build_call new_graph_func [||] "tmp" builder in
+        (* map node names to vertex_list_node pointers created by calling add_vertex *)
+        let call_add_vertex id = L.build_call add_vertex_func [| g |] ("tmp" ^ id) builder in
+        let nodes_map = List.fold_left (fun map id -> StringMap.add id (call_add_vertex id) map) StringMap.empty v in
+        (* add edges in both directions *)
+        ignore(List.map (fun (n1, n2) -> L.build_call add_edge_func [| (StringMap.find n1 nodes_map) ; (StringMap.find n2 nodes_map) |] "" builder) e);
+        ignore(List.map (fun (n1, n2) -> L.build_call add_edge_func [| (StringMap.find n2 nodes_map) ; (StringMap.find n1 nodes_map) |] "" builder) e);
+        (* print the graph for debugging - TODO: remove when storing data/iterating works *)
+        ignore(L.build_call print_graph_func [| g |] "" builder);
+        (* return pointer to graph struct *)
+        g
       | A.Call ("print", [e]) | A.Call ("printb", [e]) ->
         L.build_call printf_func [| int_format_str ; (expr builder e) |]
           "printf" builder
