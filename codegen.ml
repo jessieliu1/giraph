@@ -12,15 +12,17 @@ let translate (globals, functions) =
   and i1_t   = L.i1_type   context
   and str_t = L.pointer_type (L.i8_type context)
   and float_t = L.float_type  context
-  and void_t = L.void_type context in
+  and void_t = L.void_type context
+  and void_ptr_t = L.pointer_type (L.i8_type context)
+  and i32_ptr_t = L.pointer_type (L.i32_type context) in
 
   let ltype_of_typ = function
       A.Int -> i32_t
     | A.Bool -> i1_t
     | A.Float -> float_t
     | A.String -> str_t
-    | A.Node -> i32_t
-    | A.Graph -> i32_t
+    | A.Node -> i32_ptr_t
+    | A.Graph -> void_ptr_t
     | A.Edge -> i32_t
     | A.Void -> void_t in
   (* TODO: actually add all types *)
@@ -35,6 +37,11 @@ let translate (globals, functions) =
   (* Declare printf(), which the print built-in function will call *)
   let printf_t = L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in
   let printf_func = L.declare_function "printf" printf_t the_module in
+
+  (* Declare functions that will be called to construct graphs *)
+  let new_graph_t = L.function_type void_ptr_t [||] in
+  let new_graph_func =
+    L.declare_function "new_graph" new_graph_t the_module in
 
   let function_decls =
     let function_decl m fdecl =
@@ -113,7 +120,7 @@ let translate (globals, functions) =
         ignore (L.build_store e' (lookup id) builder); e'
       | A.Node v -> L.build_ret_void builder (*not impl*)
       | A.Edge e -> L.build_ret_void builder (*not impl*)
-      | A.Graph (v,e) -> L.build_ret_void builder (* not impl*)
+      | A.Graph (v,e) -> L.build_call new_graph_func [||] "tmp" builder
       | A.Call ("print", [e]) | A.Call ("printb", [e]) ->
         L.build_call printf_func [| int_format_str ; (expr builder e) |]
           "printf" builder
