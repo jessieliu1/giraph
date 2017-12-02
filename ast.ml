@@ -1,5 +1,5 @@
 type binop = Add | Sub | Mult | Div | Mod | Eq | Neq | 
-          Less | Leq | Greater | Geq | And | Or
+             Less | Leq | Greater | Geq | And | Or
 
 type unop = Neg | Not
 
@@ -106,7 +106,8 @@ let rec string_of_stmt = function
     Block(stmts) ->
       "{\n" ^ String.concat "" (List.map string_of_stmt stmts) ^ "}\n"
   | Expr(expr) -> string_of_expr expr ^ ";\n";
-  | Vdecl(t, id, x) -> string_of_typ t ^ " " ^ id ^ ";\n"
+  | Vdecl(t, id, Noexpr) -> string_of_typ t ^ " " ^ id ^ ";\n"
+  | Vdecl(t, id, e) -> string_of_typ t ^ " " ^ string_of_expr e ^  ";\n"
   | Return(expr) -> "return " ^ string_of_expr expr ^ ";\n";
   | If(e, s, Block([])) -> "if (" ^ string_of_expr e ^ ")\n" ^ string_of_stmt s
   | If(e, s1, s2) ->  "if (" ^ string_of_expr e ^ ")\n" ^
