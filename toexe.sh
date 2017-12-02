@@ -14,6 +14,11 @@ CC="cc"
 GIR=".gir"
 BASENAME="${1%$GIR}"
 
+if [ "$#" -ne 1 ]; then
+    echo "usage: ./toexe filename.gir"
+	exit
+fi
+
 "$GIRAPH" "$1" > "$BASENAME.ll" &&
 "$LLC" "$BASENAME.ll" > "$BASENAME.s" &&
 "$CC" "-o" "$BASENAME.exe" "$BASENAME.s"
