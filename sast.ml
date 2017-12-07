@@ -2,8 +2,6 @@
 
 open Ast
 
-type sbind = typ * svdecl
-
 type sexpr =
     SId of string * typ
   | SBinop of sexpr * binop * sexpr * typ
@@ -15,10 +13,17 @@ type sexpr =
   | SFloat_Lit of float
   | SString_Lit of string
   (* TODO: graph things *)
-  | SNode of string 
-  | SEdge of edge 
-  | SGraph of string list * edge list 
+  | SNode of string * typ
+  | SEdge of edge * typ
+  | SGraph of string list * edge list * typ
   | SNoexpr
+
+type svdecl = {
+(* do we want this *) 
+  sv_name : string;
+  sv_type : typ;
+  sv_init : sexpr;
+}
 
 (* type expr_det = sexpr * typ *) 
 (* remove because will prob want to use sexpr in build 
@@ -31,29 +36,26 @@ type sstmt =
   | SWhile of sexpr * sstmt
   | SFor_Node of sexpr * sexpr * sstmt
   | SFor_Edge of sexpr * sexpr * sstmt
-  | SBfs of expr_det * expr_det * expr_det * sstmt
-  | SDfs of expr_det * expr_det * expr_det * sstmt
+  | SBfs of sexpr * sexpr * sexpr * sstmt
+  | SDfs of sexpr * sexpr * sexpr * sstmt
   | SBreak of sstmt
   | SContinue of sstmt
   | SExpr of sexpr * typ
-  | SVdecl of svdecl
-  | SReturn of expr_det
+  | SVdecl of typ * string * sexpr
+  | SReturn of sexpr
 
-type svdecl = {
-(* do we want this *) 
-  sv_name : string;
-  sv_type : typ;
-  sv_init : sexpr;
-}
+
 
 type sfdecl = {
   sf_typ : typ;
   sf_name : string;
-  sf_formals : sbind list; 
+  sf_formals : bind list; 
   sf_body : sstmt list;
 }
 
-type sprogram = sbind list * sfdecl list
+type sprogram = bind list * sfdecl list
+
+
 (* THESE will work because we did open AST but they will pretty print AST types rather than SAST types *)
 (* Pretty-printing functions *)
 

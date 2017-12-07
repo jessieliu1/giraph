@@ -41,7 +41,7 @@ type stmt =
 
 
 type fdecl = {
-  f_typ : typ;
+  f_typ : typ; (* return type *)
   f_name : string;
   f_formals : bind list;
   f_body : stmt list;
