@@ -79,11 +79,34 @@ let translate (globals, functions) =
         ignore (L.build_store p local builder);
         StringMap.add n local m in
 
+      (* When initializing graphs with graph literals, nodes do not have to be
+         declared; e.g. "graph g = A -- B" implicitly declares nodes A and B (unless
+         they have been already declared explicitly or in a previous graph). Thus,
+         whenever we encounter a graph literal, we have to construct all the new nodes
+         it uses as local variables. The following function handles this. *)
+      let add_local_nodes m expr = match expr with
+          A.Assign(id, e) -> (match e with
+            A.Graph(nodes, edges) ->
+            let local_node_var node = L.build_alloca i32_ptr_t node builder in
+            let add_node m node =
+              if (StringMap.mem node m) then
+                m
+              else
+                StringMap.add node (local_node_var node) m
+            in
+            List.fold_left add_node m nodes
+            | _ -> m (* ignore non-graph expressions *))
+        | _ -> m (* ignore non-assign statements -
+                    TODO: figure out if graph literals could appear anywhere else *)
+      in
+
       (* find all local variables declared in function body; ignore other statements *)
       let add_local m stmt = match stmt with
           A.Vdecl(t, n, e) ->
+          let m = add_local_nodes m e in (* if e is a graph literal, adds new nodes to m; else m unchanged *)
           let local_var = L.build_alloca (ltype_of_typ t) n builder in
-          StringMap.add n local_var m;
+          StringMap.add n local_var m
+        | A.Expr(e) -> add_local_nodes m e
         | _ -> m
       in
 
@@ -134,7 +157,7 @@ let translate (globals, functions) =
         (* create new graph struct, return pointer *)
         let g = L.build_call new_graph_func [||] "tmp" builder in
         (* map node names to vertex_list_node pointers created by calling add_vertex *)
-        let call_add_vertex id = L.build_call add_vertex_func [| g |] ("tmp" ^ id) builder in
+        let call_add_vertex id = L.build_call add_vertex_func [| g |] ("tmp_" ^ id) builder in
         let nodes_map = List.fold_left (fun map id -> StringMap.add id (call_add_vertex id) map) StringMap.empty v in
         (* add edges in both directions *)
         ignore(List.map (fun (n1, n2) -> L.build_call add_edge_func [| (StringMap.find n1 nodes_map) ; (StringMap.find n2 nodes_map) |] "" builder) e);
