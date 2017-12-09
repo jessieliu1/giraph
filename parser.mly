@@ -108,7 +108,10 @@ expr:
 
 graph_expr:
   ID EDGE ID     { ($3 :: [$1]), [($1, $3)] } /* single node graphs need to be handled later */
-| graph_expr EDGE ID    { ($3 :: fst $1), ((List.hd (fst $1), $3) :: snd $1) }
+| graph_expr EDGE ID    { (if (List.mem $3 (fst $1)) then (* if this node is already in this graph, *)
+	                         ($3 :: List.filter (fun n -> n <> $3) (fst $1)) (* move to front of nodelist so edges work *)
+	                       else ($3 :: fst $1)), (* otherwise just add to front *)
+	                      ((List.hd (fst $1), $3) :: snd $1) }
 /* logic for making the edgelist will be way more complicated for digraphs, not sure yet how */
 
 expr_opt: 
