@@ -13,6 +13,7 @@ type env = {
   env_globals : typ StringMap.t; (* global vars *)
   env_flocals : typ StringMap.t; (* function locals *)
   env_fformals : typ StringMap.t; (* function formals *)
+  env_in_while : bool;
   (* todo: built in methods? *)
 }
 
@@ -170,7 +171,6 @@ and check_call str e_lst env =
     (* wrong number of arguments *)
         Invalid_argument _ -> raise (Failure ("expected " ^ string_of_int (List.length sfdecl.sf_formals) ^ "arguments when " 
         ^ string_of_int (List.length e_lst) ^ " arguments were provided"))
-   
 
 
 and convert_stmt stmt env = match stmt with 
@@ -178,25 +178,23 @@ and convert_stmt stmt env = match stmt with
     | If(e, s1, s2)         -> (check_if e s1 s2 env, env)
     | For(e1, e2, e3, s)    -> (check_for e1 e2 e3 s env, env)
     | While(e, s)           -> (check_while e s env, env)
-    | For_Node(e1, e2, s)   -> (let se1, env1 = convert_expr e1 in
-                               let se2, env2 = convert_expr e2 in 
-                               let ss, env3 = convert_stmt s in
-                               (SFor_Node(se1, se2, ss), env)) (*implement in a real way*)
-    | For_Edge(e1, e2, s)   -> (SFor_Edge(convert_expr e1, convert_expr e2, convert_stmt s), env) (*implement in a real way*)
-    | Bfs(e1, e2, e3, s)    -> (SBfs(convert_expr e1, convert_expr e2, convert_expr e3, convert_stmt s), env) (*implement in a real way*)
-    | Dfs(e1, e2, e3, s)    -> (SDfs(convert_expr e1, convert_expr e2, convert_expr e3, convert_stmt s), env) (*implement in a real way*)
-    | Break(s)              -> (SBreak(convert_stmt s), env) (*implement in a real way*)
-    | Continue(s)           -> (SContinue(convert_stmt s), env) (*implement in a real way*)
-    | Expr(e)               -> (check_expr_stmt e env, env)  (*implement in a real way*)
-    | Vdecl(t, str, e)      -> (SVdecl(t, str, convert_expr expr), env)  (*implement in a real way*)
-    | Return(e)             -> ()
+    | For_Node(str, e, s)   -> (check_for_node str e s env, env)
+    | For_Edge(str, e, s)   -> (check_for_edge str e s env, env) 
+    | Bfs(str, e1, e2, s)   -> (check_bfs str e1 e2 s env, env) 
+    | Dfs(str, e1, e2, s)   -> (check_dfs str e1 e2 s env, env) 
+    | Break                 -> (check_break, env) 
+    | Continue              -> (check_continue, env)
+    | Expr(e)               -> (check_expr_stmt e env, env) 
+    | Vdecl(t, str, e)      -> (check_vdecl t str e env)
+    | Return(e)             -> (check_return e, env) (* REMEMBER TO SET RETURN TYPE when you're semantically checking everything
+                                    in the fdecl block *)
 
 
 and check_block s_lst env = 
     let rec check_block_helper = function
       Return _ :: _ -> raise (Failure("nothing may follow a return"))
       | Block s_lst :: ss -> check_block_helper (s_lst @ ss)
-      | s :: ss -> convert_stmt s env; check_block_helper ss
+      | s :: ss -> ignore(convert_stmt s env); check_block_helper ss
       | [] -> ()
     in check_block_helper s_lst;
 
@@ -213,40 +211,164 @@ and check_if cond is es env =
                 let (sis, _) = convert_stmt is env in
                 let (ses, _) = convert_stmt es env in
                 SIf(scond, sis, ses)
-            | _ -> raise(Failure("condition must be a boolean")))    
+            | _ -> raise(Failure("Expected boolean expression")))    
 
 and check_for e1 e2 e3 s env = 
-    let (se1, env1) = convert_expr e1 env in
-    let (se2, env2) = convert_expr e2 env in
-    let (se3, env3) = convert_expr e3 env in
+    let (se1, nenv) = convert_expr e1 env in (* a new var may be added to locals there*)
+    let (se2, env2) = convert_expr e2 nenv in
+    let (se3, env3) = convert_expr e3 nenv in
+    let new_env = 
 
-    (* create a new env in loop *)
-    let flocals = StringMap.add s typ env.env_flocals in
-       let new_env = {
-            env_globals = env.env_globals;
-            env_fmap = env.env_fmap;
-            env_sfmap = env.env_sfmap;
-            env_return_type = env.env_return_type;
-            env_flocals = flocals;
-            env_fformals = env.env_fformals
-        } in
+    {
+      env_return_type = nenv.env_return_type;
+      env_fmap = nenv.env_fmap;
+      env_sfmap = nenv.env_sfmap;
+      env_globals = nenv.env_globals;
+      env_flocals = nenv.env_flocals;
+      env_fformals = nenv.env_fformals;
+      env_in_loop = true;
+    }
+    in
 
     let (for_body, for_env) = convert_stmt s new_env in
 
-    if get_sexpr_type(se2) = SBool then
-        SFor(se1, se2, se3, SBlock([for_body]))
+    if (get_sexpr_type se2) = SBool then
+        SFor(se1, se2, se3, for_body)
     else raise(Failure("Expected boolean expression"))
 
 and check_while e s env =
     let (se, senv) = convert_expr e env in
-    let (while_body, while_env) = convert_stmt s env in
-    if get_sexpr_type(se) = SBool then
-        SWhile(se, SBlock([while_body]))
+    let new_env = 
+    {
+      env_return_type = env.env_return_type;
+      env_fmap = env.env_fmap;
+      env_sfmap = env.env_sfmap;
+      env_globals = env.env_globals;
+      env_flocals = env.env_flocals;
+      env_fformals = env.env_fformals;
+      env_in_loop = true;
+    }
+    in
+
+    let (while_body, while_env) = convert_stmt s new_env in
+    if (get_sexpr_type se) = SBool then
+        SWhile(se, while_body)
     else raise(Failure("Expected boolean expression"))
+
+(* for_node (neighbor : residual.get_neighbors(n)) *)
+and check_for_node str e s env = 
+    let flocals = StringMap.add str Node env.env_flocals in
+    let new_env = 
+    {
+      env_return_type = env.env_return_type;
+      env_fmap = env.env_fmap;
+      env_sfmap = env.env_sfmap;
+      env_globals = env.env_globals;
+      env_flocals = flocals;
+      env_fformals = env.env_fformals;
+      env_in_loop = env.env_in_loop;
+    }
+    in
+    let (se, senv) = convert_expr e new_env in
+    let (for_body, for_env) = convert_stmt s new_env in
+    SFor_Node(str, se, for_body)
+
+and check_for_edge str e s env = 
+    let flocals = StringMap.add str Edge env.env_flocals in
+    let new_env = 
+    {
+      env_return_type = env.env_return_type;
+      env_fmap = env.env_fmap;
+      env_sfmap = env.env_sfmap;
+      env_globals = env.env_globals;
+      env_flocals = flocals;
+      env_fformals = env.env_fformals;
+      env_in_loop = env.env_in_loop;
+    }
+    in
+    let (se, senv) = convert_expr e new_env in
+    let (for_body, for_env) = convert_stmt s new_env in
+    SFor_Edge(str, se, for_body)
+
+and check_bfs str e1 e2 s env = 
+    let flocals = StringMap.add str Node env.env_flocals in
+    let new_env = 
+    {
+      env_return_type = env.env_return_type;
+      env_fmap = env.env_fmap;
+      env_sfmap = env.env_sfmap;
+      env_globals = env.env_globals;
+      env_flocals = flocals;
+      env_fformals = env.env_fformals;
+      env_in_loop = env.env_in_loop;
+    }
+    in
+    let (se1, senv1) = convert_expr e1 new_env in 
+    let (se2, senv2) = convert_expr e2 new_env in
+    let (bfs_body, bfs_env) = convert_stmt s new_env in 
+    SBfs(str, se1, se2, bfs_body)
+
+and check_dfs str e1 e2 s env = 
+    let flocals = StringMap.add str Node env.env_flocals in
+    let new_env = 
+    {
+      env_return_type = env.env_return_type;
+      env_fmap = env.env_fmap;
+      env_sfmap = env.env_sfmap;
+      env_globals = env.env_globals;
+      env_flocals = flocals;
+      env_fformals = env.env_fformals;
+      env_in_loop = env.env_in_loop;
+    }
+    in
+    let (se1, senv1) = convert_expr e1 new_env in 
+    let (se2, senv2) = convert_expr e2 new_env in
+    let (dfs_body, dfs_env) = convert_stmt s new_env in 
+    SDfs(str, se1, se2, dfs_body)
+
+and check_break env = 
+    if env.env_in_loop then
+        SBreak
+    else raise(Failure("can't break outside of a loop"))
+
+and check_continue env = 
+    if env.env_in_loop then
+        SContinue
+    else raise(Failure("can't continue outside of a loop"))
 
 and check_expr_stmt e env = 
     let (se, env) = convert_expr e env in
     let typ = get_sexpr_type se in SExpr(se, typ)
+
+and check_vdecl t str e env = 
+    (*what do we need to do here:
+    add things to the environment how do we affect the upper block? return the environment too? and then when 
+    we're going through all statements in a fdecl we take the env thats returned and use that stuffff*)
+
+    let (se, nenv) = convert_expr e env in
+    let typ = get_sexpr_type se in
+    if t != typ then raise(Failure("expression type mismatch"))
+    else
+    let flocals = StringMap.add str t env.env_flocals in
+    let new_env = 
+    {
+      env_return_type = env.env_return_type;
+      env_fmap = env.env_fmap;
+      env_sfmap = env.env_sfmap;
+      env_globals = env.env_globals;
+      env_flocals = flocals;
+      env_fformals = env.env_fformals;
+      env_in_loop = env.env_in_loop;
+    }
+    in (SVdecl(t, str, se), new_env)
+
+and check_return e env =
+    let se, env = convert_expr e env in 
+    let typ = get_sexpr_type se in
+    if typ = env.env_return_type 
+    then SReturn(se)
+    else raise(Failure("expected return type " ^ string_of_typ env.env_return_type 
+      ^ " but got return type " ^ string_of_typ typ))
 
 let check_globals globals fmap = 
     List.iter (check_not_void (fun n -> "illegal void global " ^ n)) globals;
@@ -254,21 +376,21 @@ let check_globals globals fmap =
 
 
 let convert_ast globals functions fmap = 
-    let _ = StringMap.find "main" fmap with
+    let _ = try StringMap.find "main" fmap with
         Not_found -> raise(Failure("missing main")) 
     in
 
     (* lets get this started *)
     let env = {
-        env_return_type : Int;
-        env_fmap : StringMap.empty;
-        env_sfmap : StringMap.empty;
-        env_globals : StringMap.empty;
-        env_flocals : StringMap.empty;
-        env_fformals : StringMap.empty;
+        env_return_type = Int;
+        env_fmap = StringMap.empty;
+        env_sfmap = StringMap.empty;
+        env_globals = StringMap.empty;
+        env_flocals = StringMap.empty;
+        env_fformals = StringMap.empty;
+        env_in_loop = false;
     }
     in
-
     "todo"
 
 (* Add library and declared functions to a map *)
