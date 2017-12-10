@@ -34,9 +34,9 @@ void *new_graph() {
 
 /* Add a new vertex to the end of the vertex list in a graph, and return a
    pointer to the new vertex. */
-void *add_vertex(void *graph_ptr) {
+void *add_vertex(void *graph_ptr, int *data_ptr) {
 	struct vertex_list_node *vertex = malloc(sizeof(struct vertex_list_node));
-	vertex->data = NULL;
+	vertex->data = data_ptr;
 	vertex->adjacencies = NULL;
 	vertex->next = NULL;
 
@@ -81,6 +81,7 @@ void print_graph(void *graph_ptr) {
 	struct vertex_list_node *vertex = g->head;
 	while (vertex) {
 		printf("vertex: %p\n", vertex);
+		printf("data: %p\n", vertex->data);
 		printf("adjacencies:");
 		struct edge_list_node *adjacency = vertex->adjacencies;
 		while (adjacency) {
@@ -90,6 +91,7 @@ void print_graph(void *graph_ptr) {
 		printf("\n\n");
 		vertex = vertex->next;
 	}
+	printf("\n");
 }
 
 
@@ -107,6 +109,7 @@ void print_data(void *graph_ptr) {
 		printf("\n\n");
 		vertex = vertex->next;
 	}
+	printf("\n\n");
 }
 
 /*

@@ -21,7 +21,7 @@ let translate (globals, functions) =
     | A.Bool -> i1_t
     | A.Float -> float_t
     | A.String -> str_t
-    | A.Node -> i32_ptr_t
+    | A.Node -> i32_t
     | A.Graph -> void_ptr_t
     | A.Edge -> i32_t
     | A.Void -> void_t in
@@ -42,15 +42,15 @@ let translate (globals, functions) =
   let new_graph_t = L.function_type void_ptr_t [||] in
   let new_graph_func = L.declare_function "new_graph" new_graph_t the_module in
 
-  let add_vertex_t = L.function_type void_ptr_t [| void_ptr_t |] in
+  let add_vertex_t = L.function_type void_ptr_t [| void_ptr_t ; i32_ptr_t |] in
   let add_vertex_func = L.declare_function "add_vertex" add_vertex_t the_module in
 
   let add_edge_t = L.function_type void_t [| void_ptr_t ; void_ptr_t |] in
   let add_edge_func = L.declare_function "add_edge" add_edge_t the_module in
 
-  (* TODO: remove this when storing data and iterating works *)
+  (* TODO: remove this when iterating works *)
   let print_graph_t = L.function_type void_t [| void_ptr_t |] in
-  let print_graph_func = L.declare_function "print_graph" print_graph_t the_module in
+  let print_graph_func = L.declare_function "print_data" print_graph_t the_module in
 
 
   let function_decls =
@@ -87,7 +87,7 @@ let translate (globals, functions) =
       let add_local_nodes m expr = match expr with
           A.Assign(id, e) -> (match e with
             A.Graph(nodes, edges, _) ->
-            let local_node_var node = L.build_alloca i32_ptr_t node builder in
+            let local_node_var node = L.build_alloca i32_t node builder in
             let add_node m node =
               if (StringMap.mem node m) then
                 m
@@ -153,16 +153,19 @@ let translate (globals, functions) =
         ignore (L.build_store e' (lookup id) builder); e'
       | A.Node n -> L.build_ret_void builder (*not impl*)
       | A.Edge (n1, n2) -> L.build_ret_void builder (*not impl*)
-      | A.Graph (nodes, edges, _) ->
+      | A.Graph (nodes, edges, nodes_init) ->
         (* create new graph struct, return pointer *)
         let g = L.build_call new_graph_func [||] "tmp" builder in
         (* map node names to vertex_list_node pointers created by calling add_vertex *)
-        let call_add_vertex node = L.build_call add_vertex_func [| g |] ("tmp_" ^ node) builder in
+        let call_add_vertex node = L.build_call add_vertex_func [| g ; (lookup node) |] ("tmp_" ^ node) builder in
         let nodes_map = List.fold_left (fun map node -> StringMap.add node (call_add_vertex node) map) StringMap.empty nodes in
         (* add edges in both directions *)
         ignore(List.map (fun (n1, n2) -> L.build_call add_edge_func [| (StringMap.find n1 nodes_map) ; (StringMap.find n2 nodes_map) |] "" builder) edges);
         ignore(List.map (fun (n1, n2) -> L.build_call add_edge_func [| (StringMap.find n2 nodes_map) ; (StringMap.find n1 nodes_map) |] "" builder) edges);
-        (* print the graph for debugging - TODO: remove when storing data/iterating works *)
+        (* initialize nodes with data *)
+        (* TODO: when iterating works, see if data persists when node names go out of scope (but graph persists) *)
+        ignore(List.map (fun (node, data) -> (L.build_store (expr builder data) (lookup node) builder)) nodes_init);
+        (* print the graph for debugging - TODO: remove when iterating works *)
         ignore(L.build_call print_graph_func [| g |] "" builder);
         (* return pointer to graph struct *)
         g
