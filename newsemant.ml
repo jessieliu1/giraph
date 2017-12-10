@@ -190,17 +190,15 @@ and convert_stmt stmt env = match stmt with
                                     in the fdecl block *)
 
 
-and check_block s_lst env = 
-    let rec check_block_helper = function
+and check_block s_lst env = function
+    (*let rec check_block_helper = function
       Return _ :: _ -> raise (Failure("nothing may follow a return"))
       | Block s_lst :: ss -> check_block_helper (s_lst @ ss)
       | s :: ss -> ignore(convert_stmt s env); check_block_helper ss
       | [] -> ()
-    in check_block_helper s_lst;
-
-    match s_lst with 
+    in check_block_helper s_lst;*)
     []      -> SBlock([SExpr(SNoexpr, Void)])
-    | _     -> SBlock(List.map (fun s -> check_block s env) s_list)
+    | _     -> SBlock(List.map (fun s -> check_block s env) s_lst)
 
 
 and check_if cond is es env =
