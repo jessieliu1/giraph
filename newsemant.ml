@@ -2,7 +2,6 @@
 
 open Ast
 open Sast
-open Exception (*need to make better lmao*)
 
 module StringMap = Map.Make(String)
 
@@ -17,7 +16,15 @@ type env = {
   env_in_while : bool;
   (* todo: built in methods? *)
 }
-
+let report_bad_binop t1 op t2 = 
+        raise (Failure ("illegal binary operator " ^
+                                string_of_typ t1 ^ " " ^ string_of_op op ^ " " ^
+                                string_of_typ t2))
+and report_bad_unop t op =
+        raise (Failure ("illegal unary operator " ^
+                                string_of_typ t ^ " " ^ string_of_op op))
+and report_bad_assign l r = raise (Failure ("illegal assignment of " ^ r ^ " to " l))
+and report_undeclared_id s = raise (Failure ("undeclared identifier " ^ s ));
 let rec convert_expr e env = match e with 
     Id(str)                       -> (check_id str env, env)
   | Binop(e1, op, e2)             -> (check_binop e1 op e2 env, env) 
@@ -73,7 +80,7 @@ and check_id str env =
         SId(str, typ) with Not_found ->
     (try let typ = StringMap.find str env.env_globals in
         SId(str, typ) with Not_found ->
-                report_undeclared_id str))
+                raise (Failure("undeclared identifier " ^ str))))
 
 
 and check_binop e1 op e2 env =
@@ -86,8 +93,8 @@ and check_binop e1 op e2 env =
             (match t1, t2 with
                 Int, Int        -> SBinop(s1, op, s2, Int)
                 | Float, Float  -> SBinop(s1, op, s2, Float)
-                | _             -> report_bad_binop t1 op t2
                 (*TODO: string concat? *)
+                | _             -> report_bad_binop t1 op t2
             )
         | Sub | Mult | Div 
             when t1 = t2 && (t1 = Int || t1 = Float) -> SBinop(s1, op, s2, t1)
@@ -104,7 +111,7 @@ and check_binop e1 op e2 env =
             when t1 = t2 && (t1 = Int || t1 = Float) -> SBinop(s1, op, s2, Bool)
         | And | Or 
             when t1 = Bool && t2 = Bool -> SBinop(s1, op, s2, Bool) 
-        | _ -> report_bad_binop t1 op t2
+                | _             -> report_bad_binop t1 op t2
 
 
 and check_unop op e env = 
@@ -113,7 +120,7 @@ and check_unop op e env =
     match op with 
         Neg when (t = Int || t = Float) -> SUnop(op, s, t)
         | Not when t = Bool             -> SUnop(op, s, t)
-        | _ -> report_bad_unop op t
+        | _ -> report_bad_unop t op
 
 
 and check_print e_lst env = 
@@ -364,8 +371,11 @@ and convert_fdecl fname fformals env =
         env_fformals = env.env_fformals;
     }
     in env    
-
 and check_vdecl t str e env = 
+    (*what do we need to do here:
+    add things to the environment how do we affect the upper block? return the environment too? and then when 
+    we're going through all statements in a fdecl we take the env thats returned and use that stuffff*)
+
     let (se, nenv) = convert_expr e env in
     let typ = get_sexpr_type se in
     if t != typ then raise(Failure("expression type mismatch"))
@@ -389,13 +399,13 @@ and check_return e env =
     if typ = env.env_return_type 
     then SReturn(se)
     else raise(Failure("expected return type " ^ string_of_typ env.env_return_type 
-      ^ " but got return type " ^ string_of_typ typ))
+      ^ " but got return type " ^ string_of_typ typ));
 
 let check_globals globals fmap = 
     List.iter (check_not_void (fun n -> "illegal void global " ^ n)) globals;
     report_duplicate (fun n -> "duplicate global " ^ n) (List.map snd globals)
 
-
+in
 let convert_ast globals functions fmap = 
     let _ = try StringMap.find "main" fmap with
         Not_found -> raise(Failure("missing main")) 
@@ -436,7 +446,7 @@ let convert_ast globals functions fmap =
     let sfdecls = List.rev(List.fold_left (fun l (_, sfdec) -> sfdec :: l)
                   [] (StringMap.bindings env.env_sfmap))
     in (sglobals, sfdecls)
-    
+in
 let build_fmap functions = 
     (* built in *)
     let built_in_decls =  StringMap.add "print"
@@ -461,12 +471,11 @@ let build_fmap functions =
     List.fold_left (fun map fdecl -> check_fdecls map fdecl) 
     built_in_decls functions
 
-
+in
 let check globals functions = 
     let globs = check_globals in
     let fmap = build_fmap functions in
     let sast = convert_ast globs functions fmap 
     in 
     sast 
-
 
