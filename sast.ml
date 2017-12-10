@@ -94,17 +94,17 @@ let sstring_of_typ = function
 let rec sstring_of_expr = function
     SBool_Lit(true) -> "true"
   | SBool_Lit(false) -> "false"
-  | SInt_Lit(l) -> sstring_of_int l
+  | SInt_Lit(l) -> string_of_int l
   | SString_Lit(l) -> l
-  | SFloat_Lit(l) -> sstring_of_float l
-  | SId(s) -> s
-  | SBinop(e1, o, e2) ->
+  | SFloat_Lit(l) -> string_of_float l
+  | SId(s, _) -> s
+  | SBinop(e1, o, e2, _) ->
       sstring_of_expr e1 ^ " " ^ sstring_of_op o ^ " " ^ sstring_of_expr e2
-  | SUnop(o, e) -> sstring_of_uop o ^ sstring_of_expr e
-  | SAssign(v, e) -> v ^ " = " ^ sstring_of_expr e
-  | SCall(f, el) ->
+  | SUnop(o, e, _) -> sstring_of_uop o ^ sstring_of_expr e
+  | SAssign(v, e, _) -> v ^ " = " ^ sstring_of_expr e
+  | SCall(f, el, _) ->
       f ^ "(" ^ String.concat ", " (List.map sstring_of_expr el) ^ ")"
-  | SGraph(node_l, edge_l) ->
+  | SGraph(node_l, edge_l, _) ->
     "[" ^ String.concat ", " node_l ^ "] " ^
     "[" ^ String.concat ", " (List.map (fun(a,b) -> "(" ^ a ^ "," ^ b ^ ")") edge_l) ^ "]"
   | SNoexpr -> ""

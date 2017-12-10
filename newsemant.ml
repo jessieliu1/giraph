@@ -364,11 +364,8 @@ and convert_fdecl fname fformals env =
         env_fformals = env.env_fformals;
     }
     in env    
-and check_vdecl t str e env = 
-    (*what do we need to do here:
-    add things to the environment how do we affect the upper block? return the environment too? and then when 
-    we're going through all statements in a fdecl we take the env thats returned and use that stuffff*)
 
+and check_vdecl t str e env = 
     let (se, nenv) = convert_expr e env in
     let typ = get_sexpr_type se in
     if t != typ then raise(Failure("expression type mismatch"))
