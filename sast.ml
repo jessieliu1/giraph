@@ -34,12 +34,12 @@ type sstmt =
   | SIf of sexpr * sstmt * sstmt
   | SFor of sexpr * sexpr * sexpr * sstmt
   | SWhile of sexpr * sstmt
-  | SFor_Node of sexpr * sexpr * sstmt
-  | SFor_Edge of sexpr * sexpr * sstmt
-  | SBfs of sexpr * sexpr * sexpr * sstmt
-  | SDfs of sexpr * sexpr * sexpr * sstmt
-  | SBreak of sstmt
-  | SContinue of sstmt
+  | SFor_Node of string * sexpr * sstmt
+  | SFor_Edge of string * sexpr * sstmt
+  | SBfs of string * sexpr * sexpr * sstmt
+  | SDfs of string * sexpr * sexpr * sstmt
+  | SBreak 
+  | SContinue 
   | SExpr of sexpr * typ
   | SVdecl of typ * string * sexpr
   | SReturn of sexpr
