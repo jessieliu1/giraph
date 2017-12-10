@@ -59,7 +59,7 @@ type sprogram = bind list * sfdecl list
 (* THESE will work because we did open AST but they will pretty print AST types rather than SAST types *)
 (* Pretty-printing functions *)
 
-let string_of_op = function
+let sstring_of_op = function
     Add -> "+"
   | Sub -> "-"
   | Mult -> "*"
@@ -75,12 +75,12 @@ let string_of_op = function
   | Or -> "||"
 
 
-let string_of_uop = function
+let sstring_of_uop = function
     Neg -> "-"
   | Not -> "!"
 
 
-let string_of_typ = function
+let sstring_of_typ = function
     Int -> "int"
   | Float -> "float"
   | Bool -> "bool"
@@ -91,48 +91,48 @@ let string_of_typ = function
   | Void -> "void"
 
 
-let rec string_of_expr = function
-    Bool_Lit(true) -> "true"
-  | Bool_Lit(false) -> "false"
-  | Int_Lit(l) -> string_of_int l
-  | String_Lit(l) -> l
-  | Float_Lit(l) -> string_of_float l
-  | Id(s) -> s
-  | Binop(e1, o, e2) ->
-      string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2
-  | Unop(o, e) -> string_of_uop o ^ string_of_expr e
-  | Assign(v, e) -> v ^ " = " ^ string_of_expr e
-  | Call(f, el) ->
-      f ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
-  | Graph(node_l, edge_l) ->
+let rec sstring_of_expr = function
+    SBool_Lit(true) -> "true"
+  | SBool_Lit(false) -> "false"
+  | SInt_Lit(l) -> sstring_of_int l
+  | SString_Lit(l) -> l
+  | SFloat_Lit(l) -> sstring_of_float l
+  | SId(s) -> s
+  | SBinop(e1, o, e2) ->
+      sstring_of_expr e1 ^ " " ^ sstring_of_op o ^ " " ^ sstring_of_expr e2
+  | SUnop(o, e) -> sstring_of_uop o ^ sstring_of_expr e
+  | SAssign(v, e) -> v ^ " = " ^ sstring_of_expr e
+  | SCall(f, el) ->
+      f ^ "(" ^ String.concat ", " (List.map sstring_of_expr el) ^ ")"
+  | SGraph(node_l, edge_l) ->
     "[" ^ String.concat ", " node_l ^ "] " ^
     "[" ^ String.concat ", " (List.map (fun(a,b) -> "(" ^ a ^ "," ^ b ^ ")") edge_l) ^ "]"
-  | Noexpr -> ""
+  | SNoexpr -> ""
 
-let rec string_of_stmt = function
+let rec sstring_of_stmt = function
     Block(stmts) ->
-      "{\n" ^ String.concat "" (List.map string_of_stmt stmts) ^ "}\n"
-  | Expr(expr) -> string_of_expr expr ^ ";\n";
-  | Vdecl(t, id, x) -> string_of_typ t ^ " " ^ id ^ ";\n"
-  | Return(expr) -> "return " ^ string_of_expr expr ^ ";\n";
-  | If(e, s, Block([])) -> "if (" ^ string_of_expr e ^ ")\n" ^ string_of_stmt s
-  | If(e, s1, s2) ->  "if (" ^ string_of_expr e ^ ")\n" ^
-      string_of_stmt s1 ^ "else\n" ^ string_of_stmt s2
+      "{\n" ^ String.concat "" (List.map sstring_of_stmt stmts) ^ "}\n"
+  | Expr(expr) -> sstring_of_expr expr ^ ";\n";
+  | Vdecl(t, id, x) -> sstring_of_typ t ^ " " ^ id ^ ";\n"
+  | Return(expr) -> "return " ^ sstring_of_expr expr ^ ";\n";
+  | If(e, s, Block([])) -> "if (" ^ sstring_of_expr e ^ ")\n" ^ sstring_of_stmt s
+  | If(e, s1, s2) ->  "if (" ^ sstring_of_expr e ^ ")\n" ^
+      sstring_of_stmt s1 ^ "else\n" ^ sstring_of_stmt s2
   | For(e1, e2, e3, s) ->
-      "for (" ^ string_of_expr e1  ^ " ; " ^ string_of_expr e2 ^ " ; " ^
-      string_of_expr e3  ^ ") " ^ string_of_stmt s
-  | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
+      "for (" ^ sstring_of_expr e1  ^ " ; " ^ sstring_of_expr e2 ^ " ; " ^
+      sstring_of_expr e3  ^ ") " ^ sstring_of_stmt s
+  | While(e, s) -> "while (" ^ sstring_of_expr e ^ ") " ^ sstring_of_stmt s
 
 
-let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
+let sstring_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
 
-let string_of_fdecl fdecl =
-  string_of_typ fdecl.f_typ ^ " " ^
+let sstring_of_fdecl fdecl =
+  sstring_of_typ fdecl.f_typ ^ " " ^
   fdecl.f_name ^ "(" ^ String.concat ", " (List.map snd fdecl.f_formals) ^
   ")\n{\n" ^
-  String.concat "" (List.map string_of_stmt fdecl.f_body) ^
+  String.concat "" (List.map sstring_of_stmt fdecl.f_body) ^
   "}\n"
 
-let string_of_program (vars, funcs) =
-  String.concat "" (List.map string_of_vdecl vars) ^ "\n" ^
-  String.concat "\n" (List.map string_of_fdecl funcs)
+let sstring_of_program (vars, funcs) =
+  String.concat "" (List.map sstring_of_vdecl vars) ^ "\n" ^
+  String.concat "\n" (List.map sstring_of_fdecl funcs)

@@ -7,6 +7,7 @@ open Exception (*need to make better lmao*)
 module StringMap = Map.Make(String)
 
 type env = {
+  env_name : string; (* name of fn*)
   env_return_type : typ; (* return type *)
   env_fmap : fdecl StringMap.t; (* function map *)
   env_sfmap : sfdecl StringMap.t; (* do we need this? *)
@@ -16,7 +17,7 @@ type env = {
   (* todo: built in methods? *)
 }
 
-let rec convert_expr expr env = match expr with 
+let rec convert_expr e env = match e with 
     Id(str)                       -> (check_id str env, env)
   | Binop(e1, op, e2)             -> (check_binop e1 op e2 env, env) 
   | Unop(op, e)                   -> (check_unop op e env, env)
@@ -245,8 +246,34 @@ and check_while e s env =
     else raise(Failure("Expected boolean expression"))
 
 and check_expr_stmt e env = 
-    let (se, env) = convert_expr e env in
+    let (se, env) = convert_expr e env in 
     let typ = get_sexpr_type se in SExpr(se, typ)
+
+and convert_fdecl fname fformals env = 
+    let fdecl = StringMap.find fname env.env_fmap in
+    
+    let (sstmts, env) = convert_stmt (Block fdecl.body) env
+    in 
+    let formals = List.fold_left 
+    in
+    let sfdecl = { 
+        sf_typ = env.env_return_type;
+        sf_name = fdecl.f_name;
+        sf_formals = formals;
+        sf_body = match sstmts with SBlock(sl) -> sl | _ -> [] ;
+    }
+
+    in
+    let env = {
+        env_name = fname;
+        env_return_type = env.env_return_type;
+        env_fmap = env.env_fmap;
+        env_sfmap = StringMap.add fname sfdecl env.env_sfmap;
+        env_globals = env.env_globals;
+        env_flocals = env.env_flocals;
+        env_fformals = env.env_fformals;
+    }
+    in env    
 
 let check_globals globals fmap = 
     List.iter (check_not_void (fun n -> "illegal void global " ^ n)) globals;
@@ -254,22 +281,46 @@ let check_globals globals fmap =
 
 
 let convert_ast globals functions fmap = 
-    let _ = StringMap.find "main" fmap with
+    let _ = try StringMap.find "main" fmap with
         Not_found -> raise(Failure("missing main")) 
     in
 
     (* lets get this started *)
     let env = {
-        env_return_type : Int;
-        env_fmap : StringMap.empty;
-        env_sfmap : StringMap.empty;
-        env_globals : StringMap.empty;
-        env_flocals : StringMap.empty;
-        env_fformals : StringMap.empty;
+        env_name = "main";
+        env_return_type = Int;
+        env_fmap = StringMap.empty;
+        env_sfmap = StringMap.empty;
+        env_globals = StringMap.empty;
+        env_flocals = StringMap.empty;
+        env_fformals = StringMap.empty;
     }
     in
 
-    "todo"
+    let sglobals = [] (*TODO check globals*)
+    in 
+    let globals_map = sglobals
+    in
+
+    let env = {
+        env_name = "main";
+        env_return_type = Int;
+        env_fmap = fmap;
+        env_sfmap = StringMap.empty;
+        env_globals = globals_map;
+        env_flocals = StringMap.empty;
+        env_fformals = StringMap.empty;
+    }
+    in
+    
+    report_duplicate (List.map (fun f -> f.fname) functions);
+    
+    let env = convert_fdecls env in
+    let env = convert_fdecls "main" [] env in 
+    let sfdecls = List.rev(List.fold_left (fun l (_, sfdec) -> sfdec :: l)
+                  [] (StringMap.bindings env.env_sfmap))
+    in (sglobals, sfdecls)
+    
 
 (* Add library and declared functions to a map *)
 let build_fmap functions = 
