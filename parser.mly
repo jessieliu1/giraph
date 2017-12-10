@@ -104,14 +104,15 @@ expr:
 | ID ASSIGN expr { Assign($1, $3) }
 | ID LPAREN actuals_opt RPAREN { Call($1, $3) }
 | LPAREN expr RPAREN { $2 }
-| graph_expr  { Graph(List.rev (fst $1), List.rev(snd $1)) }
+| LBRACK graph_expr RBRACK { Graph(List.rev (fst $2), List.rev (snd $2)) }
 
 graph_expr:
-  ID EDGE ID     { ($3 :: [$1]), [($1, $3)] } /* single node graphs need to be handled later */
-| graph_expr EDGE ID    { (if (List.mem $3 (fst $1)) then (* if this node is already in this graph, *)
-                             ($3 :: List.filter (fun n -> n <> $3) (fst $1)) (* move to front of nodelist so edges work *)
-                           else ($3 :: fst $1)), (* otherwise just add to front *)
-                          ((List.hd (fst $1), $3) :: snd $1) }
+  ID { [$1], [] }
+| graph_expr EDGE ID { (if (List.mem $3 (fst $1)) then (* if next node is already in this graph, *)
+                          ($3 :: List.filter (fun n -> n <> $3) (fst $1)) (* move to front of nodelist so edges work *)
+                        else ($3 :: fst $1)), (* otherwise just add to front *)
+                       ((List.hd (fst $1), $3) :: snd $1) (* add edge to edge list *)
+                     }
 /* logic for making the edgelist will be way more complicated for digraphs, not sure yet how */
 
 expr_opt: 
