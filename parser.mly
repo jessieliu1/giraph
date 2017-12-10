@@ -78,10 +78,10 @@ stmt:
 | IF LPAREN expr RPAREN stmt %prec NOELSE { If($3, $5, Block([])) }
 | IF LPAREN expr RPAREN stmt ELSE stmt    { If($3, $5, $7) }
 | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt { For($3, $5, $7, $9) }
-| FOR_NODE LPAREN expr COLON expr RPAREN stmt { For_Node($3, $5, $7) }
-| FOR_EDGE LPAREN expr COLON expr RPAREN stmt { For_Edge($3, $5, $7) }
-| BFS LPAREN expr COLON expr SEMI expr RPAREN stmt { Bfs($3, $5, $7, $9) }
-| DFS LPAREN expr COLON expr SEMI expr RPAREN stmt { Dfs($3, $5, $7, $9) }
+| FOR_NODE LPAREN ID COLON expr RPAREN stmt { For_Node($3, $5, $7) }
+| FOR_EDGE LPAREN ID COLON expr RPAREN stmt { For_Edge($3, $5, $7) }
+| BFS LPAREN ID COLON expr SEMI expr RPAREN stmt { Bfs($3, $5, $7, $9) }
+| DFS LPAREN ID COLON expr SEMI expr RPAREN stmt { Dfs($3, $5, $7, $9) }
 | WHILE LPAREN expr RPAREN stmt         { While($3, $5) }
 | BREAK SEMI 	{Break}
 | CONTINUE SEMI 	{Continue}
@@ -109,9 +109,9 @@ expr:
 graph_expr:
   ID EDGE ID     { ($3 :: [$1]), [($1, $3)] } /* single node graphs need to be handled later */
 | graph_expr EDGE ID    { (if (List.mem $3 (fst $1)) then (* if this node is already in this graph, *)
-	                         ($3 :: List.filter (fun n -> n <> $3) (fst $1)) (* move to front of nodelist so edges work *)
-	                       else ($3 :: fst $1)), (* otherwise just add to front *)
-	                      ((List.hd (fst $1), $3) :: snd $1) }
+                             ($3 :: List.filter (fun n -> n <> $3) (fst $1)) (* move to front of nodelist so edges work *)
+                           else ($3 :: fst $1)), (* otherwise just add to front *)
+                          ((List.hd (fst $1), $3) :: snd $1) }
 /* logic for making the edgelist will be way more complicated for digraphs, not sure yet how */
 
 expr_opt: 

@@ -151,17 +151,17 @@ let translate (globals, functions) =
          | A.Not     -> L.build_not) e' "tmp" builder
       | A.Assign(id, e) -> let e' = expr builder e in
         ignore (L.build_store e' (lookup id) builder); e'
-      | A.Node v -> L.build_ret_void builder (*not impl*)
-      | A.Edge (v1, v2) -> L.build_ret_void builder (*not impl*)
-      | A.Graph (v,e) ->
+      | A.Node n -> L.build_ret_void builder (*not impl*)
+      | A.Edge (n1, n2) -> L.build_ret_void builder (*not impl*)
+      | A.Graph (nodes,edges) ->
         (* create new graph struct, return pointer *)
         let g = L.build_call new_graph_func [||] "tmp" builder in
         (* map node names to vertex_list_node pointers created by calling add_vertex *)
-        let call_add_vertex id = L.build_call add_vertex_func [| g |] ("tmp_" ^ id) builder in
-        let nodes_map = List.fold_left (fun map id -> StringMap.add id (call_add_vertex id) map) StringMap.empty v in
+        let call_add_vertex node = L.build_call add_vertex_func [| g |] ("tmp_" ^ node) builder in
+        let nodes_map = List.fold_left (fun map node -> StringMap.add node (call_add_vertex node) map) StringMap.empty nodes in
         (* add edges in both directions *)
-        ignore(List.map (fun (n1, n2) -> L.build_call add_edge_func [| (StringMap.find n1 nodes_map) ; (StringMap.find n2 nodes_map) |] "" builder) e);
-        ignore(List.map (fun (n1, n2) -> L.build_call add_edge_func [| (StringMap.find n2 nodes_map) ; (StringMap.find n1 nodes_map) |] "" builder) e);
+        ignore(List.map (fun (n1, n2) -> L.build_call add_edge_func [| (StringMap.find n1 nodes_map) ; (StringMap.find n2 nodes_map) |] "" builder) edges);
+        ignore(List.map (fun (n1, n2) -> L.build_call add_edge_func [| (StringMap.find n2 nodes_map) ; (StringMap.find n1 nodes_map) |] "" builder) edges);
         (* print the graph for debugging - TODO: remove when storing data/iterating works *)
         ignore(L.build_call print_graph_func [| g |] "" builder);
         (* return pointer to graph struct *)

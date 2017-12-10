@@ -29,10 +29,10 @@ type stmt =
   | If of expr * stmt * stmt
   | For of expr * expr * expr * stmt
   | While of expr * stmt
-  | For_Node of expr * expr * stmt
-  | For_Edge of expr * expr * stmt
-  | Bfs of expr * expr * expr * stmt
-  | Dfs of expr * expr * expr * stmt
+  | For_Node of string * expr * stmt
+  | For_Edge of string * expr * stmt
+  | Bfs of string * expr * expr * stmt
+  | Dfs of string * expr * expr * stmt
   | Break
   | Continue
   | Expr of expr
