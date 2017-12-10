@@ -21,7 +21,7 @@ type expr =
   | String_Lit of string
   | Node of string
   | Edge of string * string
-  | Graph of string list * edge list
+  | Graph of string list * edge list * (string * expr) list
   | Noexpr
 
 type stmt =
@@ -97,9 +97,10 @@ let rec string_of_expr = function
   | Assign(v, e) -> v ^ " = " ^ string_of_expr e
   | Call(f, el) ->
       f ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
-  | Graph(node_l, edge_l) ->
+  | Graph(node_l, edge_l, node_init_l) ->
     "[" ^ String.concat ", " node_l ^ "] " ^
-    "[" ^ String.concat ", " (List.map (fun(a,b) -> "(" ^ a ^ "," ^ b ^ ")") edge_l) ^ "]"
+    "[" ^ String.concat ", " (List.map (fun(a,b) -> "(" ^ a ^ "," ^ b ^ ")") edge_l) ^ "] " ^
+    "[" ^ String.concat ", " (List.map (fun(n,e) -> "(" ^ n ^ "," ^ string_of_expr e ^ ")") node_init_l) ^ "]"
   | Noexpr -> ""
 
 let rec string_of_stmt = function

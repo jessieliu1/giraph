@@ -104,15 +104,31 @@ expr:
 | ID ASSIGN expr { Assign($1, $3) }
 | ID LPAREN actuals_opt RPAREN { Call($1, $3) }
 | LPAREN expr RPAREN { $2 }
-| LBRACK graph_expr RBRACK { Graph(List.rev (fst $2), List.rev (snd $2)) }
+| LBRACK graph_expr RBRACK { match $2 with (n, e, n_i) ->
+                               Graph(List.rev n, List.rev e, List.rev n_i) }
 
 graph_expr:
-  ID { [$1], [] }
-| graph_expr EDGE ID { (if (List.mem $3 (fst $1)) then (* if next node is already in this graph, *)
-                          ($3 :: List.filter (fun n -> n <> $3) (fst $1)) (* move to front of nodelist so edges work *)
-                        else ($3 :: fst $1)), (* otherwise just add to front *)
-                       ((List.hd (fst $1), $3) :: snd $1) (* add edge to edge list *)
+  ID { [$1], [], [] }
+| ID COLON expr { [$1], [], [($1, $3)] }
+| graph_expr EDGE ID { match $1 with
+                         (nodes, edges, nodes_init) ->
+                         let nodes = if (List.mem $3 nodes) then (* if next node is already in this graph, *)
+                                       ($3 :: List.filter (fun n -> n <> $3) nodes) (* move to front of nodelist so edges work *)
+                                     else
+                                       $3 :: nodes (* otherwise just add to front *)
+                         and edges = ((List.hd nodes), $3) :: edges
+                         in (nodes, edges, nodes_init)
                      }
+| graph_expr EDGE ID COLON expr { match $1 with
+                                    (nodes, edges, nodes_init) -> (* handle nodes and edges w/ same logic as above *)
+                                    let nodes = if (List.mem $3 nodes) then
+                                                  ($3 :: List.filter (fun n -> n <> $3) nodes)
+                                                else
+                                                  $3 :: nodes
+                                    and edges = ((List.hd nodes), $3) :: edges
+                                    and nodes_init = ($3, $5) :: nodes_init (* add node name/data pair to nodes_init *)
+                                    in (nodes, edges, nodes_init)
+                                }
 /* logic for making the edgelist will be way more complicated for digraphs, not sure yet how */
 
 expr_opt: 
