@@ -14,7 +14,7 @@ type env = {
   env_globals : typ StringMap.t; (* global vars *)
   env_flocals : typ StringMap.t; (* function locals *)
   env_fformals : typ StringMap.t; (* function formals *)
-  env_in_while : bool;
+  env_in_loop : bool;
   (* todo: built in methods? *)
 }
 
@@ -33,8 +33,8 @@ let rec convert_expr e env = match e with
   | Float_Lit(f)                  -> (SFloat_Lit(f), env)
   | String_Lit(str)               -> (SString_Lit(str), env)
   (* todo below *)
-  | Node(n)                       -> (SNode(n, Node), env)
-  | Edge(ed)                      -> (SEdge(ed, Edge), env)
+ (* | Node(n)                       -> (SNode(n, Node), env)
+  | Edge(ed)                      -> (SEdge(ed, Edge), env) *)
   | Graph(str_lst, ed_lst)        -> (SGraph(str_lst, ed_lst, Graph), env)
   | Noexpr                        -> (SNoexpr, env)
 
@@ -55,8 +55,8 @@ and get_sexpr_type sexpr = match sexpr with
   | SInt_Lit(_)                -> Int
   | SFloat_Lit(_)              -> Float
   | SString_Lit(_)             -> String
-  | SNode(_, typ)              -> typ
-  | SEdge(_, typ)              -> typ
+ (* | SNode(_, typ)              -> typ
+  | SEdge(_, typ)              -> typ *)
   | SGraph(_, _, typ)          -> typ
   | SNoexpr                    -> Void
 
@@ -177,40 +177,54 @@ and check_call str e_lst env =
 and convert_stmt stmt env = match stmt with 
     Block(s_lst)            -> (check_block s_lst env, env)
     | If(e, s1, s2)         -> (check_if e s1 s2 env, env)
-    | For(e1, e2, e3, s)    -> (check_for e1 e2 e3 s env, env)
+    | For(e1, e2, e3, s)    -> (check_for e1 e2 e3 s env, env) 
     | While(e, s)           -> (check_while e s env, env)
     | For_Node(str, e, s)   -> (check_for_node str e s env, env)
-    | For_Edge(str, e, s)   -> (check_for_edge str e s env, env) 
-    | Bfs(str, e1, e2, s)   -> (check_bfs str e1 e2 s env, env) 
+    | For_Edge(str, e, s)   -> (check_for_edge str e s env, env)
+    | Bfs(str, e1, e2, s)   -> (check_bfs str e1 e2 s env, env)
     | Dfs(str, e1, e2, s)   -> (check_dfs str e1 e2 s env, env) 
-    | Break                 -> (check_break, env) 
-    | Continue              -> (check_continue, env)
-    | Expr(e)               -> (check_expr_stmt e env, env) 
-    | Vdecl(t, str, e)      -> (check_vdecl t str e env)
-    | Return(e)             -> (check_return e, env) (* REMEMBER TO SET RETURN TYPE when you're semantically checking everything
+    | Break                 -> (*(check_break, env) *)  SBlock([SExpr(SNoexpr, Void)]), env
+    | Continue              -> (*(check_continue, env) *) SBlock([SExpr(SNoexpr, Void)]), env
+    | Expr(e)               -> (*(check_expr_stmt e env, env) *) SBlock([SExpr(SNoexpr, Void)]), env
+    | Vdecl(t, str, e)      -> (*(check_vdecl t str e env)*) SBlock([SExpr(SNoexpr, Void)]), env
+    | Return(e)             -> (*(check_return e, env)*) SBlock([SExpr(SNoexpr, Void)]), env (* REMEMBER TO SET RETURN TYPE when you're semantically checking everything
                                     in the fdecl block *)
 
 
-and check_block s_lst env = function
+and check_block s_lst env = 
+    match s_lst with
+    (*let rec check_block_helper = function 
+      Return _ :: _ -> raise (Failure("nothing may follow a return"))
+      | Block s_lst :: ss -> check_block_helper (s_lst @ ss)
+      | s :: ss -> convert_stmt stmt env ; check_block_helper ss
+      | [] -> SBlock([SExpr(SNoexpr, Void)])
+    in check_block_helper s_lst *)
     (*let rec check_block_helper = function
       Return _ :: _ -> raise (Failure("nothing may follow a return"))
       | Block s_lst :: ss -> check_block_helper (s_lst @ ss)
       | s :: ss -> ignore(convert_stmt s env); check_block_helper ss
       | [] -> ()
     in check_block_helper s_lst;*)
-    []      -> SBlock([SExpr(SNoexpr, Void)])
-    | _     -> SBlock(List.map (fun s -> check_block s env) s_lst)
+    []      -> SBlock([SExpr(SNoexpr, Void)]) 
+    | _     -> (*check every statement, and put those checked statements in a list*)
+              let add_sstmt acc stmt = 
+                let sstmt, env = convert_stmt stmt env in
+                sstmt::acc
+              in
+              let sblock = List.fold_left add_sstmt [] s_lst in
+            SBlock(sblock)
 
 
 and check_if cond is es env =
     (* semantically check the condition *)
-    let scond,typ = convert_expr cond env in 
-        (match typ with 
+    let scond,env = convert_expr cond env in 
+        (match get_sexpr_type scond with 
             Bool ->
                 let (sis, _) = convert_stmt is env in
                 let (ses, _) = convert_stmt es env in
                 SIf(scond, sis, ses)
             | _ -> raise(Failure("Expected boolean expression")))    
+
 
 and check_for e1 e2 e3 s env = 
     let (se1, nenv) = convert_expr e1 env in (* a new var may be added to locals there*)
@@ -219,6 +233,7 @@ and check_for e1 e2 e3 s env =
     let new_env = 
 
     {
+      env_name = nenv.env_name;
       env_return_type = nenv.env_return_type;
       env_fmap = nenv.env_fmap;
       env_sfmap = nenv.env_sfmap;
@@ -231,14 +246,16 @@ and check_for e1 e2 e3 s env =
 
     let (for_body, for_env) = convert_stmt s new_env in
 
-    if (get_sexpr_type se2) = SBool then
+    if (get_sexpr_type se2) = Bool then
         SFor(se1, se2, se3, for_body)
     else raise(Failure("Expected boolean expression"))
+
 
 and check_while e s env =
     let (se, senv) = convert_expr e env in
     let new_env = 
     {
+      env_name = env.env_name;
       env_return_type = env.env_return_type;
       env_fmap = env.env_fmap;
       env_sfmap = env.env_sfmap;
@@ -250,7 +267,7 @@ and check_while e s env =
     in
 
     let (while_body, while_env) = convert_stmt s new_env in
-    if (get_sexpr_type se) = SBool then
+    if (get_sexpr_type se) = Bool then
         SWhile(se, while_body)
     else raise(Failure("Expected boolean expression"))
 
@@ -259,6 +276,7 @@ and check_for_node str e s env =
     let flocals = StringMap.add str Node env.env_flocals in
     let new_env = 
     {
+      env_name = env.env_name;
       env_return_type = env.env_return_type;
       env_fmap = env.env_fmap;
       env_sfmap = env.env_sfmap;
@@ -276,6 +294,7 @@ and check_for_edge str e s env =
     let flocals = StringMap.add str Edge env.env_flocals in
     let new_env = 
     {
+      env_name = env.env_name;
       env_return_type = env.env_return_type;
       env_fmap = env.env_fmap;
       env_sfmap = env.env_sfmap;
@@ -289,10 +308,12 @@ and check_for_edge str e s env =
     let (for_body, for_env) = convert_stmt s new_env in
     SFor_Edge(str, se, for_body)
 
+
 and check_bfs str e1 e2 s env = 
     let flocals = StringMap.add str Node env.env_flocals in
     let new_env = 
     {
+      env_name = env.env_name;
       env_return_type = env.env_return_type;
       env_fmap = env.env_fmap;
       env_sfmap = env.env_sfmap;
@@ -307,10 +328,12 @@ and check_bfs str e1 e2 s env =
     let (bfs_body, bfs_env) = convert_stmt s new_env in 
     SBfs(str, se1, se2, bfs_body)
 
+
 and check_dfs str e1 e2 s env = 
     let flocals = StringMap.add str Node env.env_flocals in
     let new_env = 
     {
+      env_name = env.env_name;
       env_return_type = env.env_return_type;
       env_fmap = env.env_fmap;
       env_sfmap = env.env_sfmap;
@@ -325,11 +348,13 @@ and check_dfs str e1 e2 s env =
     let (dfs_body, dfs_env) = convert_stmt s new_env in 
     SDfs(str, se1, se2, dfs_body)
 
+
 and check_break env = 
     if env.env_in_loop then
         SBreak
     else raise(Failure("can't break outside of a loop"))
 
+(*
 and check_continue env = 
     if env.env_in_loop then
         SContinue
@@ -391,6 +416,7 @@ and check_return e env =
     else raise(Failure("expected return type " ^ string_of_typ env.env_return_type 
       ^ " but got return type " ^ string_of_typ typ))
 
+
 let check_globals globals fmap = 
     List.iter (check_not_void (fun n -> "illegal void global " ^ n)) globals;
     report_duplicate (fun n -> "duplicate global " ^ n) (List.map snd globals)
@@ -437,6 +463,7 @@ let convert_ast globals functions fmap =
                   [] (StringMap.bindings env.env_sfmap))
     in (sglobals, sfdecls)
     
+
 let build_fmap functions = 
     (* built in *)
     let built_in_decls =  StringMap.add "print"
@@ -467,6 +494,4 @@ let check globals functions =
     let fmap = build_fmap functions in
     let sast = convert_ast globs functions fmap 
     in 
-    sast 
-
-
+    sast *)

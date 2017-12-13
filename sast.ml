@@ -13,8 +13,8 @@ type sexpr =
   | SFloat_Lit of float
   | SString_Lit of string
   (* TODO: graph things *)
-  | SNode of string * typ
-  | SEdge of edge * typ
+(*  | SNode of string * typ
+  | SEdge of edge * typ *)
   | SGraph of string list * edge list * typ
   | SNoexpr
 
@@ -109,7 +109,7 @@ let rec sstring_of_expr = function
     "[" ^ String.concat ", " (List.map (fun(a,b) -> "(" ^ a ^ "," ^ b ^ ")") edge_l) ^ "]"
   | SNoexpr -> ""
 
-let rec sstring_of_stmt = function
+(*let rec sstring_of_stmt = function
     Block(stmts) ->
       "{\n" ^ String.concat "" (List.map sstring_of_stmt stmts) ^ "}\n"
   | Expr(expr) -> sstring_of_expr expr ^ ";\n";
@@ -135,4 +135,4 @@ let sstring_of_fdecl fdecl =
 
 let sstring_of_program (vars, funcs) =
   String.concat "" (List.map sstring_of_vdecl vars) ^ "\n" ^
-  String.concat "\n" (List.map sstring_of_fdecl funcs)
+  String.concat "\n" (List.map sstring_of_fdecl funcs)*)

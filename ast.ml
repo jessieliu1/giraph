@@ -19,8 +19,8 @@ type expr =
   | Int_Lit of int
   | Float_Lit of float
   | String_Lit of string
-  | Node of string
-  | Edge of edge
+(*  | Node of string
+  | Edge of edge *)
   | Graph of string list * edge list
   | Noexpr
 
