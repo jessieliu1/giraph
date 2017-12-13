@@ -85,9 +85,9 @@ let sstring_of_typ = function
   | Float -> "float"
   | Bool -> "bool"
   | String -> "str"
-  | Node -> "node"
+  | NodeTyp -> "node"
   | Graph -> "graph"
-  | Edge -> "edge"
+  | EdgeTyp -> "edge"
   | Void -> "void"
 
 

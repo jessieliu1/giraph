@@ -33,8 +33,8 @@ let rec convert_expr e env = match e with
   | Float_Lit(f)                  -> (SFloat_Lit(f), env)
   | String_Lit(str)               -> (SString_Lit(str), env)
   (* todo below *)
-  | Node(n)                       -> (SNode(n, Node), env)
-  | Edge(ed)                      -> (SEdge(ed, Edge), env) 
+  | Node(n)                       -> (SNode(n, NodeTyp), env)
+  | Edge(ed)                      -> (SEdge(ed, EdgeTyp), env) 
   | Graph(str_lst, ed_lst)        -> (SGraph(str_lst, ed_lst, Graph), env)
   | Noexpr                        -> (SNoexpr, env)
 
@@ -183,9 +183,9 @@ and convert_stmt stmt env = match stmt with
     | For_Edge(str, e, s)   -> (check_for_edge str e s env, env)
     | Bfs(str, e1, e2, s)   -> (check_bfs str e1 e2 s env, env)
     | Dfs(str, e1, e2, s)   -> (check_dfs str e1 e2 s env, env) 
-    | Break                 -> (*(check_break, env) *)  SBlock([SExpr(SNoexpr, Void)]), env
-    | Continue              -> (*(check_continue, env) *) SBlock([SExpr(SNoexpr, Void)]), env
-    | Expr(e)               -> (*(check_expr_stmt e env, env) *) SBlock([SExpr(SNoexpr, Void)]), env
+    | Break                 -> (check_break env, env)  
+    | Continue              -> (check_continue env, env) 
+    | Expr(e)               -> (check_expr_stmt e env, env) 
     | Vdecl(t, str, e)      -> (*(check_vdecl t str e env)*) SBlock([SExpr(SNoexpr, Void)]), env
     | Return(e)             -> (*(check_return e, env)*) SBlock([SExpr(SNoexpr, Void)]), env (* REMEMBER TO SET RETURN TYPE when you're semantically checking everything
                                     in the fdecl block *)
@@ -273,7 +273,7 @@ and check_while e s env =
 
 (* for_node (neighbor : residual.get_neighbors(n)) *)
 and check_for_node str e s env = 
-    let flocals = StringMap.add str Node env.env_flocals in
+    let flocals = StringMap.add str NodeTyp env.env_flocals in
     let new_env = 
     {
       env_name = env.env_name;
@@ -291,7 +291,7 @@ and check_for_node str e s env =
     SFor_Node(str, se, for_body)
 
 and check_for_edge str e s env = 
-    let flocals = StringMap.add str Edge env.env_flocals in
+    let flocals = StringMap.add str EdgeTyp env.env_flocals in
     let new_env = 
     {
       env_name = env.env_name;
@@ -310,7 +310,7 @@ and check_for_edge str e s env =
 
 
 and check_bfs str e1 e2 s env = 
-    let flocals = StringMap.add str Node env.env_flocals in
+    let flocals = StringMap.add str NodeTyp env.env_flocals in
     let new_env = 
     {
       env_name = env.env_name;
@@ -330,7 +330,7 @@ and check_bfs str e1 e2 s env =
 
 
 and check_dfs str e1 e2 s env = 
-    let flocals = StringMap.add str Node env.env_flocals in
+    let flocals = StringMap.add str NodeTyp env.env_flocals in
     let new_env = 
     {
       env_name = env.env_name;
@@ -354,30 +354,34 @@ and check_break env =
         SBreak
     else raise(Failure("can't break outside of a loop"))
 
-(*
+
 and check_continue env = 
     if env.env_in_loop then
         SContinue
     else raise(Failure("can't continue outside of a loop"))
 
+
 and check_expr_stmt e env = 
     let (se, env) = convert_expr e env in 
     let typ = get_sexpr_type se in SExpr(se, typ)
 
+
 and convert_fdecl fname fformals env = 
     let fdecl = StringMap.find fname env.env_fmap in
     
-    let (sstmts, env) = convert_stmt (Block fdecl.body) env
+    let (sstmts, env) = convert_stmt (Block fdecl.f_body) env
     in 
-    let formals = List.fold_left 
+
+    let formals = List.fold_left (fun m x -> StringMap.add (fst x) (snd x) m) StringMap.empty fformals 
     in
     let sfdecl = { 
         sf_typ = env.env_return_type;
         sf_name = fdecl.f_name;
-        sf_formals = formals;
+        sf_formals = []; (*skips check? *)
         sf_body = match sstmts with SBlock(sl) -> sl | _ -> [] ;
     }
 
+(*TODO: get rid of fformals?*)
     in
     let env = {
         env_name = fname;
@@ -386,9 +390,12 @@ and convert_fdecl fname fformals env =
         env_sfmap = StringMap.add fname sfdecl env.env_sfmap;
         env_globals = env.env_globals;
         env_flocals = env.env_flocals;
-        env_fformals = env.env_fformals;
+        env_fformals = formals;
+        env_in_loop = env.env_in_loop
     }
     in env    
+
+(*
 and check_vdecl t str e env = 
     (*what do we need to do here:
     add things to the environment how do we affect the upper block? return the environment too? and then when 
