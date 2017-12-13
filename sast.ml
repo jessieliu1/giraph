@@ -13,8 +13,8 @@ type sexpr =
   | SFloat_Lit of float
   | SString_Lit of string
   (* TODO: graph things *)
-(*  | SNode of string * typ
-  | SEdge of edge * typ *)
+  | SNode of string * typ
+  | SEdge of edge * typ 
   | SGraph of string list * edge list * typ
   | SNoexpr
 
@@ -91,23 +91,25 @@ let sstring_of_typ = function
   | Void -> "void"
 
 
-let rec sstring_of_expr = function
+let rec string_of_expr = function
     SBool_Lit(true) -> "true"
   | SBool_Lit(false) -> "false"
   | SInt_Lit(l) -> string_of_int l
   | SString_Lit(l) -> l
   | SFloat_Lit(l) -> string_of_float l
-  | SId(s, _) -> s
-  | SBinop(e1, o, e2, _) ->
-      sstring_of_expr e1 ^ " " ^ sstring_of_op o ^ " " ^ sstring_of_expr e2
-  | SUnop(o, e, _) -> sstring_of_uop o ^ sstring_of_expr e
-  | SAssign(v, e, _) -> v ^ " = " ^ sstring_of_expr e
-  | SCall(f, el, _) ->
-      f ^ "(" ^ String.concat ", " (List.map sstring_of_expr el) ^ ")"
-  | SGraph(node_l, edge_l, _) ->
+  | SId(s, t) -> s ^ ":" ^ string_of_typ t
+  | SBinop(e1, o, e2, t) ->
+      string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^
+      string_of_expr e2 ^ ":" ^ string_of_typ t
+  | SUnop(o, e, t) -> string_of_uop o ^ string_of_expr e ^ ":" ^ string_of_typ t
+  | SAssign(v, e, t) -> v ^ " = " ^ string_of_expr e^ ":" ^ string_of_typ t
+  | SCall(f, el, t) ->
+      f ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"^ ":" ^ string_of_typ t
+  | SGraph(node_l, edge_l, t) ->
     "[" ^ String.concat ", " node_l ^ "] " ^
     "[" ^ String.concat ", " (List.map (fun(a,b) -> "(" ^ a ^ "," ^ b ^ ")") edge_l) ^ "]"
   | SNoexpr -> ""
+
 
 (*let rec sstring_of_stmt = function
     Block(stmts) ->
@@ -130,9 +132,10 @@ let sstring_of_fdecl fdecl =
   sstring_of_typ fdecl.f_typ ^ " " ^
   fdecl.f_name ^ "(" ^ String.concat ", " (List.map snd fdecl.f_formals) ^
   ")\n{\n" ^
-  String.concat "" (List.map sstring_of_stmt fdecl.f_body) ^
+  String.concat "" (List.map string_of_stmt sfdecl.sf_body) ^
   "}\n"
 
 let sstring_of_program (vars, funcs) =
   String.concat "" (List.map sstring_of_vdecl vars) ^ "\n" ^
   String.concat "\n" (List.map sstring_of_fdecl funcs)*)
+
