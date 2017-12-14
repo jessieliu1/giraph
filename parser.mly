@@ -133,7 +133,13 @@ graph_expr:
                                        ($3 :: List.filter (fun n -> n <> $3) nodes) (* move to front of nodelist so edges work *)
                                      else
                                        $3 :: nodes (* otherwise just add to front *)
-                         and edges = ((List.hd nodes), $3) :: edges
+                         and edges = let new_edge = ((List.hd nodes), $3) and
+                                         new_edge_rev = ($3, (List.hd nodes)) in
+                                     (* only add this edge if it's not already there *)
+                                     if (List.mem new_edge edges || List.mem new_edge_rev edges) then
+                                       edges
+                                     else
+                                       new_edge :: edges
                          in (nodes, edges, nodes_init)
                      }
 | graph_expr EDGE ID COLON expr { match $1 with
@@ -142,7 +148,12 @@ graph_expr:
                                                   ($3 :: List.filter (fun n -> n <> $3) nodes)
                                                 else
                                                   $3 :: nodes
-                                    and edges = ((List.hd nodes), $3) :: edges
+                                    and edges = let new_edge = ((List.hd nodes), $3) and
+                                                    new_edge_rev = ($3, (List.hd nodes)) in
+                                                if (List.mem new_edge edges || List.mem new_edge_rev edges) then
+                                                  edges
+                                                else
+                                                  new_edge :: edges
                                     and nodes_init = ($3, $5) :: nodes_init (* add node name/data pair to nodes_init *)
                                     in (nodes, edges, nodes_init)
                                 }
