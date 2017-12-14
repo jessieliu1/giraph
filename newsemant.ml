@@ -186,8 +186,8 @@ and convert_stmt stmt env = match stmt with
     | Break                 -> (check_break env, env)  
     | Continue              -> (check_continue env, env) 
     | Expr(e)               -> (check_expr_stmt e env, env) 
-    | Vdecl(t, str, e)      -> (*(check_vdecl t str e env)*) SBlock([SExpr(SNoexpr, Void)]), env
-    | Return(e)             -> (*(check_return e, env)*) SBlock([SExpr(SNoexpr, Void)]), env 
+    | Vdecl(t, str, e)      -> (check_vdecl t str e env)
+    | Return(e)             -> (check_return e env, env)
     (* REMEMBER TO SET RETURN TYPE when you're semantically checking everything
                                     in the fdecl block *)
 
