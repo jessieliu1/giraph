@@ -10,7 +10,7 @@ type env = {
   env_name : string; (* name of fn*)
   env_return_type : typ; (* return type *)
   env_fmap : fdecl StringMap.t; (* function map *)
-  env_sfmap : sfdecl StringMap.t; (* do we need this? *)
+  env_sfmap : sfdecl StringMap.t; 
   env_globals : typ StringMap.t; (* global vars *)
   env_flocals : typ StringMap.t; (* function locals *)
   env_fformals : typ StringMap.t; (* function formals *)
@@ -151,7 +151,7 @@ and check_call str e_lst env =
     (* can't call main *)
     if str == "main" then raise (Failure ("cant make call to main"))
     (* check if function can be found*)
-    else if not (StringMap.mem str env.env_sfmap) then report_function_not_found str
+    else if not (StringMap.mem str env.env_fmap) then report_function_not_found str
     else 
     (* semantically check all the arguments*)
     let checked_args, env = convert_expr_list e_lst env in 
@@ -159,19 +159,40 @@ and check_call str e_lst env =
     (* get the types of the args*)
     let arg_types = get_sexpr_lst_type (checked_args) in
 
-    (* validate types here? *)
-
-    let sfdecl = StringMap.find str env.env_sfmap in
-    
-    try 
-        (* confirm types match *)
-        List.iter2 (fun t1 (t2, _) -> if t1 != t2 then report_typ_args t2 t1 else ()) arg_types sfdecl.sf_formals;
-        let sexpr_lst, env = convert_expr_list e_lst env in 
-            SCall(str, sexpr_lst, sfdecl.sf_typ)
-    with 
-    (* wrong number of arguments *)
-        Invalid_argument _ -> raise (Failure ("expected " ^ string_of_int (List.length sfdecl.sf_formals) ^ "arguments when " 
-        ^ string_of_int (List.length e_lst) ^ " arguments were provided"))
+    if not (StringMap.mem str env.env_sfmap) then
+        let fdecl = StringMap.find str env.env_fmap in
+        let env = 
+        {
+            env_name = env.env_name;
+            env_return_type = env.env_return_type;
+            env_fmap = env.env_fmap;
+            env_sfmap = (convert_fdecl fdecl.f_name fdecl.f_formals env).env_sfmap;
+            env_globals = env.env_globals;
+            env_flocals = env.env_flocals;
+            env_fformals = env.env_fformals;
+            env_in_loop = env.env_in_loop;
+        } in
+        let sfdecl = StringMap.find str env.env_sfmap in
+          try 
+              (* confirm types match *)
+              List.iter2 (fun t1 (t2, _) -> if t1 != t2 then report_typ_args t2 t1 else ()) arg_types sfdecl.sf_formals;
+              let sexpr_lst, env = convert_expr_list e_lst env in 
+                  SCall(str, sexpr_lst, sfdecl.sf_typ)
+          with 
+          (* wrong number of arguments *)
+              Invalid_argument _ -> raise (Failure ("expected " ^ string_of_int (List.length sfdecl.sf_formals) ^ "arguments when " 
+              ^ string_of_int (List.length e_lst) ^ " arguments were provided"))
+    else
+          let sfdecl = StringMap.find str env.env_sfmap in
+          try 
+              (* confirm types match *)
+              List.iter2 (fun t1 (t2, _) -> if t1 != t2 then report_typ_args t2 t1 else ()) arg_types sfdecl.sf_formals;
+              let sexpr_lst, env = convert_expr_list e_lst env in 
+                  SCall(str, sexpr_lst, sfdecl.sf_typ)
+          with 
+          (* wrong number of arguments *)
+              Invalid_argument _ -> raise (Failure ("expected " ^ string_of_int (List.length sfdecl.sf_formals) ^ "arguments when " 
+              ^ string_of_int (List.length e_lst) ^ " arguments were provided"))
 
 
 and convert_stmt stmt env = match stmt with 
@@ -188,8 +209,6 @@ and convert_stmt stmt env = match stmt with
     | Expr(e)               -> (check_expr_stmt e env, env) 
     | Vdecl(t, str, e)      -> (check_vdecl t str e env)
     | Return(e)             -> (check_return e env, env)
-    (* REMEMBER TO SET RETURN TYPE when you're semantically checking everything
-                                    in the fdecl block *)
 
 
 and check_block s_lst env = 
@@ -399,7 +418,6 @@ and convert_fdecl fname fformals env =
         sf_body = match sstmts with SBlock(sl) -> sl | _ -> [] ;
     }
     in
-
     let new_env = { 
         env_name = fname;
         env_return_type = fdecl.f_typ;
@@ -409,16 +427,13 @@ and convert_fdecl fname fformals env =
         env_flocals = env.env_flocals;
         env_fformals = formals;
         env_in_loop = env.env_in_loop
-    }
-
+    } 
   in new_env
+    
+
 
 
 and check_vdecl t str e env = 
-    (*what do we need to do here:
-    add things to the environment how do we affect the upper block? return the environment too? and then when 
-    we're going through all statements in a fdecl we take the env thats returned and use that stuffff*)
-
     let (se, nenv) = convert_expr e env in
     let typ = get_sexpr_type se in
     if t != typ then raise(Failure("expression type mismatch"))
@@ -446,35 +461,29 @@ and check_return e env =
     else raise(Failure("expected return type " ^ string_of_typ env.env_return_type 
       ^ " but got return type " ^ string_of_typ typ))
 
-
-let check_globals globals fmap = 
-    List.iter (check_not_void (fun n -> "illegal void global " ^ n)) globals;
-    report_duplicate (fun n -> "duplicate global " ^ n) (List.map snd globals)
-
-(*
-let convert_ast globals functions fmap = 
+let convert_ast globals fdecls fmap = 
     let _ = try StringMap.find "main" fmap with
         Not_found -> raise(Failure("missing main")) 
     in
 
-    (* let's get this started *)
-    let env = {
-        env_name = "main";
-        env_return_type = Int;
-        env_fmap = StringMap.empty;
-        env_sfmap = StringMap.empty;
-        env_globals = StringMap.empty;
-        env_flocals = StringMap.empty;
-        env_fformals = StringMap.empty;
-        env_in_loop = false;
-    }
+    report_duplicate (fun n -> "duplicate global " ^ n) (List.map snd globals);
+
+    let convert_globals m global = 
+      match global with
+      (typ, str) -> if (typ != Void) then StringMap.add str typ m
+      else raise(Failure("global " ^ str ^ " cannot have a void type"))
     in
 
-    let sglobals = StringMap.empty (*TODO check globals*)
+    (* semantically checked globals in a map *)
+    let globals_map = List.fold_left convert_globals StringMap.empty globals
     in 
-    let globals_map = sglobals
-    in
 
+    let globals_lst = List.rev(List.fold_left (fun acc binding -> match binding with (sfname, _) -> sfname::acc) [] (StringMap.bindings globals_map))
+    in 
+
+    (* check for duplicate functions *)
+    report_duplicate (fun f -> "duplicate function " ^ f.f_name) fdecls;
+    
     let env = {
         env_name = "main";
         env_return_type = Int;
@@ -486,16 +495,16 @@ let convert_ast globals functions fmap =
         env_in_loop = false;
     }
     in
-    
-    report_duplicate (fun f -> "duplicate function " ^ f.f_name) functions;
-    
-    let env = convert_fdecl env in
-    let env = convert_fdecl "main" [] env in 
-    let sfdecls = List.rev(List.fold_left (fun l (_, sfdec) -> sfdec :: l)
-                  [] (StringMap.bindings env.env_sfmap))
-    in (sglobals, sfdecls)
 
-let build_fmap functions = 
+    (* this is the environment with all the sfdecls, stemming from main *)
+    let sfdecl_env = convert_fdecl "main" [] env in 
+
+    let sfdecls = List.rev(List.fold_left (fun lst (_, sfdecl) -> sfdecl :: lst)
+                  [] (StringMap.bindings sfdecl_env.env_sfmap)) 
+    in (globals_lst, sfdecls)
+
+
+let build_fmap fdecls = 
     (* built in *)
     let built_in_decls =  StringMap.add "print"
      { f_typ = Void; f_name = "print"; f_formals = [(Int, "x")];
@@ -516,13 +525,12 @@ let build_fmap functions =
         else StringMap.add fdecl.f_name fdecl map
     in
 
-    List.fold_left (fun map fdecl -> check_fdecls map fdecl) 
-    built_in_decls functions
+    (* this is the fmap, what if i just want the list of fdecls *)
+    List.fold_left (fun map fdecl -> check_fdecls map fdecl) built_in_decls fdecls
 
-
-let check globals functions = 
-    let globs = check_globals in
-    let fmap = build_fmap functions in
-    let sast = convert_ast globs functions fmap 
+(* our globals are just bind list *)
+let check globals fdecls = 
+    let fmap = build_fmap fdecls in
+    let sast = convert_ast globals fdecls fmap
     in 
-    sast *)
+    sast 
