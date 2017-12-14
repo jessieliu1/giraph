@@ -105,7 +105,7 @@ expr:
 | ID LPAREN actuals_opt RPAREN { Call($1, $3) }
 | LPAREN expr RPAREN { $2 }
 | LBRACK graph_expr RBRACK { match $2 with (n, e, n_i) ->
-                               Graph(List.rev n, List.rev e, List.rev n_i) }
+                               Graph_Lit(List.rev n, List.rev e, List.rev n_i) }
 
 graph_expr:
   ID { [$1], [], [] }

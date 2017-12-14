@@ -86,7 +86,7 @@ let translate (globals, functions) =
          it uses as local variables. The following function handles this. *)
       let add_local_nodes m expr = match expr with
           A.Assign(id, e) -> (match e with
-            A.Graph(nodes, edges, _) ->
+            A.Graph_Lit(nodes, edges, _) ->
             let local_node_var node = L.build_alloca i32_t node builder in
             let add_node m node =
               if (StringMap.mem node m) then
@@ -151,9 +151,7 @@ let translate (globals, functions) =
          | A.Not     -> L.build_not) e' "tmp" builder
       | A.Assign(id, e) -> let e' = expr builder e in
         ignore (L.build_store e' (lookup id) builder); e'
-      | A.Node n -> L.build_ret_void builder (*not impl*)
-      | A.Edge (n1, n2) -> L.build_ret_void builder (*not impl*)
-      | A.Graph (nodes, edges, nodes_init) ->
+      | A.Graph_Lit (nodes, edges, nodes_init) ->
         (* create new graph struct, return pointer *)
         let g = L.build_call new_graph_func [||] "tmp" builder in
         (* map node names to vertex_list_node pointers created by calling add_vertex *)
