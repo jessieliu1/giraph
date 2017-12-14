@@ -524,13 +524,12 @@ let build_fmap fdecls =
             raise (Failure ("reserved function name " ^ fdecl.f_name))
         else StringMap.add fdecl.f_name fdecl map
     in
-
-    (* this is the fmap, what if i just want the list of fdecls *)
     List.fold_left (fun map fdecl -> check_fdecls map fdecl) built_in_decls fdecls
 
 (* our globals are just bind list *)
-let check globals fdecls = 
-    let fmap = build_fmap fdecls in
-    let sast = convert_ast globals fdecls fmap
-    in 
-    sast 
+let check ast = match ast with
+    (globals, fdecls) ->
+      let fmap = build_fmap fdecls in
+      let sast = convert_ast globals fdecls fmap
+      in 
+      sast 

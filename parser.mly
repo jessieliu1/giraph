@@ -53,7 +53,7 @@ typ:
   | BOOL { Bool }
   | VOID { Void }
   | STRING { String }
-  | NODE { Node }
+  | NODE { NodeTyp }
   | GRAPH { Graph }
 
 formals_opt: /* nothing */  { [] }
@@ -78,13 +78,13 @@ stmt:
 | IF LPAREN expr RPAREN stmt %prec NOELSE { If($3, $5, Block([])) }
 | IF LPAREN expr RPAREN stmt ELSE stmt    { If($3, $5, $7) }
 | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt { For($3, $5, $7, $9) }
-| FOR_NODE LPAREN expr COLON expr RPAREN stmt { For_Node($3, $5, $7) }
-| FOR_EDGE LPAREN expr COLON expr RPAREN stmt { For_Edge($3, $5, $7) }
-| BFS LPAREN expr COLON expr SEMI expr RPAREN stmt { Bfs($3, $5, $7, $9) }
-| DFS LPAREN expr COLON expr SEMI expr RPAREN stmt { Dfs($3, $5, $7, $9) }
+| FOR_NODE LPAREN ID COLON expr RPAREN stmt { For_Node($3, $5, $7) }
+| FOR_EDGE LPAREN ID COLON expr RPAREN stmt { For_Edge($3, $5, $7) }
+| BFS LPAREN ID COLON expr SEMI expr RPAREN stmt { Bfs($3, $5, $7, $9) }
+| DFS LPAREN ID COLON expr SEMI expr RPAREN stmt { Dfs($3, $5, $7, $9) }
 | WHILE LPAREN expr RPAREN stmt         { While($3, $5) }
-| BREAK SEMI 	{Break(Block([]))}
-| CONTINUE SEMI 	{Continue(Block([]))}
+| BREAK SEMI 	{Break}
+| CONTINUE SEMI 	{Continue}
 
 expr:
   INT_LIT           { Int_Lit($1) }

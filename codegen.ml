@@ -19,9 +19,9 @@ let translate (globals, functions) =
     | A.Bool -> i1_t
     | A.Float -> float_t
     | A.String -> str_t
-    | A.Node -> i32_t
+    | A.NodeTyp -> i32_t
     | A.Graph -> i32_t
-    | A.Edge -> i32_t
+    | A.EdgeTyp -> i32_t
     | A.Void -> void_t in
   (* TODO: actually add all types *)
 
@@ -172,8 +172,8 @@ let translate (globals, functions) =
         let merge_bb = L.append_block context "merge" the_function in
         ignore (L.build_cond_br bool_val body_bb merge_bb pred_builder);
         L.builder_at_end context merge_bb
-      | A.Break b1 -> builder (*not implemented *) 
-      | A.Continue c1 -> builder (*not implemented *) 
+      | A.Break -> builder (*not implemented *) 
+      | A.Continue -> builder (*not implemented *) 
       | A.For (e1, e2, e3, body) -> stmt builder
         ( A.Block [A.Expr e1 ; A.While (e2, A.Block [body ; A.Expr e3]) ] )
       | A.For_Node (v1, v2, v3) -> builder (*not implemented*)
