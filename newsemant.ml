@@ -372,17 +372,21 @@ and convert_fdecl fname fformals env =
     let (sstmts, env) = convert_stmt (Block fdecl.f_body) env
     in 
 
-    let formals = List.fold_left (fun m x -> StringMap.add (fst x) (snd x) m) StringMap.empty fformals 
-    in
     let sfdecl = { 
         sf_typ = env.env_return_type;
         sf_name = fdecl.f_name;
-        sf_formals = []; (*skips check? *)
+        sf_formals = fformals; (*skips check? *)
         sf_body = match sstmts with SBlock(sl) -> sl | _ -> [] ;
     }
-
-(*TODO: get rid of fformals?*)
     in
+
+    let formals_to_map m formal = 
+      match formal with
+      (t, str) -> StringMap.add str t m
+    in
+    let formals = List.fold_left formals_to_map StringMap.empty fformals 
+    in 
+
     let env = {
         env_name = fname;
         env_return_type = env.env_return_type;
@@ -393,7 +397,23 @@ and convert_fdecl fname fformals env =
         env_fformals = formals;
         env_in_loop = env.env_in_loop
     }
-    in env    
+    in env
+
+
+
+(*TODO: get rid of fformals?*)
+    (* in
+    let env = {
+        env_name = fname;
+        env_return_type = env.env_return_type;
+        env_fmap = env.env_fmap;
+        env_sfmap = StringMap.add fname sfdecl env.env_sfmap;
+        env_globals = env.env_globals;
+        env_flocals = env.env_flocals;
+        env_fformals = formals;
+        env_in_loop = env.env_in_loop
+    }
+    in env    *)
 
 (*
 and check_vdecl t str e env = 
