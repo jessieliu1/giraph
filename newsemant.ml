@@ -187,7 +187,8 @@ and convert_stmt stmt env = match stmt with
     | Continue              -> (check_continue env, env) 
     | Expr(e)               -> (check_expr_stmt e env, env) 
     | Vdecl(t, str, e)      -> (*(check_vdecl t str e env)*) SBlock([SExpr(SNoexpr, Void)]), env
-    | Return(e)             -> (*(check_return e, env)*) SBlock([SExpr(SNoexpr, Void)]), env (* REMEMBER TO SET RETURN TYPE when you're semantically checking everything
+    | Return(e)             -> (*(check_return e, env)*) SBlock([SExpr(SNoexpr, Void)]), env 
+    (* REMEMBER TO SET RETURN TYPE when you're semantically checking everything
                                     in the fdecl block *)
 
 
@@ -367,8 +368,32 @@ and check_expr_stmt e env =
 
 
 and convert_fdecl fname fformals env = 
-    let fdecl = StringMap.find fname env.env_fmap in
-    
+    let fdecl = StringMap.find fname env.env_fmap 
+    in
+
+    report_duplicate (fun n -> match n with 
+                t, str -> "duplicate fformal " ^ str) fformals;
+
+    let formals_to_map m formal = 
+      match formal with
+      (t, str) -> StringMap.add str t m
+    in
+    let formals = List.fold_left formals_to_map StringMap.empty fformals 
+    in 
+
+    let env = {
+        env_name = fname;
+        env_return_type = fdecl.f_typ;
+        env_fmap = env.env_fmap;
+        env_sfmap = env.env_sfmap;
+        env_globals = env.env_globals;
+        env_flocals = env.env_flocals;
+        env_fformals = formals;
+        env_in_loop = env.env_in_loop
+    }
+    in 
+
+    (* Semantically check all statements of the body *)
     let (sstmts, env) = convert_stmt (Block fdecl.f_body) env
     in 
 
@@ -380,16 +405,9 @@ and convert_fdecl fname fformals env =
     }
     in
 
-    let formals_to_map m formal = 
-      match formal with
-      (t, str) -> StringMap.add str t m
-    in
-    let formals = List.fold_left formals_to_map StringMap.empty fformals 
-    in 
-
-    let env = {
+    let new_env = { 
         env_name = fname;
-        env_return_type = env.env_return_type;
+        env_return_type = fdecl.f_typ;
         env_fmap = env.env_fmap;
         env_sfmap = StringMap.add fname sfdecl env.env_sfmap;
         env_globals = env.env_globals;
@@ -397,25 +415,10 @@ and convert_fdecl fname fformals env =
         env_fformals = formals;
         env_in_loop = env.env_in_loop
     }
-    in env
+
+  in new_env
 
 
-
-(*TODO: get rid of fformals?*)
-    (* in
-    let env = {
-        env_name = fname;
-        env_return_type = env.env_return_type;
-        env_fmap = env.env_fmap;
-        env_sfmap = StringMap.add fname sfdecl env.env_sfmap;
-        env_globals = env.env_globals;
-        env_flocals = env.env_flocals;
-        env_fformals = formals;
-        env_in_loop = env.env_in_loop
-    }
-    in env    *)
-
-(*
 and check_vdecl t str e env = 
     (*what do we need to do here:
     add things to the environment how do we affect the upper block? return the environment too? and then when 
@@ -428,6 +431,7 @@ and check_vdecl t str e env =
     let flocals = StringMap.add str t env.env_flocals in
     let new_env = 
     {
+      env_name = env.env_name;
       env_return_type = env.env_return_type;
       env_fmap = env.env_fmap;
       env_sfmap = env.env_sfmap;
@@ -438,20 +442,21 @@ and check_vdecl t str e env =
     }
     in (SVdecl(t, str, se), new_env)
 
+
 and check_return e env =
     let se, env = convert_expr e env in 
     let typ = get_sexpr_type se in
     if typ = env.env_return_type 
     then SReturn(se)
     else raise(Failure("expected return type " ^ string_of_typ env.env_return_type 
-      ^ " but got return type " ^ string_of_typ typ));
+      ^ " but got return type " ^ string_of_typ typ))
 
 
 let check_globals globals fmap = 
     List.iter (check_not_void (fun n -> "illegal void global " ^ n)) globals;
     report_duplicate (fun n -> "duplicate global " ^ n) (List.map snd globals)
 
-in
+(*
 let convert_ast globals functions fmap = 
     let _ = try StringMap.find "main" fmap with
         Not_found -> raise(Failure("missing main")) 
@@ -466,10 +471,11 @@ let convert_ast globals functions fmap =
         env_globals = StringMap.empty;
         env_flocals = StringMap.empty;
         env_fformals = StringMap.empty;
+        env_in_loop = false;
     }
     in
 
-    let sglobals = [] (*TODO check globals*)
+    let sglobals = StringMap.empty (*TODO check globals*)
     in 
     let globals_map = sglobals
     in
@@ -482,13 +488,14 @@ let convert_ast globals functions fmap =
         env_globals = globals_map;
         env_flocals = StringMap.empty;
         env_fformals = StringMap.empty;
+        env_in_loop = false;
     }
     in
     
-    report_duplicate (List.map (fun f -> f.fname) functions);
+    report_duplicate (fun f -> "duplicate function " ^ f.f_name) functions;
     
-    let env = convert_fdecls env in
-    let env = convert_fdecls "main" [] env in 
+    let env = convert_fdecl env in
+    let env = convert_fdecl "main" [] env in 
     let sfdecls = List.rev(List.fold_left (fun l (_, sfdec) -> sfdec :: l)
                   [] (StringMap.bindings env.env_sfmap))
     in (sglobals, sfdecls)
@@ -517,7 +524,7 @@ let build_fmap functions =
     List.fold_left (fun map fdecl -> check_fdecls map fdecl) 
     built_in_decls functions
 
-in
+
 let check globals functions = 
     let globs = check_globals in
     let fmap = build_fmap functions in
