@@ -193,19 +193,14 @@ and convert_stmt stmt env = match stmt with
 
 
 and check_block s_lst env = 
-    match s_lst with
-    (*let rec check_block_helper = function 
+    let rec check_block_helper = function 
       Return _ :: _ -> raise (Failure("nothing may follow a return"))
       | Block s_lst :: ss -> check_block_helper (s_lst @ ss)
-      | s :: ss -> convert_stmt stmt env ; check_block_helper ss
-      | [] -> SBlock([SExpr(SNoexpr, Void)])
-    in check_block_helper s_lst *)
-    (*let rec check_block_helper = function
-      Return _ :: _ -> raise (Failure("nothing may follow a return"))
-      | Block s_lst :: ss -> check_block_helper (s_lst @ ss)
-      | s :: ss -> ignore(convert_stmt s env); check_block_helper ss
+      | s :: ss -> ignore(convert_stmt s env) ; check_block_helper ss
       | [] -> ()
-    in check_block_helper s_lst;*)
+    in check_block_helper s_lst; 
+
+    match s_lst with 
     []      -> SBlock([SExpr(SNoexpr, Void)]) 
     | _     -> (*check every statement, and put those checked statements in a list*)
               let add_sstmt acc stmt = 
@@ -462,7 +457,7 @@ let convert_ast globals functions fmap =
         Not_found -> raise(Failure("missing main")) 
     in
 
-    (* lets get this started *)
+    (* let's get this started *)
     let env = {
         env_name = "main";
         env_return_type = Int;
