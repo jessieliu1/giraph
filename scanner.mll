@@ -45,7 +45,6 @@ rule token = parse
   | "wedigraph" { WEDIGRAPH }
   | "break" { BREAK }
   | "continue" { CONTINUE }
-  | "function" { FUNCTION }
   | "return" { RETURN }
   | "void" { VOID }
 
