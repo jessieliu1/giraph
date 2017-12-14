@@ -104,8 +104,25 @@ expr:
 | ID ASSIGN expr { Assign($1, $3) }
 | ID LPAREN actuals_opt RPAREN { Call($1, $3) }
 | LPAREN expr RPAREN { $2 }
-| LBRACK graph_expr RBRACK { match $2 with (n, e, n_i) ->
-                               Graph_Lit(List.rev n, List.rev e, List.rev n_i) }
+| LBRACK graph_expr_opt RBRACK { match $2 with (n, e, n_i) -> Graph_Lit(n, e, n_i) }
+
+graph_expr_opt:
+  /* nothing */ { [], [], [] }
+| graph_exprs_list { match $1 with (n, e, n_i) -> (List.rev n, List.rev e, List.rev n_i) }
+
+graph_exprs_list:
+  graph_expr { $1 }
+| graph_exprs_list SEMI graph_expr { match $1 with (n1, e1, n_i1) ->
+                                       match $3 with (n2, e2, n_i2) ->
+                                         (* essentially, take the union of node/edge/node_init lists. *)
+                                         let add_if_missing list elem = if (List.mem elem list) then
+                                                                          list
+                                                                        else
+                                                                          elem :: list
+                                         in (List.fold_left add_if_missing n1 (List.rev n2),
+                                             List.fold_left add_if_missing e1 (List.rev e2),
+                                             List.fold_left add_if_missing n_i1 (List.rev n_i2))
+                                   }
 
 graph_expr:
   ID { [$1], [], [] }
