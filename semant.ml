@@ -145,7 +145,7 @@ and check_assign str e env =
         (* if types match *)
         if lvaluet == rvaluet then SAssign(str, r, lvaluet) 
         else report_bad_assign lvaluet rvaluet
-    else report_undeclared_id str
+    else report_undeclared_id_assign str
 
 and check_call str e_lst env = 
     (* can't call main *)
@@ -212,21 +212,17 @@ and convert_stmt stmt env = match stmt with
 
 
 and check_block s_lst env = 
-    let rec check_block_helper = function 
-      Return _ :: _ :: _ -> raise (Failure("nothing may follow a return"))
-      | Block s_lst :: ss -> check_block_helper (s_lst @ ss)
-      | s :: ss -> ignore(convert_stmt s env) ; check_block_helper ss
-      | [] -> ()
-    in check_block_helper s_lst; 
-
     match s_lst with 
     []      -> SBlock([SExpr(SNoexpr, Void)]) 
     | _     -> (*check every statement, and put those checked statements in a list*)
-              let add_sstmt acc stmt = 
-                let sstmt, _ = convert_stmt stmt env in
-                sstmt::acc
+              let rec add_sstmt acc stmt_lst env = match stmt_lst with
+                [] -> acc
+                | Return _ :: _ :: _ -> raise (Failure("nothing may follow a return"))
+                | st :: st_lst -> 
+                      let sstmt, new_env = convert_stmt st env in 
+                      let new_acc = sstmt::acc in add_sstmt new_acc st_lst new_env
               in
-              let sblock = List.fold_left add_sstmt [] s_lst in
+              let sblock = add_sstmt [] s_lst env in
             SBlock(sblock)
 
 
@@ -431,41 +427,29 @@ and convert_fdecl fname fformals env =
   in new_env
     
 
-
-
 and check_vdecl t str e env = 
-    let (se, _) = convert_expr e env in
+    let flocals = StringMap.add str t env.env_flocals in
+    let new_env = 
+      {
+        env_name = env.env_name;
+        env_return_type = env.env_return_type;
+        env_fmap = env.env_fmap;
+        env_sfmap = env.env_sfmap;
+        env_globals = env.env_globals;
+        env_flocals = flocals;
+        env_fformals = env.env_fformals;
+        env_in_loop = env.env_in_loop;
+      }
+    in
+
+    let (se, _) = convert_expr e new_env in
     let typ = get_sexpr_type se in
-    if typ != Noexpr then
-      if t != typ then raise(Failure("expression type mismatch"))
+    if typ != Void then
+      if t != typ then raise(Failure("expression type mismatch " ^ string_of_typ t ^ " and " ^ string_of_typ typ))
       else
-      let flocals = StringMap.add str t env.env_flocals in
-      let new_env = 
-      {
-        env_name = env.env_name;
-        env_return_type = env.env_return_type;
-        env_fmap = env.env_fmap;
-        env_sfmap = env.env_sfmap;
-        env_globals = env.env_globals;
-        env_flocals = flocals;
-        env_fformals = env.env_fformals;
-        env_in_loop = env.env_in_loop;
-      }
-      in (SVdecl(t, str, se), new_env)
+      (SVdecl(t, str, se), new_env)
     else 
-      let flocals = StringMap.add str t env.env_flocals in
-      let new_env = 
-      {
-        env_name = env.env_name;
-        env_return_type = env.env_return_type;
-        env_fmap = env.env_fmap;
-        env_sfmap = env.env_sfmap;
-        env_globals = env.env_globals;
-        env_flocals = flocals;
-        env_fformals = env.env_fformals;
-        env_in_loop = env.env_in_loop;
-      }
-      in (SVdecl(t, str, se), new_env)
+      (SVdecl(t, str, se), new_env)
 
 
 and check_return e env =

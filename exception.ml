@@ -9,8 +9,8 @@ let report_duplicate exceptf lst =
         | [] -> ()
     in helper (List.sort compare lst)
 
-and report_undeclared_id str = 
-    raise (Failure ("undeclared identifier " ^ str))
+and report_undeclared_id_assign str = 
+    raise (Failure ("assign to undeclared identifier " ^ str))
 
 (* prob will want to change these to actual exceptions *)
 and report_bad_binop t1 op t2 = 
