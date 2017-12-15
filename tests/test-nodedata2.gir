@@ -1,0 +1,5 @@
+int main() {
+	graph g = [n:4];
+	print(n.data());
+	return 0;
+}
