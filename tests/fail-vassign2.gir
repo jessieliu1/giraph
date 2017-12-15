@@ -1,0 +1,3 @@
+int main() {
+    a = 7;     /* Fail: uninitialized id a */
+}

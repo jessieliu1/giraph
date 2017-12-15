@@ -53,7 +53,7 @@ typ:
   | BOOL { Bool }
   | VOID { Void }
   | STRING { String }
-  | NODE { Node }
+  | NODE { NodeTyp }
   | GRAPH { Graph }
 
 formals_opt: /* nothing */  { [] }
