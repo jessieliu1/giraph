@@ -1,5 +1,5 @@
 type binop = Add | Sub | Mult | Div | Mod | Eq | Neq | 
-          Less | Leq | Greater | Geq | And | Or
+             Less | Leq | Greater | Geq | And | Or
 
 type unop = Neg | Not
 
@@ -19,9 +19,9 @@ type expr =
   | Int_Lit of int
   | Float_Lit of float
   | String_Lit of string
+  | Graph_Lit of string list * edge list * (string * expr) list
   | Node of string
   | Edge of edge 
-  | Graph of string list * edge list
   | Noexpr
 
 type stmt =
@@ -33,7 +33,7 @@ type stmt =
   | For_Edge of string * expr * stmt
   | Bfs of string * expr * expr * stmt
   | Dfs of string * expr * expr * stmt
-  | Break 
+  | Break
   | Continue
   | Expr of expr
   | Vdecl of typ * string * expr
@@ -97,16 +97,18 @@ let rec string_of_expr = function
   | Assign(v, e) -> v ^ " = " ^ string_of_expr e
   | Call(f, el) ->
       f ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
-  | Graph(node_l, edge_l) ->
+  | Graph_Lit(node_l, edge_l, node_init_l) ->
     "[" ^ String.concat ", " node_l ^ "] " ^
-    "[" ^ String.concat ", " (List.map (fun(a,b) -> "(" ^ a ^ "," ^ b ^ ")") edge_l) ^ "]"
+    "[" ^ String.concat ", " (List.map (fun(a,b) -> "(" ^ a ^ "," ^ b ^ ")") edge_l) ^ "] " ^
+    "[" ^ String.concat ", " (List.map (fun(n,e) -> "(" ^ n ^ "," ^ string_of_expr e ^ ")") node_init_l) ^ "]"
   | Noexpr -> ""
 
 let rec string_of_stmt = function
     Block(stmts) ->
       "{\n" ^ String.concat "" (List.map string_of_stmt stmts) ^ "}\n"
   | Expr(expr) -> string_of_expr expr ^ ";\n";
-  | Vdecl(t, id, x) -> string_of_typ t ^ " " ^ id ^ ";\n"
+  | Vdecl(t, id, Noexpr) -> string_of_typ t ^ " " ^ id ^ ";\n"
+  | Vdecl(t, id, e) -> string_of_typ t ^ " " ^ string_of_expr e ^  ";\n"
   | Return(expr) -> "return " ^ string_of_expr expr ^ ";\n";
   | If(e, s, Block([])) -> "if (" ^ string_of_expr e ^ ")\n" ^ string_of_stmt s
   | If(e, s1, s2) ->  "if (" ^ string_of_expr e ^ ")\n" ^
