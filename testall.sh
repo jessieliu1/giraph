@@ -92,7 +92,7 @@ Check() {
     generatedfiles="$generatedfiles ${basename}.ll ${basename}.s ${basename}.exe ${basename}.out" &&
     Run "$GIRAPH" "$1" ">" "${basename}.ll" &&
     Run "$LLC" "${basename}.ll" ">" "${basename}.s" &&
-    Run "$CC" "-o" "${basename}.exe" "${basename}.s" &&
+    Run "$CC" "-o" "${basename}.exe" "${basename}.s" "graph.o" &&
     Run "./${basename}.exe" > "${basename}.out" &&
     Compare ${basename}.out ${reffile}.out ${basename}.diff
 
@@ -162,6 +162,13 @@ LLIFail() {
 }
 
 which "$LLI" >> $globallog || LLIFail
+
+if [ ! -f graph.o ]
+then
+    echo "Could not find graph.o"
+    echo "Try \"make graph.o\""
+    exit 1
+fi
 
 if [ $# -ge 1 ]
 then
