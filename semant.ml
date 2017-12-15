@@ -213,7 +213,7 @@ and convert_stmt stmt env = match stmt with
 
 and check_block s_lst env = 
     let rec check_block_helper = function 
-      Return _ :: _ -> raise (Failure("nothing may follow a return"))
+      Return _ :: _ :: _ -> raise (Failure("nothing may follow a return"))
       | Block s_lst :: ss -> check_block_helper (s_lst @ ss)
       | s :: ss -> ignore(convert_stmt s env) ; check_block_helper ss
       | [] -> ()
@@ -436,21 +436,36 @@ and convert_fdecl fname fformals env =
 and check_vdecl t str e env = 
     let (se, _) = convert_expr e env in
     let typ = get_sexpr_type se in
-    if t != typ then raise(Failure("expression type mismatch"))
-    else
-    let flocals = StringMap.add str t env.env_flocals in
-    let new_env = 
-    {
-      env_name = env.env_name;
-      env_return_type = env.env_return_type;
-      env_fmap = env.env_fmap;
-      env_sfmap = env.env_sfmap;
-      env_globals = env.env_globals;
-      env_flocals = flocals;
-      env_fformals = env.env_fformals;
-      env_in_loop = env.env_in_loop;
-    }
-    in (SVdecl(t, str, se), new_env)
+    if typ != Noexpr then
+      if t != typ then raise(Failure("expression type mismatch"))
+      else
+      let flocals = StringMap.add str t env.env_flocals in
+      let new_env = 
+      {
+        env_name = env.env_name;
+        env_return_type = env.env_return_type;
+        env_fmap = env.env_fmap;
+        env_sfmap = env.env_sfmap;
+        env_globals = env.env_globals;
+        env_flocals = flocals;
+        env_fformals = env.env_fformals;
+        env_in_loop = env.env_in_loop;
+      }
+      in (SVdecl(t, str, se), new_env)
+    else 
+      let flocals = StringMap.add str t env.env_flocals in
+      let new_env = 
+      {
+        env_name = env.env_name;
+        env_return_type = env.env_return_type;
+        env_fmap = env.env_fmap;
+        env_sfmap = env.env_sfmap;
+        env_globals = env.env_globals;
+        env_flocals = flocals;
+        env_fformals = env.env_fformals;
+        env_in_loop = env.env_in_loop;
+      }
+      in (SVdecl(t, str, se), new_env)
 
 
 and check_return e env =
