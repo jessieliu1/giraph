@@ -1,0 +1,14 @@
+int main() {
+	int i = 0;
+	if (i != 2) {
+		int j = 5;
+		i = i + 1;
+		print(j);
+
+		if (j != 0) {
+			int k = 3;
+			print(k);
+		}
+	}
+	return 0;
+}
