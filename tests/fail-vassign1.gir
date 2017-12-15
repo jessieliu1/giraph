@@ -1,4 +1,0 @@
-int main() {
-    i = 7;     /* Fail: uninitialized variable i */
-    int i;  
-}

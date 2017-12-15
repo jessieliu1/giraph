@@ -3,7 +3,7 @@ type binop = Add | Sub | Mult | Div | Mod | Eq | Neq |
 
 type unop = Neg | Not
 
-type typ = Int | Float | Bool | Void | String | NodeTyp | Graph | EdgeTyp
+type typ = Int | Float | Bool | Void | String | Node | Graph | Edge
 
 type bind = typ * string
 
@@ -20,8 +20,6 @@ type expr =
   | Float_Lit of float
   | String_Lit of string
   | Graph_Lit of string list * edge list * (string * expr) list
-  | Node of string
-  | Edge of edge 
   | Noexpr
 
 type stmt =
@@ -41,7 +39,7 @@ type stmt =
 
 
 type fdecl = {
-  f_typ : typ; (* return type *)
+  f_typ : typ;
   f_name : string;
   f_formals : bind list;
   f_body : stmt list;
@@ -78,9 +76,9 @@ let string_of_typ = function
   | Float -> "float"
   | Bool -> "bool"
   | String -> "str"
-  | NodeTyp -> "node"
+  | Node -> "node"
   | Graph -> "graph"
-  | EdgeTyp -> "edge"
+  | Edge -> "edge"
   | Void -> "void"
 
 

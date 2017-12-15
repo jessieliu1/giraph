@@ -21,9 +21,9 @@ let translate (globals, functions) =
     | A.Bool -> i1_t
     | A.Float -> float_t
     | A.String -> str_t
-    | A.NodeTyp -> i32_t
-    | A.Graph -> i32_t
-    | A.EdgeTyp -> i32_t
+    | A.Node -> i32_t
+    | A.Graph -> void_ptr_t
+    | A.Edge -> i32_t
     | A.Void -> void_t in
   (* TODO: actually add all types *)
 
