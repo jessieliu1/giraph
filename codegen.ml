@@ -179,6 +179,8 @@ let translate (globals, functions) =
         let result = (match fdecl.A.f_typ with A.Void -> ""
                                              | _ -> f ^ "_result") in
         L.build_call fdef (Array.of_list actuals) result builder
+      | A.Method (node, "data", []) -> L.build_load (lookup node) node builder (* TODO: clean these up with sast types *)
+      | A.Method (node, "set_data", [data]) -> L.build_store (expr builder data) (lookup node) builder
     in
 
     (* Invoke "f builder" if the current block doesn't already

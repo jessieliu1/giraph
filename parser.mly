@@ -1,12 +1,12 @@
 %{ open Ast %}
 
 
-%token LPAREN RPAREN LBRACK RBRACK LBRACE RBRACE COMMA SEMI
+%token LPAREN RPAREN LBRACK RBRACK LBRACE RBRACE DOT COMMA SEMI COLON
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT MOD
 %token EQ NEQ LT LEQ GT GEQ AND OR
 %token RETURN IF THEN ELSE FOR WHILE FOR_NODE FOR_EDGE BFS DFS BREAK CONTINUE
 %token INT BOOL VOID FLOAT STRING NODE EDGE GRAPH WEGRAPH DIGRAPH WEDIGRAPH
-%token COLON RARROW LARROW DIARROW 
+%token RARROW LARROW DIARROW
 %token SINGLEQUOTE DOUBLEQUOTE
 %token <int> INT_LIT
 %token <float> FLOAT_LIT
@@ -103,6 +103,7 @@ expr:
 | NOT expr              { Unop(Not, $2) }
 | ID ASSIGN expr { Assign($1, $3) }
 | ID LPAREN actuals_opt RPAREN { Call($1, $3) }
+| ID DOT ID LPAREN actuals_opt RPAREN { Method($1, $3, $5) }
 | LPAREN expr RPAREN { $2 }
 | LBRACK graph_expr_opt RBRACK { match $2 with (n, e, n_i) -> Graph_Lit(n, e, n_i) }
 

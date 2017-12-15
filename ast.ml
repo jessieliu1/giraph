@@ -15,6 +15,7 @@ type expr =
   | Unop of unop * expr
   | Assign of string * expr
   | Call of string * expr list
+  | Method of string * string * expr list
   | Bool_Lit of bool
   | Int_Lit of int
   | Float_Lit of float
@@ -94,7 +95,8 @@ let rec string_of_expr = function
   | Unop(o, e) -> string_of_uop o ^ string_of_expr e
   | Assign(v, e) -> v ^ " = " ^ string_of_expr e
   | Call(f, el) ->
-      f ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
+    f ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
+  | Method(id, m, el) -> id ^ "." ^ m ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
   | Graph_Lit(node_l, edge_l, node_init_l) ->
     "[" ^ String.concat ", " node_l ^ "] " ^
     "[" ^ String.concat ", " (List.map (fun(a,b) -> "(" ^ a ^ "," ^ b ^ ")") edge_l) ^ "] " ^

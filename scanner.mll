@@ -11,7 +11,9 @@ rule token = parse
     [ ' ' '\t' '\r' '\n'] { token lexbuf } (* to ignore whitespace *)
   | "!~" { comment lexbuf }
   | ',' { COMMA }
+  | '.' { DOT }
   | ';' { SEMI }
+  | ':' { COLON }
   | '\'' { SINGLEQUOTE }
   | '\"' { DOUBLEQUOTE }
 
@@ -73,7 +75,6 @@ rule token = parse
   | "<-" { LARROW }
   | "<->" { DIARROW }
   | "--" { EDGE }
-  | ':' { COLON }
 
   (* literals and IDs *)
   | digit+ as lxm                               { INT_LIT(int_of_string lxm) }
