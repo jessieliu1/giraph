@@ -35,7 +35,7 @@ let rec convert_expr e env = match e with
   (* todo below *)
   | Node(n)                       -> (SNode(n, NodeTyp), env)
   | Edge(ed)                      -> (SEdge(ed, EdgeTyp), env) 
-  | Graph_Lit(str_lst, ed_lst, node_init_l )        -> (SGraph_Lit(str_lst, ed_lst, node_init_l, Graph), env)
+  | Graph(str_lst, ed_lst)        -> (SGraph(str_lst, ed_lst, Graph), env)
   | Noexpr                        -> (SNoexpr, env)
 
 
@@ -57,7 +57,7 @@ and get_sexpr_type sexpr = match sexpr with
   | SString_Lit(_)             -> String
   | SNode(_, typ)              -> typ
   | SEdge(_, typ)              -> typ 
-  | SGraph_Lit(_, _,_, typ)          -> typ
+  | SGraph(_, _, typ)          -> typ
   | SNoexpr                    -> Void
 
 
