@@ -67,6 +67,7 @@ rule token = parse
      | '|' { UNION } *)
   | '!' { NOT }
   | "==" { EQ }
+  | "!=" { NEQ }
   | ">=" { GEQ }
   | "<=" { LEQ }
   | '>' { GT }
