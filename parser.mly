@@ -129,121 +129,31 @@ graph_exprs_list:
                                              List.fold_left add_if_missing n_i1 (List.rev n_i2))
                                    }
 graph_expr:
-ugraph_expr EDGE ID { update_graph $1 $3 }
-| ugraph_expr EDGE ID COLON expr { update_graph_e $1 $3 $5 }
+ugraph_expr EDGE ID { update_graph $1 $3 (*update_graph takes graph, node, 0 for right, 1 for left as params *) }
+| ugraph_expr EDGE ID COLON expr { update_graph_e $1 $3 $5 (*update_graph_e takes expr additionally*) } 
 | digraph_expr RARROW ID { update_digraph $1 $3 0 }
 | digraph_expr RARROW ID COLON expr { update_digraph_e $1 $3 $5 0 }
-| digraph_expr LARROW ID { update_digraph $1 $3 0 }
-| digraph_expr LARROW ID COLON expr { update_digraph_e $1 $3 $5 0 }
+| digraph_expr LARROW ID { update_digraph $1 $3 1 }
+| digraph_expr LARROW ID COLON expr { update_digraph_e $1 $3 $5 1 }
 
 ugraph_expr:
   ID { [$1], [], [] }
 | ID COLON expr { [$1], [], [($1, $3)] }
-| ugraph_expr EDGE ID { match $1 with
-                         (nodes, edges, nodes_init) ->
-                         let nodes = if (List.mem $3 nodes) then (* if next node is already in this graph, *)
-                                       ($3 :: List.filter (fun n -> n <> $3) nodes) (* move to front of nodelist so edges work *)
-                                     else
-                                       $3 :: nodes (* otherwise just add to front *)
-                         and edges = let new_edge = ((List.hd nodes), $3) and
-                                         new_edge_rev = ($3, (List.hd nodes)) in
-                                     (* only add this edge if it's not already there *)
-                                     if (List.mem new_edge edges || List.mem new_edge_rev edges) then
-                                       edges
-                                     else
-                                       new_edge :: edges
-                         in (nodes, edges, nodes_init)
-                     }
-| ugraph_expr EDGE ID COLON expr { match $1 with
-                                    (nodes, edges, nodes_init) -> (* handle nodes and edges w/ same logic as above *)
-                                    let nodes = if (List.mem $3 nodes) then
-                                                  ($3 :: List.filter (fun n -> n <> $3) nodes)
-                                                else
-                                                  $3 :: nodes
-                                    and edges = let new_edge = ((List.hd nodes), $3) and
-                                                    new_edge_rev = ($3, (List.hd nodes)) in
-                                                if (List.mem new_edge edges || List.mem new_edge_rev edges) then
-                                                  edges
-                                                else
-                                                  new_edge :: edges
-                                    and nodes_init = ($3, $5) :: nodes_init (* add node name/data pair to nodes_init *)
-                                    in (nodes, edges, nodes_init)
-                                }
+| ugraph_expr EDGE ID { update_graph $1 $3 }
+| ugraph_expr EDGE ID COLON expr { update_graph_e $1 $3 $5}
 
 
 digraph_expr:
   ID { [$1], [], [] }
 | ID COLON expr { [$1], [], [($1, $3)] }
-| digraph_expr RARROW ID { match $1 with
-                         (nodes, edges, nodes_init) ->
-                         let nodes = if (List.mem $3 nodes) then (* if next node is already in this graph, *)
-                                       ($3 :: List.filter (fun n -> n <> $3) nodes) (* move to front of nodelist so edges work *)
-                                     else
-                                       $3 :: nodes (* otherwise just add to front *)
-                         and edges = let new_edge = ((List.hd nodes), $3) in
-                                     (* only add this edge if it's not already there *)
-                                     if (List.mem new_edge edges) then
-                                       edges
-                                     else
-                                       new_edge :: edges
-                         in (nodes, edges, nodes_init)
-                     }
-| digraph_expr LARROW ID { match $1 with
-                         (nodes, edges, nodes_init) ->
-                         let nodes = if (List.mem $3 nodes) then (* if next node is already in this graph, *)
-                                       ($3 :: List.filter (fun n -> n <> $3) nodes) (* move to front of nodelist so edges work *)
-                                     else
-                                       $3 :: nodes (* otherwise just add to front *)
-                         and edges = let new_edge = ($3, (List.hd nodes)) in
-                                     (* only add this edge if it's not already there *)
-                                     if (List.mem new_edge edges) then
-                                       edges
-                                     else
-                                       new_edge :: edges
-                         in (nodes, edges, nodes_init)
-                      }
-| digraph_expr DIARROW ID { match $1 with
-                         (nodes, edges, nodes_init) ->
-                         let nodes = if (List.mem $3 nodes) then (* if next node is already in this graph, *)
-                                       ($3 :: List.filter (fun n -> n <> $3) nodes) (* move to front of nodelist so edges work *)
-                                     else
-                                       $3 :: nodes (* otherwise just add to front *)
-                         and edges = let new_edge = ((List.hd nodes), $3) and
-                                        new_edge_rev = ($3, (List.hd nodes)) in
-                                     (* only add this edge if it's not already there *)
-                                     if (List.mem new_edge edges && List.mem new_edge_rev edges) then
-                                       edges
-                                     else if (List.mem new_edge edges) then
-                                        new_edge_rev :: edges
-                                     else if (List.mem new_edge_rev edges) then
-                                        new_edge :: edges 
-                                     else
-                                       new_edge :: new_edge_rev :: edges
-                         in (nodes, edges, nodes_init)
-                     }
-| digraph_expr RARROW ID COLON expr { print_string("hi"); match $1 with (nodes, edges, nodes_init) -> (nodes, edges, nodes_init) }
+| digraph_expr RARROW ID { update_digraph $1 $3 0 }
+| digraph_expr LARROW ID { update_digraph $1 $3 1 }
+| digraph_expr DIARROW ID { update_digraph_b $1 $3 }
+| digraph_expr RARROW ID COLON expr { update_digraph_e $1 $3 $5 0 }
+| digraph_expr LARROW ID COLON expr { update_digraph_e $1 $3 $5 1 }
+| digraph_expr DIARROW ID COLON expr { update_digraph_be $1 $3 $5 }
 
 
-/* 
-                                    let nodes_init = ($3, $5) :: nodes_init (* add node name/data pair to nodes_init *)
-                                    in (nodes, edges, nodes_init)*/
-/*
-| digraph_expr DIARROW ID COLON expr { match $1 with
-                                    (nodes, edges, nodes_init) -> (* handle nodes and edges w/ same logic as above *)
-                                    let nodes = if (List.mem $3 nodes) then
-                                                  ($3 :: List.filter (fun n -> n <> $3) nodes)
-                                                else
-                                                  $3 :: nodes
-                                    and edges = let new_edge = ((List.hd nodes), $3) and
-                                                    new_edge_rev = ($3, (List.hd nodes)) in
-                                                if (List.mem new_edge edges || List.mem new_edge_rev edges) then
-                                                  edges
-                                                else
-                                                  new_edge :: edges
-                                    and nodes_init = ($3, $5) :: nodes_init (* add node name/data pair to nodes_init *)
-                                    in (nodes, edges, nodes_init)
-                      }
-*/
 expr_opt: 
 /* nothing */ { Noexpr }
 | expr { $1 }
