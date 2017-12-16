@@ -13,8 +13,8 @@ type sexpr =
   | SInt_Lit of int
   | SFloat_Lit of float
   | SString_Lit of string
-  (* TODO: graph things *)
-  | SGraph_Lit of string list * edge list * (string * sexpr) list * typ * typ
+              (*First typ is graph, second is the typ of node data*)
+  | SGraph_Lit of string list * edge list * (string * sexpr) list * typ * typ 
   | SNoexpr
 
 type svdecl = {

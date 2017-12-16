@@ -56,7 +56,7 @@ and get_sexpr_type sexpr = match sexpr with
   | SInt_Lit(_)                -> Int
   | SFloat_Lit(_)              -> Float
   | SString_Lit(_)             -> String
-  | SGraph_Lit(_,_,_,t,typ)    -> typ
+  | SGraph_Lit(_,_,_,t,typ)    -> t
   | SNoexpr                    -> Void
 
 
