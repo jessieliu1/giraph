@@ -41,4 +41,5 @@ and report_typ_args ot nt =
     raise (Failure ("expected " ^ string_of_typ ot ^ " when " 
         ^ string_of_typ nt ^ " type was provided"))
 
-
+and report_meth_not_found s1 s2 =
+    raise (Failure ("method " ^ s2 ^ " of type " ^ s1 ^ " not found"))

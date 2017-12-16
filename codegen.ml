@@ -21,9 +21,9 @@ let translate (globals, functions) =
     | A.Bool -> i1_t
     | A.Float -> float_t
     | A.String -> str_t
-    | A.NodeTyp -> i32_t
-    | A.Graph -> i32_t
-    | A.EdgeTyp -> i32_t
+    | A.Node -> i32_t
+    | A.Graph -> void_ptr_t
+    | A.Edge -> i32_t
     | A.Void -> void_t in
   (* TODO: actually add all types *)
 
@@ -48,10 +48,18 @@ let translate (globals, functions) =
   let add_edge_t = L.function_type void_t [| void_ptr_t ; void_ptr_t |] in
   let add_edge_func = L.declare_function "add_edge" add_edge_t the_module in
 
-  (* TODO: remove this when iterating works *)
-  let print_graph_t = L.function_type void_t [| void_ptr_t |] in
-  let print_graph_func = L.declare_function "print_data" print_graph_t the_module in
+  (* Declare functions that will be called to iterate through graphs*)
+  let num_vertices_t = L.function_type i32_t [| void_ptr_t |] in
+  let num_vertices_func = L.declare_function "num_vertices" num_vertices_t the_module in
 
+  let get_head_vertex_t = L.function_type void_ptr_t [| void_ptr_t |] in
+  let get_head_vertex_func = L.declare_function "get_head_vertex" get_head_vertex_t the_module in
+
+  let get_next_vertex_t = L.function_type void_ptr_t [| void_ptr_t |] in
+  let get_next_vertex_func = L.declare_function "get_next_vertex" get_next_vertex_t the_module in
+
+  let get_data_from_vertex_t = L.function_type i32_ptr_t [| void_ptr_t |] in
+  let get_data_from_vertex_func = L.declare_function "get_data_from_vertex" get_data_from_vertex_t the_module in
 
   let function_decls =
     let function_decl m fdecl =
@@ -70,17 +78,25 @@ let translate (globals, functions) =
     let int_format_str = L.build_global_stringptr "%d\n" "fmt" builder and
       string_format_str = L.build_global_stringptr "%s\n" "fmt" builder in
 
-    (* Construct the function's "locals": formal arguments and locally
-       declared variables.  Allocate each on the stack, initialize their
-       value, if appropriate, and remember their values in the "locals" map *)
-    let local_vars =
+    (* Allocate formal arguments on the stack, initialize their value, and
+       remember their values in a map also containing all global vars. *)
+    let globals_and_formals =
       let add_formal m (t, n) p = L.set_value_name n p;
         let local = L.build_alloca (ltype_of_typ t) n builder in
         ignore (L.build_store p local builder);
-        StringMap.add n local m in
+        StringMap.add n local m
+      in
+      List.fold_left2 add_formal global_vars fdecl.A.f_formals
+        (Array.to_list (L.params the_function))
+    in
 
+    (* Construct the locally declared variables for a block. Allocate each on the
+       stack, initialize their value, if appropriate, and remember their values in
+       the map m, passed as an argument. This is called every time A.Block is processed,
+       allowing every bracketed block to have its own scope. *)
+    let add_local_vars m builder sl =
       (* When initializing graphs with graph literals, nodes do not have to be
-         declared; e.g. "graph g = A -- B" implicitly declares nodes A and B (unless
+         declared; e.g. "graph g = [A -- B]" implicitly declares nodes A and B (unless
          they have been already declared explicitly or in a previous graph). Thus,
          whenever we encounter a graph literal, we have to construct all the new nodes
          it uses as local variables. The following function handles this. *)
@@ -100,36 +116,34 @@ let translate (globals, functions) =
                     TODO: figure out if graph literals could appear anywhere else *)
       in
 
-      (* find all local variables declared in function body; ignore other statements *)
+      (* find all local variables declared in block; ignore other statements *)
       let add_local m stmt = match stmt with
           A.Vdecl(t, n, e) ->
-          let m = add_local_nodes m e in (* if e is a graph literal, adds new nodes to m; else m unchanged *)
+          let m = add_local_nodes m e in (* if e is a graph literal, adds new nodes to m;
+                                            else m unchanged *)
           let local_var = L.build_alloca (ltype_of_typ t) n builder in
           StringMap.add n local_var m
         | A.Expr(e) -> add_local_nodes m e
         | _ -> m
       in
-
-      let formals = List.fold_left2 add_formal StringMap.empty fdecl.A.f_formals
-          (Array.to_list (L.params the_function)) in
-      List.fold_left add_local formals fdecl.A.f_body in
-
-    (* Return the value for a variable or formal argument *)
-    let lookup n = try StringMap.find n local_vars
-      with Not_found -> StringMap.find n global_vars
+      List.fold_left add_local m sl (* return value of add_local_vars *)
     in
 
+    (* Given a symbol table "vars", return the value for a variable
+       or formal argument in the table *)
+    let lookup vars n = StringMap.find n vars in
+
     (* Construct code for an expression; return its value *)
-    let rec expr builder = function
+    let rec expr vars builder = function
         A.Int_Lit i -> L.const_int i32_t i
       | A.Bool_Lit b -> L.const_int i1_t (if b then 1 else 0)
       | A.Noexpr -> L.const_int i32_t 0
-      | A.Id s -> L.build_load (lookup s) s builder
+      | A.Id s -> L.build_load (lookup vars s) s builder
       | A.String_Lit s -> L.build_global_stringptr s "str" builder
       | A.Float_Lit f -> L.const_float float_t f
       | A.Binop (e1, op, e2) ->
-        let e1' = expr builder e1
-        and e2' = expr builder e2 in
+        let e1' = expr vars builder e1
+        and e2' = expr vars builder e2 in
         (match op with
            A.Add     -> L.build_add
          | A.Sub     -> L.build_sub
@@ -145,40 +159,40 @@ let translate (globals, functions) =
          | A.Greater -> L.build_icmp L.Icmp.Sgt
          | A.Geq     -> L.build_icmp L.Icmp.Sge) e1' e2' "tmp" builder
       | A.Unop(op, e) ->
-        let e' = expr builder e in
+        let e' = expr vars builder e in
         (match op with
            A.Neg     -> L.build_neg
          | A.Not     -> L.build_not) e' "tmp" builder
-      | A.Assign(id, e) -> let e' = expr builder e in
-        ignore (L.build_store e' (lookup id) builder); e'
+      | A.Assign(id, e) -> let e' = expr vars builder e in
+        ignore (L.build_store e' (lookup vars id) builder); e'
       | A.Graph_Lit (nodes, edges, nodes_init) ->
         (* create new graph struct, return pointer *)
         let g = L.build_call new_graph_func [||] "tmp" builder in
         (* map node names to vertex_list_node pointers created by calling add_vertex *)
-        let call_add_vertex node = L.build_call add_vertex_func [| g ; (lookup node) |] ("tmp_" ^ node) builder in
+        let call_add_vertex node = L.build_call add_vertex_func [| g ; (lookup vars node) |] ("tmp_" ^ node) builder in
         let nodes_map = List.fold_left (fun map node -> StringMap.add node (call_add_vertex node) map) StringMap.empty nodes in
         (* add edges in both directions *)
         ignore(List.map (fun (n1, n2) -> L.build_call add_edge_func [| (StringMap.find n1 nodes_map) ; (StringMap.find n2 nodes_map) |] "" builder) edges);
         ignore(List.map (fun (n1, n2) -> L.build_call add_edge_func [| (StringMap.find n2 nodes_map) ; (StringMap.find n1 nodes_map) |] "" builder) edges);
         (* initialize nodes with data *)
         (* TODO: when iterating works, see if data persists when node names go out of scope (but graph persists) *)
-        ignore(List.map (fun (node, data) -> (L.build_store (expr builder data) (lookup node) builder)) nodes_init);
-        (* print the graph for debugging - TODO: remove when iterating works *)
-        ignore(L.build_call print_graph_func [| g |] "" builder);
+        ignore(List.map (fun (node, data) -> (L.build_store (expr vars builder data) (lookup vars node) builder)) nodes_init);
         (* return pointer to graph struct *)
         g
       | A.Call ("print", [e]) | A.Call ("printb", [e]) ->
-        L.build_call printf_func [| int_format_str ; (expr builder e) |]
+        L.build_call printf_func [| int_format_str ; (expr vars builder e) |]
           "printf" builder
       | A.Call ("prints", [e]) ->
-        L.build_call printf_func [| string_format_str ; (expr builder e) |] 
+        L.build_call printf_func [| string_format_str ; (expr vars builder e) |]
           "prints" builder
       | A.Call (f, act) ->
         let (fdef, fdecl) = StringMap.find f function_decls in
-        let actuals = List.rev (List.map (expr builder) (List.rev act)) in
+        let actuals = List.rev (List.map (expr vars builder) (List.rev act)) in
         let result = (match fdecl.A.f_typ with A.Void -> ""
                                              | _ -> f ^ "_result") in
         L.build_call fdef (Array.of_list actuals) result builder
+      | A.Method (node, "data", []) -> L.build_load (lookup vars node) node builder (* TODO: clean these up with sast types *)
+      | A.Method (node, "set_data", [data]) -> L.build_store (expr vars builder data) (lookup vars node) builder
     in
 
     (* Invoke "f builder" if the current block doesn't already
@@ -190,23 +204,24 @@ let translate (globals, functions) =
 
     (* Build the code for the given statement; return the builder for
        the statement's successor *)
-    let rec stmt builder = function
-        A.Block sl -> List.fold_left stmt builder sl
-      | A.Expr e -> ignore (expr builder e); builder
-      | A.Vdecl(t, n, e) -> ignore (expr builder e); builder
+    let rec stmt vars builder = function
+        A.Block sl -> let vars = add_local_vars vars builder sl in
+        List.fold_left (stmt vars) builder sl
+      | A.Expr e -> ignore (expr vars builder e); builder
+      | A.Vdecl(t, n, e) -> ignore (expr vars builder e); builder
       | A.Return e -> ignore (match fdecl.A.f_typ with
             A.Void -> L.build_ret_void builder
-          | _ -> L.build_ret (expr builder e) builder); builder
+          | _ -> L.build_ret (expr vars builder e) builder); builder
       | A.If (predicate, then_stmt, else_stmt) ->
-        let bool_val = expr builder predicate in
+        let bool_val = expr vars builder predicate in
         let merge_bb = L.append_block context "merge" the_function in
 
         let then_bb = L.append_block context "then" the_function in
-        add_terminal (stmt (L.builder_at_end context then_bb) then_stmt)
+        add_terminal (stmt vars (L.builder_at_end context then_bb) then_stmt)
           (L.build_br merge_bb);
 
         let else_bb = L.append_block context "else" the_function in
-        add_terminal (stmt (L.builder_at_end context else_bb) else_stmt)
+        add_terminal (stmt vars (L.builder_at_end context else_bb) else_stmt)
           (L.build_br merge_bb);
 
         ignore (L.build_cond_br bool_val then_bb else_bb builder);
@@ -217,11 +232,11 @@ let translate (globals, functions) =
         ignore (L.build_br pred_bb builder);
 
         let body_bb = L.append_block context "while_body" the_function in
-        add_terminal (stmt (L.builder_at_end context body_bb) body)
+        add_terminal (stmt vars (L.builder_at_end context body_bb) body)
           (L.build_br pred_bb);
 
         let pred_builder = L.builder_at_end context pred_bb in
-        let bool_val = expr pred_builder predicate in
+        let bool_val = expr vars pred_builder predicate in
 
         let merge_bb = L.append_block context "merge" the_function in
         ignore (L.build_cond_br bool_val body_bb merge_bb pred_builder);
@@ -229,15 +244,59 @@ let translate (globals, functions) =
       | A.Break -> builder (*not implemented *)
       | A.Continue -> builder (*not implemented *)
       | A.For (e1, e2, e3, body) ->
-        stmt builder( A.Block [A.Expr e1 ; A.While (e2, A.Block [body ; A.Expr e3]) ] )
-      | A.For_Node (v1, v2, v3) -> builder (*not implemented*)
+        stmt vars builder( A.Block [A.Expr e1 ; A.While (e2, A.Block [body ; A.Expr e3]) ] )
+      | A.For_Node (n, g, body) ->
+        let graph_ptr = (expr vars builder g) in
+
+        (* allocate counter variable - counts number of nodes seen so far *)
+        let counter = L.build_alloca i32_t "counter" builder in
+        ignore(L.build_store (L.const_int i32_t 0) counter builder);
+        (* get number of nodes in graph *)
+        let size = L.build_call num_vertices_func [| graph_ptr |] "size" builder in
+
+        (* allocate pointer to current vertex struct *)
+        let current_vertex_ptr = L.build_alloca void_ptr_t "current" builder in
+        (* get head of vertex list *)
+        let head_vertex = L.build_call get_head_vertex_func [| graph_ptr |] "head" builder in
+        ignore(L.build_store head_vertex current_vertex_ptr builder);
+
+        let pred_bb = L.append_block context "while" the_function in
+        ignore (L.build_br pred_bb builder);
+
+        let body_bb = L.append_block context "while_body" the_function in
+        let body_builder = L.builder_at_end context body_bb in
+        (* load value of current vertex *)
+        let current_vertex = L.build_load current_vertex_ptr "current_tmp" body_builder in
+        (* get node data pointer from current vertex struct *)
+        let node_var = L.build_call get_data_from_vertex_func [| current_vertex |] n body_builder in
+        (* add the node data pointer to symbol table, so the body can access it *)
+        let vars = StringMap.add n node_var vars in
+        (* change current_vertex to be pointer to next_vertex *)
+        let next_vertex = L.build_call get_next_vertex_func [| current_vertex |] "next" body_builder in
+        ignore(L.build_store next_vertex current_vertex_ptr body_builder);
+        (* increment counter *)
+        let counter_val = L.build_load counter "counter_tmp" body_builder in
+        let counter_incr = L.build_add (L.const_int i32_t 1) counter_val "counter_incr" body_builder in
+        ignore(L.build_store counter_incr counter body_builder);
+        (* build body of loop *)
+        add_terminal (stmt vars body_builder body) (L.build_br pred_bb);
+
+        (* branch to while_body iff counter < size *)
+        let pred_builder = L.builder_at_end context pred_bb in
+        let counter_val = L.build_load counter "counter_tmp" pred_builder in
+        let done_bool_val = L.build_icmp L.Icmp.Slt counter_val size "done" pred_builder in
+
+        let merge_bb = L.append_block context "merge" the_function in
+        ignore (L.build_cond_br done_bool_val body_bb merge_bb pred_builder);
+        L.builder_at_end context merge_bb
+
       | A.For_Edge (e1, e2, e3) -> builder (*not implemented *)
       | A.Bfs (e1, e2, e3, s) -> builder (*not implemented *)
       | A.Dfs (e1, e2, e3, s) -> builder (*not implemented*)
     in
 
     (* Build the code for each statement in the function *)
-    let builder = stmt builder (A.Block fdecl.A.f_body) in
+    let builder = stmt globals_and_formals builder (A.Block fdecl.A.f_body) in
 
     (* Add a return if the last block falls off the end *)
     add_terminal builder (match fdecl.A.f_typ with

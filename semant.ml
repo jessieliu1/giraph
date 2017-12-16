@@ -23,7 +23,9 @@ let rec convert_expr e env = match e with
   | Binop(e1, op, e2)             -> (check_binop e1 op e2 env, env) 
   | Unop(op, e)                   -> (check_unop op e env, env)
   | Assign(str, e)                -> (check_assign str e env, env)
-  (*todo below*)
+  | Method(s1, "data", e_lst)     -> (check_data s1 e_lst env, env)
+  | Method (s1, "set_data", e_lst) -> (check_sdata s1 e_lst env, env)
+  | Method (s1, s2, e_lst)        -> (report_meth_not_found s1 s2) (*TODO more methods? will all methods be pre-named? *)
   | Call("print", e_lst)          -> (check_print e_lst env, env)
   | Call("printb", e_lst)         -> (check_print e_lst env, env)
   | Call("prints", e_lst)         -> (check_print e_lst env, env)
@@ -33,9 +35,8 @@ let rec convert_expr e env = match e with
   | Float_Lit(f)                  -> (SFloat_Lit(f), env)
   | String_Lit(str)               -> (SString_Lit(str), env)
   (* todo below *)
-  | Node(n)                       -> (SNode(n, NodeTyp), env)
-  | Edge(ed)                      -> (SEdge(ed, EdgeTyp), env) 
-  | Graph(str_lst, ed_lst)        -> (SGraph(str_lst, ed_lst, Graph), env)
+  | Graph_Lit(str_lst, ed_lst, n_lst) -> (SGraph_Lit(str_lst, ed_lst, [], Graph)), env
+    (*-> (check_graph str_lst ed_lst n_lst env, env) *)
   | Noexpr                        -> (SNoexpr, env)
 
 
@@ -51,13 +52,12 @@ and get_sexpr_type sexpr = match sexpr with
   | SUnop(_, _, typ)           -> typ
   | SAssign(_, _, typ)         -> typ
   | SCall(_, _, typ)           -> typ
+  | SMethod(_,_,_, typ)        -> typ
   | SBool_Lit(_)               -> Bool
   | SInt_Lit(_)                -> Int
   | SFloat_Lit(_)              -> Float
   | SString_Lit(_)             -> String
-  | SNode(_, typ)              -> typ
-  | SEdge(_, typ)              -> typ 
-  | SGraph(_, _, typ)          -> typ
+  | SGraph_Lit(_, _,_, typ)          -> typ
   | SNoexpr                    -> Void
 
 
@@ -147,6 +147,30 @@ and check_assign str e env =
         else report_bad_assign lvaluet rvaluet
     else report_undeclared_id_assign str
 
+and check_data s1 e_lst env =
+    let len = List.length e_lst in
+    if (len != 0) then (raise(Failure("data takes 0 arguments but " ^ string_of_int len ^ " arguments given")))
+    else 
+    let s = check_id s1 env in
+    let t = get_sexpr_type s in
+    if (t != Node) then (raise(Failure("data() called on type " ^ string_of_typ t ^ " when node was expected")))
+    else SMethod(s1,"data", [], Int)  (*TODO get actual type, not Int, once graph data types are in*)
+and check_sdata s1 e_lst env =
+        let len = List.length e_lst in
+        if (len != 1) then raise(Failure("set_data() takes 1 arguments but " ^ string_of_int len ^ " arguments given"))
+        else 
+        let id = check_id s1 env in
+        let t = get_sexpr_type id in 
+        if (t != Node) then raise(Failure("set_data() called on type " ^ string_of_typ t ^ " when node was expected"))
+        else
+        let (s, _) = convert_expr (List.hd e_lst) env in 
+        SMethod(s1,"set_data", [s], Int) (*TODO get actual type, not Int, once graph data types are in*)
+
+
+(*and check_graph str_lst ed_lst n_lst*)
+
+
+
 and check_call str e_lst env = 
     (* can't call main *)
     if str == "main" then raise (Failure ("cant make call to main"))
@@ -194,9 +218,8 @@ and check_call str e_lst env =
               Invalid_argument _ -> raise (Failure ("expected " ^ string_of_int (List.length sfdecl.sf_formals) ^ "arguments when " 
               ^ string_of_int (List.length e_lst) ^ " arguments were provided"))
 
-
 and convert_stmt stmt env = match stmt with 
-    Block(s_lst)            -> (check_block s_lst env, env)
+    Block(s_lst)            -> (check_block s_lst env, env) 
     | If(e, s1, s2)         -> (check_if e s1 s2 env, env)
     | For(e1, e2, e3, s)    -> (check_for e1 e2 e3 s env, env) 
     | While(e, s)           -> (check_while e s env, env)
@@ -214,10 +237,10 @@ and convert_stmt stmt env = match stmt with
 and check_block s_lst env = 
     match s_lst with 
     []      -> SBlock([SExpr(SNoexpr, Void)]) 
-    | _     -> (*check every statement, and put those checked statements in a list*)
+    | _ -> (*check every statement, and put those checked statements in a list*)
               let rec add_sstmt acc stmt_lst env = match stmt_lst with
                 [] -> acc
-                | Return _ :: _ :: _ -> raise (Failure("nothing may follow a return"))
+                | Return _ :: _ :: _  -> raise (Failure("nothing may follow a return"))
                 | st :: st_lst -> 
                       let sstmt, new_env = convert_stmt st env in 
                       let new_acc = sstmt::acc in add_sstmt new_acc st_lst new_env
@@ -284,7 +307,7 @@ and check_while e s env =
 
 (* for_node (neighbor : residual.get_neighbors(n)) *)
 and check_for_node str e s env = 
-    let flocals = StringMap.add str NodeTyp env.env_flocals in
+    let flocals = StringMap.add str Node env.env_flocals in
     let new_env = 
     {
       env_name = env.env_name;
@@ -297,12 +320,12 @@ and check_for_node str e s env =
       env_in_loop = env.env_in_loop;
     }
     in
-    let (se, senv) = convert_expr e new_env in
+    let (se, senv) = convert_expr e new_env in 
     let (for_body, _) = convert_stmt s senv in
     SFor_Node(str, se, for_body)
 
 and check_for_edge str e s env = 
-    let flocals = StringMap.add str EdgeTyp env.env_flocals in
+    let flocals = StringMap.add str Edge env.env_flocals in
     let new_env = 
     {
       env_name = env.env_name;
@@ -321,7 +344,7 @@ and check_for_edge str e s env =
 
 
 and check_bfs str e1 e2 s env = 
-    let flocals = StringMap.add str NodeTyp env.env_flocals in
+    let flocals = StringMap.add str Node env.env_flocals in
     let new_env = 
     {
       env_name = env.env_name;
@@ -341,7 +364,7 @@ and check_bfs str e1 e2 s env =
 
 
 and check_dfs str e1 e2 s env = 
-    let flocals = StringMap.add str NodeTyp env.env_flocals in
+    let flocals = StringMap.add str Node env.env_flocals in
     let new_env = 
     {
       env_name = env.env_name;
@@ -532,3 +555,4 @@ let check ast = match ast with
       let sast = convert_ast globals fdecls fmap
       in 
       sast 
+

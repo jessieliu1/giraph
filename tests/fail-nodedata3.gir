@@ -1,0 +1,5 @@
+int main() {
+	int n=3;
+	print(n.data());
+	return 0;
+}

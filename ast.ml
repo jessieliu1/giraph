@@ -3,7 +3,7 @@ type binop = Add | Sub | Mult | Div | Mod | Eq | Neq |
 
 type unop = Neg | Not
 
-type typ = Int | Float | Bool | Void | String | NodeTyp | Graph | EdgeTyp
+type typ = Int | Float | Bool | Void | String | Node | Graph | Edge
 
 type bind = typ * string
 
@@ -15,13 +15,12 @@ type expr =
   | Unop of unop * expr
   | Assign of string * expr
   | Call of string * expr list
+  | Method of string * string * expr list
   | Bool_Lit of bool
   | Int_Lit of int
   | Float_Lit of float
   | String_Lit of string
   | Graph_Lit of string list * edge list * (string * expr) list
-  | Node of string
-  | Edge of edge 
   | Noexpr
 
 type stmt =
@@ -41,7 +40,7 @@ type stmt =
 
 
 type fdecl = {
-  f_typ : typ; (* return type *)
+  f_typ : typ;
   f_name : string;
   f_formals : bind list;
   f_body : stmt list;
@@ -78,9 +77,9 @@ let string_of_typ = function
   | Float -> "float"
   | Bool -> "bool"
   | String -> "str"
-  | NodeTyp -> "node"
+  | Node -> "node"
   | Graph -> "graph"
-  | EdgeTyp -> "edge"
+  | Edge -> "edge"
   | Void -> "void"
 
 
@@ -96,7 +95,8 @@ let rec string_of_expr = function
   | Unop(o, e) -> string_of_uop o ^ string_of_expr e
   | Assign(v, e) -> v ^ " = " ^ string_of_expr e
   | Call(f, el) ->
-      f ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
+    f ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
+  | Method(id, m, el) -> id ^ "." ^ m ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
   | Graph_Lit(node_l, edge_l, node_init_l) ->
     "[" ^ String.concat ", " node_l ^ "] " ^
     "[" ^ String.concat ", " (List.map (fun(a,b) -> "(" ^ a ^ "," ^ b ^ ")") edge_l) ^ "] " ^
@@ -117,6 +117,7 @@ let rec string_of_stmt = function
       "for (" ^ string_of_expr e1  ^ " ; " ^ string_of_expr e2 ^ " ; " ^
       string_of_expr e3  ^ ") " ^ string_of_stmt s
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
+  | For_Node(n, g, s) -> "for_node (" ^ n ^ " : " ^ string_of_expr g ^ ") " ^ string_of_stmt s
 
 
 let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"

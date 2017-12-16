@@ -32,6 +32,41 @@ void *new_graph() {
 	return (void *) g;
 }
 
+/* iterate through graph to get num vertices */
+int num_vertices(void *g_in) {
+	struct graph *g = (struct graph *) g_in;
+	struct vertex_list_node *vertex = g->head;
+	int counter = 0;
+	while (vertex) {
+		counter++;
+		vertex = vertex->next;
+	}
+
+	return counter;
+}
+
+/* return head of graph */
+void *get_head_vertex(void *g_in) {
+	struct graph *g = (struct graph *) g_in;
+	struct vertex_list_node *head = g->head;
+
+	return (void *) head;
+}
+
+/* given a vertex, returns next vertex from graph's list */
+void *get_next_vertex(void *v_in) {
+	struct vertex_list_node *v = (struct vertex_list_node *) v_in;
+
+	return (void *) v->next;
+}
+
+/* return the data pointer stored in a vertex */
+int *get_data_from_vertex(void *v_in) {
+	struct vertex_list_node *v = (struct vertex_list_node *) v_in;
+
+	return v->data;
+}
+
 /* Add a new vertex to the end of the vertex list in a graph, and return a
    pointer to the new vertex. */
 void *add_vertex(void *graph_ptr, int *data_ptr) {
@@ -111,24 +146,35 @@ void print_data(void *graph_ptr) {
 	}
 	printf("\n\n");
 }
-
 /*
 int main() {
 	struct graph *g = (struct graph *) new_graph();
 
-	struct vertex_list_node *head = (struct vertex_list_node *) add_vertex(g);
-	head->data = malloc(sizeof(int));
+	int *new_data = malloc(sizeof(int));
+	add_vertex(g, new_data);
+	struct vertex_list_node *head = (struct vertex_list_node *) get_head_vertex(g);
 	*head->data = 0;
 
-	for (int i = 1; i < 4; i++) {
-		struct vertex_list_node *vertex = (struct vertex_list_node *) add_vertex(g);
-		vertex->data = malloc(sizeof(int));
+	int save_vertex_num = 2;
+	struct vertex_list_node *save;
+
+	for (int i = 1; i < 6; i++) {
+		int *new_data = malloc(sizeof(int));
+		struct vertex_list_node *vertex = (struct vertex_list_node *) add_vertex(g, new_data);
 		*vertex->data = i;
+
+		if (i == save_vertex_num) {
+			save = vertex;
+		}
 
 		add_edge(head, vertex);
 		add_edge(vertex, head);
 	}
 
+	printf("num vertices: %d\n", num_vertices(g));
+
+	printf("vertex with data: %d ... next vertex in list has data: %d\n\n", *get_data_from_vertex(save),
+		*get_data_from_vertex(get_next_vertex(save)));
+
 	print_data((void *) g);
-}
-*/
+}*/

@@ -7,6 +7,7 @@ type sexpr =
   | SBinop of sexpr * binop * sexpr * typ
   | SUnop of unop * sexpr * typ
   | SAssign of string * sexpr * typ
+  | SMethod of string * string * sexpr list * typ
   | SCall of string * sexpr list * typ
   | SBool_Lit of bool
   | SInt_Lit of int
