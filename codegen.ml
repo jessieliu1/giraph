@@ -388,6 +388,8 @@ let translate (globals, functions) =
         let visited = L.build_call get_bfs_visited_array_func [| graph_ptr |] "visited" builder in
 
         let queue = L.build_call get_bfs_queue_func [| root_vertex ; visited |] "queue" builder in
+        (* populate queue and visited on the root node, but do not need to save returned vertex
+          because current_vertex_ptr is already root_vertex during first iteration of the loop *)
         ignore(L.build_call get_next_bfs_vertex_func [| visited ; queue |] "get_next" builder);
 
         let pred_bb = L.append_block context "while" the_function in
@@ -408,8 +410,10 @@ let translate (globals, functions) =
         (* build body of loop *)
         add_terminal (stmt vars body_builder body) (L.build_br pred_bb);
         let pred_builder = L.builder_at_end context pred_bb in
+        (* determine whether current_vertex_ptr is NULL using c bfs_done function *)
         let pred_vertex = L.build_load current_vertex_ptr "pred_tmp" pred_builder in
         let done_flag = L.build_call bfs_done_func [| pred_vertex |] "done" pred_builder in
+        (* branch to while_body iff done_flag is 0 (i.e. if current_vertex_ptr is not NULL) *)
         let done_bool_val = L.build_icmp L.Icmp.Eq done_flag (L.const_int i32_t 0) "done_pred" pred_builder in
 
         let merge_bb = L.append_block context "merge" the_function in

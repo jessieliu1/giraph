@@ -341,17 +341,23 @@ void print_visited(struct vertex_list_node **visited) {
 	printf("]\n");
 }
 
+/* allocate an array of vertex pointers of size (num_vertices + 1), and 
+store num_vertices in a dummy vertex at the first index */
 void *get_bfs_visited_array(void *g_in) {
 	int *size = malloc(sizeof(int));
 	*size = num_vertices(g_in);
-	struct vertex_list_node **visited = (struct vertex_list_node **) malloc(sizeof(struct vertex_list_node *) * (*size + 1));
+	struct vertex_list_node **visited = 
+		(struct vertex_list_node **) malloc(sizeof(struct vertex_list_node *) * (*size + 1));
 	memset(visited, 0, sizeof(struct vertex_list_node *) * (*size + 1));
-	struct vertex_list_node *dummy_size_node = (struct vertex_list_node *) malloc(sizeof(struct vertex_list_node));
+	/* store num nodes in the graph in the first entry in the array */
+	struct vertex_list_node *dummy_size_node = 
+		(struct vertex_list_node *) malloc(sizeof(struct vertex_list_node));
 	dummy_size_node->data = size;
 	visited[0] = dummy_size_node;
 	return visited;
 }
 
+/* check if a vertex pointer is already in the visited array */
 int unvisited(struct vertex_list_node *v, struct vertex_list_node **visited) {
 	int size = *visited[0]->data;
 	for (int i = 1; i <= size; i++) {
@@ -365,9 +371,9 @@ int unvisited(struct vertex_list_node *v, struct vertex_list_node **visited) {
 	return 1;
 }
 
+/* add a vertex pointer to the visited array  */
 void add_visited(struct vertex_list_node **visited, struct vertex_list_node *v) {
 	int size = *visited[0]->data;
-
 	for (int i = 1; i <= size; i++) {
 		if (!visited[i]) {
 			visited[i] = v;
@@ -376,20 +382,22 @@ void add_visited(struct vertex_list_node **visited, struct vertex_list_node *v) 
 	}
 }
 
+/* create a bfs_queue, and push the first vertex pointer onto it */
 void *get_bfs_queue(void *first_v, void *visited) {
 	struct vertex_list_node *v = (struct vertex_list_node *) first_v;
 	struct queue_list_node *q = malloc(sizeof(struct queue_list_node));
 	q->v = (struct vertex_list_node *) first_v;
-	q->next = 0;
+	q->next = NULL;
 	add_visited(visited, q->v);
 	return q;
 }
 
+/* create a queue_list_node with given vertex pointer and add it to the back of the queue */
 void push_queue(struct vertex_list_node *vertex, struct queue_list_node *queue) {
 	/* if empty */
 	if (!queue->v) {
 		queue->v = vertex;
-		queue->next = 0;
+		queue->next = NULL;
 		return;
 	}
 	/*else add to end */
@@ -397,11 +405,12 @@ void push_queue(struct vertex_list_node *vertex, struct queue_list_node *queue) 
 		queue = queue->next;
 	}
 	struct queue_list_node *new_q = (struct queue_list_node *) malloc(sizeof(struct queue_list_node));
-	new_q->next = 0;
+	new_q->next = NULL;
 	new_q->v = vertex;
 	queue->next = new_q;
 }
 
+/* pop a vertex pointer from the queue */
 void *pop_queue(struct queue_list_node *queue) {
 	struct vertex_list_node *out = queue->v;
 	struct queue_list_node *tofree = queue->next;
@@ -411,7 +420,7 @@ void *pop_queue(struct queue_list_node *queue) {
 		free(tofree);
 	}
 	else {
-		queue->v = 0;
+		queue->v = NULL;
 	}
 	return out;
 }
@@ -422,7 +431,7 @@ void *get_next_bfs_vertex(void *visited_in, void *queue) {
 	struct vertex_list_node *v = pop_queue(queue);
 	/* if queue empty we are done */
 	if (!v) {
-		return 0;
+		return NULL;
 	}
 	struct edge_list_node *adjacency = v->adjacencies;
 	while (adjacency) {
@@ -435,6 +444,7 @@ void *get_next_bfs_vertex(void *visited_in, void *queue) {
 	return v;
 }
 
+/* test if the vertex is null to determine if bfs has finished */
 int bfs_done(void *curr_v) {
 	if (curr_v == NULL) {
 		return 1;
