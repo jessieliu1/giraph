@@ -70,6 +70,11 @@ let translate (globals, functions) =
   let get_data_from_vertex_t = L.function_type i32_ptr_t [| void_ptr_t |] in
   let get_data_from_vertex_func = L.declare_function "get_data_from_vertex" get_data_from_vertex_t the_module in
 
+  (* Declare functions corresponding to graph methods *)
+  let add_vertex_if_not_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t |] in
+  let add_vertex_if_not_func = L.declare_function "add_vertex_if_not_present" add_vertex_if_not_t the_module in
+
+
   let function_decls =
     let function_decl m fdecl =
       let name = fdecl.A.f_name
@@ -111,17 +116,17 @@ let translate (globals, functions) =
          it uses as local variables. The following function handles this. *)
       let add_nodes_from_graph_lits m expr = match expr with
           A.Assign(id, e) -> (match e with
-            A.Graph_Lit(nodes, edges, _) ->
-            let add_node m node =
-              if (StringMap.mem node m) then
-                m
-              else
-                let local_node_var = L.build_alloca (ltype_of_typ A.Node) node builder in
-                let new_data_ptr = L.build_call new_data_func [||] "tmp_data" builder in
-                ignore(L.build_store new_data_ptr local_node_var builder);
-                StringMap.add node local_node_var m
-            in
-            List.fold_left add_node m nodes
+              A.Graph_Lit(nodes, edges, _) ->
+              let add_node m node =
+                if (StringMap.mem node m) then
+                  m
+                else
+                  let local_node_var = L.build_alloca (ltype_of_typ A.Node) node builder in
+                  let new_data_ptr = L.build_call new_data_func [||] "tmp_data" builder in
+                  ignore(L.build_store new_data_ptr local_node_var builder);
+                  StringMap.add node local_node_var m
+              in
+              List.fold_left add_node m nodes
             | _ -> m (* ignore non-graph expressions *))
         | _ -> m (* ignore non-assign statements -
                     TODO: figure out if graph literals could appear anywhere else *)
@@ -224,7 +229,7 @@ let translate (globals, functions) =
       | A.Method (graph_expr, "add_node", [node_expr]) ->
         let graph_ptr = expr vars builder graph_expr
         and data_ptr = expr vars builder node_expr in
-        L.build_call add_vertex_func [| graph_ptr ; data_ptr |] "tmp" builder
+        L.build_call add_vertex_if_not_func [| graph_ptr ; data_ptr |] "" builder
     in
 
     (* Invoke "f builder" if the current block doesn't already

@@ -76,16 +76,44 @@ void add_edge(void *from_ptr, void *to_ptr) {
 	}
 }
 
+/* Allocate a new unique data pointer. */
 int *new_data() {
 	return malloc(sizeof(int));
 }
 
+/* Change the data stored in a data pointer. */
 void set_data(int *data_ptr, int data_val) {
 	*data_ptr = data_val;
 }
 
+/* Get data stored in a data pointer. */
 int get_data(int *data_ptr) {
 	return *data_ptr;
+}
+
+/* Find and return the vertex_list_node associated with a data pointer.
+   Returns null if there is none.
+   If this ever needs to be called LLVM-side, change struct *'s in header to
+   void *'s. */
+struct vertex_list_node *find_vertex(struct graph *g, int *data_ptr) {
+	struct vertex_list_node *vertex = g->head;
+	while (vertex) {
+		if (vertex->data == data_ptr) {
+			return vertex;
+		}
+		vertex = vertex->next;
+	}
+	return NULL;
+}
+
+/* Given a graph and a data pointer, checks if the graph has a vertex associated
+   with the data pointer, and if not, creates one and adds it to the graph.
+   Corresponds to add_node method in giraph. */
+void add_vertex_if_not_present(void *g_in, int *data_ptr) {
+	struct graph *g = (struct graph *) g_in;
+	if (find_vertex(g, data_ptr) == NULL) {
+		add_vertex(g_in, data_ptr);
+	}
 }
 
 /* iterate through graph to get num vertices */
