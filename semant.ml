@@ -451,6 +451,10 @@ and convert_fdecl fname fformals env =
     
 
 and check_vdecl t str e env = 
+    if (StringMap.mem str env.env_flocals || StringMap.mem str env.env_fformals || StringMap.mem str env.env_globals)
+    then raise(Failure("cannot reinitialize existing variable"))
+    else
+    
     let flocals = StringMap.add str t env.env_flocals in
     let new_env = 
       {
