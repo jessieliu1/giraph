@@ -211,11 +211,13 @@ let translate (globals, functions) =
         let result = (match fdecl.A.f_typ with A.Void -> ""
                                              | _ -> f ^ "_result") in
         L.build_call fdef (Array.of_list actuals) result builder
-      | A.Method (node, "data", []) ->
-        let data_ptr = L.build_load (lookup vars node) node builder in
-        L.build_call get_data_func [| data_ptr |] (node ^ "_data") builder
-      | A.Method (node, "set_data", [data]) ->
-        let data_ptr = L.build_load (lookup vars node) node builder in
+
+      (* node methods *)
+      | A.Method (node_expr, "data", []) ->
+        let data_ptr = expr vars builder node_expr in
+        L.build_call get_data_func [| data_ptr |] "tmp_data" builder
+      | A.Method (node_expr, "set_data", [data]) ->
+        let data_ptr = expr vars builder node_expr in
         L.build_call set_data_func [| data_ptr ; (expr vars builder data) |] "" builder
     in
 
@@ -277,7 +279,7 @@ let translate (globals, functions) =
         ignore(L.build_store (L.const_int i32_t 0) counter builder);
         (* get number of nodes in graph *)
         let size = L.build_call num_vertices_func [| graph_ptr |] "size" builder in
-        (* allocate register for n and to symbol table, so the body can access it *)
+        (* allocate register for n; then, add to symbol table, so the body can access it *)
         let node_var = L.build_alloca (ltype_of_typ A.Node) n builder in
         let vars = StringMap.add n node_var vars in
         (* allocate pointer to current vertex struct *)

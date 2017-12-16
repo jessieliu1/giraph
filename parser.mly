@@ -27,6 +27,8 @@
 %nonassoc  NOELSE
 %nonassoc ELSE
 
+%left DOT
+
 %left RARROW DIARROW EDGE
 %right LARROW
 %nonassoc COLON
@@ -103,7 +105,7 @@ expr:
 | NOT expr              { Unop(Not, $2) }
 | ID ASSIGN expr { Assign($1, $3) }
 | ID LPAREN actuals_opt RPAREN { Call($1, $3) }
-| ID DOT ID LPAREN actuals_opt RPAREN { Method($1, $3, $5) }
+| expr DOT ID LPAREN actuals_opt RPAREN { Method($1, $3, $5) }
 | LPAREN expr RPAREN { $2 }
 | LBRACK graph_expr_opt RBRACK { match $2 with (n, e, n_i) -> Graph_Lit(n, e, n_i) }
 
