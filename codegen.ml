@@ -219,6 +219,12 @@ let translate (globals, functions) =
       | A.Method (node_expr, "set_data", [data]) ->
         let data_ptr = expr vars builder node_expr in
         L.build_call set_data_func [| data_ptr ; (expr vars builder data) |] "" builder
+
+      (* graph methods *)
+      | A.Method (graph_expr, "add_node", [node_expr]) ->
+        let graph_ptr = expr vars builder graph_expr
+        and data_ptr = expr vars builder node_expr in
+        L.build_call add_vertex_func [| graph_ptr ; data_ptr |] "tmp" builder
     in
 
     (* Invoke "f builder" if the current block doesn't already

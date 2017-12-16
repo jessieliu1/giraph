@@ -1,0 +1,10 @@
+int main() {
+	graph g = [A:1 -- B:2];
+	graph g2 = [C:3];
+	g.add_node(C);
+
+	for_node(n : g) {
+		print(n.data());
+	}
+	return 0;
+}
