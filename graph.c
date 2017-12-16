@@ -32,41 +32,6 @@ void *new_graph() {
 	return (void *) g;
 }
 
-/* iterate through graph to get num vertices */
-int num_vertices(void *g_in) {
-	struct graph *g = (struct graph *) g_in;
-	struct vertex_list_node *vertex = g->head;
-	int counter = 0;
-	while (vertex) {
-		counter++;
-		vertex = vertex->next;
-	}
-
-	return counter;
-}
-
-/* return head of graph */
-void *get_head_vertex(void *g_in) {
-	struct graph *g = (struct graph *) g_in;
-	struct vertex_list_node *head = g->head;
-
-	return (void *) head;
-}
-
-/* given a vertex, returns next vertex from graph's list */
-void *get_next_vertex(void *v_in) {
-	struct vertex_list_node *v = (struct vertex_list_node *) v_in;
-
-	return (void *) v->next;
-}
-
-/* return the data pointer stored in a vertex */
-int *get_data_from_vertex(void *v_in) {
-	struct vertex_list_node *v = (struct vertex_list_node *) v_in;
-
-	return v->data;
-}
-
 /* Add a new vertex to the end of the vertex list in a graph, and return a
    pointer to the new vertex. */
 void *add_vertex(void *graph_ptr, int *data_ptr) {
@@ -109,6 +74,53 @@ void add_edge(void *from_ptr, void *to_ptr) {
 		last_node->next->vertex = to;
 		last_node->next->next = NULL;
 	}
+}
+
+int *new_data() {
+	return malloc(sizeof(int));
+}
+
+void set_data(int *data_ptr, int data_val) {
+	*data_ptr = data_val;
+}
+
+int get_data(int *data_ptr) {
+	return *data_ptr;
+}
+
+/* iterate through graph to get num vertices */
+int num_vertices(void *g_in) {
+	struct graph *g = (struct graph *) g_in;
+	struct vertex_list_node *vertex = g->head;
+	int counter = 0;
+	while (vertex) {
+		counter++;
+		vertex = vertex->next;
+	}
+
+	return counter;
+}
+
+/* return head of graph */
+void *get_head_vertex(void *g_in) {
+	struct graph *g = (struct graph *) g_in;
+	struct vertex_list_node *head = g->head;
+
+	return (void *) head;
+}
+
+/* given a vertex, returns next vertex from graph's list */
+void *get_next_vertex(void *v_in) {
+	struct vertex_list_node *v = (struct vertex_list_node *) v_in;
+
+	return (void *) v->next;
+}
+
+/* return the data pointer stored in a vertex */
+int *get_data_from_vertex(void *v_in) {
+	struct vertex_list_node *v = (struct vertex_list_node *) v_in;
+
+	return v->data;
 }
 
 void print_graph(void *graph_ptr) {
