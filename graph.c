@@ -118,7 +118,8 @@ void add_vertex_if_not_present(void *g_in, int *data_ptr) {
 
 /* Given a graph and a data pointer, finds the vertex in the graph associated
    with the data pointer and removes it from the vertex list and all adjacency
-   lists. If no such vertex exists, does nothing. */
+   lists. If no such vertex exists, does nothing.
+   Corresponds to remove_node method in giraph. */
 void remove_vertex(void *g_in, int *data_ptr) {
 	struct graph *g = (struct graph *) g_in;
 	struct vertex_list_node *remove = find_vertex(g, data_ptr);
@@ -138,7 +139,8 @@ void remove_vertex(void *g_in, int *data_ptr) {
 				vertex->adjacencies = curr_e->next;
 				free(curr_e); /* woooaaahh */
 			} else {
-				/* otherwise just remove appropriate edge_list_node from list */
+				/* else, just remove appropriate edge_list_node from list
+				   by reconnecting surrounding nodes */
 				struct edge_list_node *prev_e = vertex->adjacencies;
 				curr_e = prev_e->next;
 
@@ -165,7 +167,7 @@ void remove_vertex(void *g_in, int *data_ptr) {
 		return;
 	}
 
-	/* Else, remove from vertex list by reconnecting. */
+	/* Else, remove from vertex list by reconnecting surrounding nodes. */
 	struct vertex_list_node *prev_v = g->head;
 	curr_v = prev_v->next;
 	while (curr_v) {
@@ -177,6 +179,23 @@ void remove_vertex(void *g_in, int *data_ptr) {
 		prev_v = curr_v;
 		curr_v = curr_v->next;
 	}
+}
+
+/* Given a graph and two data pointers, adds a (directed) edge between the
+   vertices corresponding to each data pointer. If either of such vertices
+   does not exist, they are created.
+   Corresponds to add_edge method in giraph. */
+void add_edge_method(void *g_in, int *from_data_ptr, int *to_data_ptr) {
+	struct graph *g = (struct graph *) g_in;
+	void *from = (void *) find_vertex(g, from_data_ptr);
+	if (from == NULL) {
+		from = add_vertex(g_in, from_data_ptr);
+	}
+	void *to = (void *) find_vertex(g, to_data_ptr);
+	if (to == NULL) {
+		to = add_vertex(g_in, to_data_ptr);
+	}
+	add_edge(from, to);
 }
 
 /* iterate through graph to get num vertices */
