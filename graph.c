@@ -198,6 +198,45 @@ void add_edge_method(void *g_in, int *from_data_ptr, int *to_data_ptr) {
 	add_edge(from, to);
 }
 
+/* Given a graph and two data pointers, removes the directed edge between the
+   vertices corresponding to each data pointer. If either of such vertices
+   does not exist, or if the edge does not exist, does nothing.
+   Corresponds to remove_edge method in giraph. */
+void remove_edge(void *g_in, int *from_data_ptr, int *to_data_ptr) {
+	struct graph *g = (struct graph *) g_in;
+	struct vertex_list_node *from = find_vertex(g, from_data_ptr);
+	struct vertex_list_node *to = find_vertex(g, to_data_ptr);
+	if (from == NULL || to == NULL) {
+		return;
+	}
+
+	/* Remove edge_list_node for "to" from adjacency list of "from" */
+	if (from->adjacencies) {
+		/* if we need to remove the first adjacency, set from's
+		   "adjacencies" pointer to be the next adjacency */
+		struct edge_list_node *curr = from->adjacencies;
+		if (curr->vertex == to) {
+			from->adjacencies = curr->next;
+			free(curr);
+		} else {
+			/* else, just remove appropriate edge_list_node from list
+			   by reconnecting surrounding nodes */
+			struct edge_list_node *prev = from->adjacencies;
+			curr = prev->next;
+
+			while (curr) {
+				if (curr->vertex == to) {
+					prev->next = curr->next;
+					free(curr);
+					break;
+				}
+				prev = curr;
+				curr = curr->next;
+			}
+		}
+	}
+}
+
 /* iterate through graph to get num vertices */
 int num_vertices(void *g_in) {
 	struct graph *g = (struct graph *) g_in;

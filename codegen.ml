@@ -80,6 +80,9 @@ let translate (globals, functions) =
   let add_edge_method_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t |] in
   let add_edge_method_func = L.declare_function "add_edge_method" add_edge_method_t the_module in
 
+  let remove_edge_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t |] in
+  let remove_edge_func = L.declare_function "remove_edge" remove_edge_t the_module in
+
 
   let function_decls =
     let function_decl m fdecl =
@@ -247,6 +250,14 @@ let translate (globals, functions) =
         (* since this is an undirected graph, add edges both ways *)
         ignore(L.build_call add_edge_method_func [| graph_ptr ; from_data_ptr ; to_data_ptr |] "" builder);
         L.build_call add_edge_method_func [| graph_ptr ; to_data_ptr ; from_data_ptr |] "" builder
+      | A.Method (graph_expr, "remove_edge", [from_node_expr ; to_node_expr]) ->
+        let graph_ptr = expr vars builder graph_expr
+        and from_data_ptr = expr vars builder from_node_expr
+        and to_data_ptr = expr vars builder to_node_expr in
+        (* since this is an undirected graph, remove edges both ways *)
+        ignore(L.build_call remove_edge_func [| graph_ptr ; from_data_ptr ; to_data_ptr |] "" builder);
+        L.build_call remove_edge_func [| graph_ptr ; to_data_ptr ; from_data_ptr |] "" builder
+
     in
 
     (* Invoke "f builder" if the current block doesn't already
