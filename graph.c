@@ -116,6 +116,69 @@ void add_vertex_if_not_present(void *g_in, int *data_ptr) {
 	}
 }
 
+/* Given a graph and a data pointer, finds the vertex in the graph associated
+   with the data pointer and removes it from the vertex list and all adjacency
+   lists. If no such vertex exists, does nothing. */
+void remove_vertex(void *g_in, int *data_ptr) {
+	struct graph *g = (struct graph *) g_in;
+	struct vertex_list_node *remove = find_vertex(g, data_ptr);
+	if (remove == NULL) {
+		return;
+	}
+
+	/* Iterate through all vertices and remove this vertex from any adjacency
+	   lists. */
+	struct vertex_list_node *vertex = g->head;
+	while (vertex) {
+		if (vertex->adjacencies) {
+			/* if we need to remove the first adjacency, set vertex's
+			   "adjacencies" pointer to be the next adjacency */
+			struct edge_list_node *curr_e = vertex->adjacencies;
+			if (curr_e->vertex == remove) {
+				vertex->adjacencies = curr_e->next;
+				free(curr_e); /* woooaaahh */
+			} else {
+				/* otherwise just remove appropriate edge_list_node from list */
+				struct edge_list_node *prev_e = vertex->adjacencies;
+				curr_e = prev_e->next;
+
+				while (curr_e) {
+					if (curr_e->vertex == remove) {
+						prev_e->next = curr_e->next;
+						free(curr_e);
+						break;
+					}
+					prev_e = curr_e;
+					curr_e = curr_e->next;
+				}
+			}
+		}
+		vertex = vertex->next;
+	}
+
+	/* Remove vertex from vertex list. */
+	struct vertex_list_node *curr_v = g->head;
+	/* If it's the first vertex, connect g->head to next vertex. */
+	if (curr_v == remove) {
+		g->head = curr_v->next;
+		free(curr_v);
+		return;
+	}
+
+	/* Else, remove from vertex list by reconnecting. */
+	struct vertex_list_node *prev_v = g->head;
+	curr_v = prev_v->next;
+	while (curr_v) {
+		if (curr_v == remove) {
+			prev_v->next = curr_v->next;
+			free(curr_v);
+			return;
+		}
+		prev_v = curr_v;
+		curr_v = curr_v->next;
+	}
+}
+
 /* iterate through graph to get num vertices */
 int num_vertices(void *g_in) {
 	struct graph *g = (struct graph *) g_in;

@@ -74,6 +74,9 @@ let translate (globals, functions) =
   let add_vertex_if_not_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t |] in
   let add_vertex_if_not_func = L.declare_function "add_vertex_if_not_present" add_vertex_if_not_t the_module in
 
+  let remove_vertex_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t |] in
+  let remove_vertex_func = L.declare_function "remove_vertex" remove_vertex_t the_module in
+
 
   let function_decls =
     let function_decl m fdecl =
@@ -230,6 +233,10 @@ let translate (globals, functions) =
         let graph_ptr = expr vars builder graph_expr
         and data_ptr = expr vars builder node_expr in
         L.build_call add_vertex_if_not_func [| graph_ptr ; data_ptr |] "" builder
+      | A.Method (graph_expr, "remove_node", [node_expr]) ->
+        let graph_ptr = expr vars builder graph_expr
+        and data_ptr = expr vars builder node_expr in
+        L.build_call remove_vertex_func [| graph_ptr ; data_ptr |] "" builder
     in
 
     (* Invoke "f builder" if the current block doesn't already
