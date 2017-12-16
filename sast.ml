@@ -14,7 +14,7 @@ type sexpr =
   | SFloat_Lit of float
   | SString_Lit of string
   (* TODO: graph things *)
-  | SGraph_Lit of string list * edge list * (string * sexpr) list * typ
+  | SGraph_Lit of string list * edge list * (string * sexpr) list * typ * typ
   | SNoexpr
 
 type svdecl = {
@@ -104,7 +104,7 @@ let rec string_of_sexpr = function
   | SAssign(v, e, t) -> v ^ " = " ^ string_of_sexpr e^ ":" ^ string_of_typ t
   | SCall(f, el, t) ->
       f ^ "(" ^ String.concat ", " (List.map string_of_sexpr el) ^ ")"^ ":" ^ string_of_typ t
-  | SGraph_Lit(node_l, edge_l, node_init_list, t) ->
+  | SGraph_Lit(node_l, edge_l, node_init_list, t, t2) ->
     "[" ^ String.concat ", " node_l ^ "] " ^
     "[" ^ String.concat ", " (List.map (fun(a,b) -> "(" ^ a ^ "," ^ b ^ ")") edge_l) ^ "]"
   | SNoexpr -> ""

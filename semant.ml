@@ -35,8 +35,7 @@ let rec convert_expr e env = match e with
   | Float_Lit(f)                  -> (SFloat_Lit(f), env)
   | String_Lit(str)               -> (SString_Lit(str), env)
   (* todo below *)
-  | Graph_Lit(str_lst, ed_lst, n_lst) -> (SGraph_Lit(str_lst, ed_lst, [], Graph)), env
-    (*-> (check_graph str_lst ed_lst n_lst env, env) *)
+  | Graph_Lit(str_lst, ed_lst, n_lst) -> (check_graph str_lst ed_lst n_lst env)
   | Noexpr                        -> (SNoexpr, env)
 
 
@@ -57,7 +56,7 @@ and get_sexpr_type sexpr = match sexpr with
   | SInt_Lit(_)                -> Int
   | SFloat_Lit(_)              -> Float
   | SString_Lit(_)             -> String
-  | SGraph_Lit(_, _,_, typ)          -> typ
+  | SGraph_Lit(_,_,_,t,typ)    -> typ
   | SNoexpr                    -> Void
 
 
@@ -166,10 +165,44 @@ and check_sdata s1 e_lst env =
         let (s, _) = convert_expr (List.hd e_lst) env in 
         SMethod(s1,"set_data", [s], Int) (*TODO get actual type, not Int, once graph data types are in*)
 
-
-(*and check_graph str_lst ed_lst n_lst*)
-
-
+(* TODO *)
+and check_graph str_lst ed_lst n_lst env =
+    (* first elt must be int *)
+    (* match first elt to other elts *)
+    match str_lst with
+    [] -> SGraph_Lit([],[],[],Graph, Void), env
+    | _ -> 
+        let (s,_) = convert_expr (snd (List.hd n_lst)) env in
+        let t = get_sexpr_type s in
+        List.iter (fun n -> let (sn,_) = convert_expr (snd n) env in
+                        let tn = get_sexpr_type sn in
+                        if tn != t then raise (Failure("node type mismatch of " ^ string_of_typ t ^ " and " ^ string_of_typ tn))) n_lst; 
+    
+    let def_decl locs str = ignore (if (StringMap.mem str env.env_flocals || StringMap.mem str env.env_fformals || StringMap.mem str env.env_globals) then 
+        let lval = try StringMap.find str env.env_flocals with
+        Not_found -> (try StringMap.find str env.env_fformals with
+                Not_found -> StringMap.find str env.env_globals) in
+       if lval != Node then raise (Failure("variable " ^ str ^ " of type " ^ string_of_typ lval ^ " is already declared")));
+          StringMap.add str Node locs
+        in
+    let flocals = env.env_flocals in 
+        List.fold_left def_decl flocals str_lst;
+          let newenv = 
+         {
+             env_name = env.env_name;
+             env_return_type = env.env_return_type;
+             env_fmap = env.env_fmap;
+             env_sfmap = env.env_sfmap;
+             env_globals = env.env_globals;
+             env_flocals = flocals;
+             env_fformals = env.env_fformals;
+             env_in_loop = env.env_in_loop;
+        }
+    in
+   let nodes = List.map (fun (x,y) -> let (s,_) = convert_expr y newenv in (x,s)) n_lst in
+    SGraph_Lit(str_lst, ed_lst, nodes, Graph, Int), newenv
+   (* if elt is already defined don't declare, just add to node list*)
+    (* if elt is not defined declare and assign expr to it *)
 
 and check_call str e_lst env = 
     (* can't call main *)
