@@ -83,6 +83,21 @@ let translate (globals, functions) =
   let remove_edge_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t |] in
   let remove_edge_func = L.declare_function "remove_edge" remove_edge_t the_module in
 
+  (* Declare functions that will be called for bfs on graphs*)
+  let find_vertex_t = L.function_type void_ptr_t [| void_ptr_t ; i32_ptr_t |] in
+  let find_vertex_func = L.declare_function "find_vertex" find_vertex_t the_module in
+
+  let get_bfs_visited_array_t = L.function_type void_ptr_t [| void_ptr_t |] in
+  let get_bfs_visited_array_func = L.declare_function "get_bfs_visited_array" get_bfs_visited_array_t the_module in
+
+  let get_bfs_queue_t = L.function_type void_ptr_t [| void_ptr_t ; void_ptr_t |] in
+  let get_bfs_queue_func = L.declare_function "get_bfs_queue" get_bfs_queue_t the_module in
+
+  let get_next_bfs_vertex_t = L.function_type void_ptr_t [| void_ptr_t ; void_ptr_t |] in
+  let get_next_bfs_vertex_func = L.declare_function "get_next_bfs_vertex" get_next_bfs_vertex_t the_module in
+
+  let bfs_done_t = L.function_type i32_t [| void_ptr_t |] in
+  let bfs_done_func = L.declare_function "bfs_done" bfs_done_t the_module in
 
   let function_decls =
     let function_decl m fdecl =
@@ -257,7 +272,6 @@ let translate (globals, functions) =
         (* since this is an undirected graph, remove edges both ways *)
         ignore(L.build_call remove_edge_func [| graph_ptr ; from_data_ptr ; to_data_ptr |] "" builder);
         L.build_call remove_edge_func [| graph_ptr ; to_data_ptr ; from_data_ptr |] "" builder
-
     in
 
     (* Invoke "f builder" if the current block doesn't already
@@ -357,7 +371,50 @@ let translate (globals, functions) =
         L.builder_at_end context merge_bb
 
       | A.For_Edge (e1, e2, e3) -> builder (*not implemented *)
-      | A.Bfs (e1, e2, e3, s) -> builder (*not implemented *)
+      | A.Bfs (n, g, r, body) -> 
+        let graph_ptr = (expr vars builder g) in
+        let root_ptr = (expr vars builder r) in
+
+        (* allocate register for n; then, add to symbol table, so the body can access it *)
+        let node_var = L.build_alloca (ltype_of_typ A.Node) n builder in
+        (* add the node data pointer to symbol table, so the body can access it *)
+        let vars = StringMap.add n node_var vars in
+        (* allocate pointer to current vertex struct *)
+        let current_vertex_ptr = L.build_alloca void_ptr_t "current" builder in
+        (* get root vertex_list_node for bfs search *)
+        let root_vertex = L.build_call find_vertex_func [| graph_ptr ; root_ptr |] "root" builder in
+        ignore(L.build_store root_vertex current_vertex_ptr builder);
+
+        let visited = L.build_call get_bfs_visited_array_func [| graph_ptr |] "visited" builder in
+
+        let queue = L.build_call get_bfs_queue_func [| root_vertex ; visited |] "queue" builder in
+        ignore(L.build_call get_next_bfs_vertex_func [| visited ; queue |] "get_next" builder);
+
+        let pred_bb = L.append_block context "while" the_function in
+        ignore (L.build_br pred_bb builder);
+
+        let body_bb = L.append_block context "while_body" the_function in
+        let body_builder = L.builder_at_end context body_bb in
+        (* load value of current vertex *)
+        let current_vertex = L.build_load current_vertex_ptr "current_tmp" body_builder in
+        (* get node data pointer from current vertex struct *)
+        let data_ptr = L.build_call get_data_from_vertex_func [| current_vertex |] (n ^ "_tmp") body_builder in
+        ignore(L.build_store data_ptr node_var body_builder);
+
+        (* change current_vertex to be pointer to next_vertex *)
+        let next_vertex = L.build_call get_next_bfs_vertex_func [| visited ; queue |] "get_next" body_builder in
+        ignore(L.build_store next_vertex current_vertex_ptr body_builder);
+
+        (* build body of loop *)
+        add_terminal (stmt vars body_builder body) (L.build_br pred_bb);
+        let pred_builder = L.builder_at_end context pred_bb in
+        let pred_vertex = L.build_load current_vertex_ptr "pred_tmp" pred_builder in
+        let done_flag = L.build_call bfs_done_func [| pred_vertex |] "done" pred_builder in
+        let done_bool_val = L.build_icmp L.Icmp.Eq done_flag (L.const_int i32_t 0) "done_pred" pred_builder in
+
+        let merge_bb = L.append_block context "merge" the_function in
+        ignore (L.build_cond_br done_bool_val body_bb merge_bb pred_builder);
+        L.builder_at_end context merge_bb
       | A.Dfs (e1, e2, e3, s) -> builder (*not implemented*)
     in
 
