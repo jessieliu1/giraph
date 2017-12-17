@@ -2,6 +2,122 @@
 #include <string.h>
 #include <stdlib.h>
 
+///////////// MAP /////////////
+/* A single node of the adjacency list for a single vertex. */
+struct map_node {
+	struct map_node *next;
+	unsigned int key;
+	void *value;
+};
+
+struct map_node *get_node(unsigned int key, void *value) {
+	struct map_node *out = (struct map_node *) malloc(sizeof(struct map_node));
+	out->key = key;
+	out->value = value;
+	out->next = NULL;
+	return out;
+}
+
+/* returns pointer to map */
+void *make_map() {
+	/* (size - 1) is hashable. 432 is the the 83rd prime number (431) plus 1. */
+	int default_size = 432;
+	struct map_node **map = (struct map_node **) malloc(sizeof(struct map_node *) * default_size);
+	memset(map, 0, sizeof(struct map_node *) * default_size);
+	int *size = (int *) malloc(sizeof(int));
+	*size = default_size;
+	map[0] = get_node(0, size);
+	return map;
+}
+
+void free_map(void *map_in) {
+	struct map_node **map = (struct map_node **) map_in;
+	int size = *((int *) map[0]->value);
+	for (int i = 0; i < size; i++) {
+		struct map_node *bucket = map[i];
+		if (bucket) {
+			struct map_node *next = bucket->next;
+			free(bucket);
+			while (next) {
+				bucket = next;
+				next = bucket->next;
+				free(bucket);
+			}
+		}
+	}
+	free(map);
+}
+
+/* hash function: hash 0 is reserved for table size */
+int hash(unsigned int in, int size) {
+	return 1 + ((in * 997) % (size - 1));
+}
+
+/* if putting into a key already in map, replace map */
+void put(void *map_in, int *key, void *value) {
+	struct map_node **map = (struct map_node **) map_in;
+	int size = *((int *) map[0]->value);
+	unsigned int for_hash = (unsigned int) key;
+	int hash_val = hash(for_hash, size);
+	struct map_node *bucket = map[hash_val];
+	if (!bucket) {
+		map[hash_val] = get_node((unsigned int) key, value);
+		return;
+	}
+	if (bucket->key == (unsigned int) key) {
+		bucket->value = value;
+		return;
+	}
+	while (bucket->next) {
+		if (bucket->key == (unsigned int) key) {
+			bucket->value = value;
+			return;
+		}
+		bucket = bucket->next;
+	}
+	bucket->next = get_node((unsigned int) key, value);
+}
+
+/* returns NULL if not found */
+void *get(void *map_in, int *key) {
+	struct map_node **map = (struct map_node **) map_in;
+	int size = *((int *) map[0]->value);
+	unsigned int for_hash = (unsigned int) key;
+	int hash_val = hash(for_hash, size);
+	struct map_node *bucket = map[hash_val];
+	if (!bucket) {
+		return NULL;
+	}
+	while (bucket) {
+		if (bucket->key == (unsigned int) key) {
+			return bucket->value;
+		}
+		bucket = bucket->next;
+	}
+	return NULL;
+}
+
+int contains_key(void *map_in, int *key) {
+	struct map_node **map = (struct map_node **) map_in;
+	int size = *((int *) map[0]->value);
+	unsigned int for_hash = (unsigned int) key;
+	int hash_val = hash(for_hash, size);
+	struct map_node *bucket = map[hash_val];
+	if (!bucket) {
+		return 0;
+	}
+	while (bucket) {
+		if (bucket->key == (unsigned int) key) {
+			return 1;
+		}
+		bucket = bucket->next;
+	}
+	return 0;
+}
+///////////////////////////////
+
+
+
 /* Terminology-wise, we've painted ourselves into a corner here. 
    Elsewhere in in this project, "node" refers to a single node in a graph.
    That is NOT true in this file. In this file, "vertex" refers to a node in
@@ -389,6 +505,52 @@ void *construct_edge_list(void *g_in) {
 	return head;
 }
 
+/* construct a list of edge_list_node's and return head */
+void *construct_undirected_edge_list(void *g_in) {
+	struct graph *g = (struct graph *) g_in;
+	struct vertex_list_node *v = g->head;
+	struct edge_list_node *head = NULL;
+	int first = 1;
+	struct edge_list_node *prev;
+	void *map = make_map();
+	while (v) {
+		struct adj_list_node *adjacency = v->adjacencies;
+		put(map, (void *) v, (void *) v->adjacencies);
+		while (adjacency) {
+			struct adj_list_node *to_adj_list = get(map, (int *) adjacency->vertex);
+			int opposite_edge_exists = 0;
+			while (to_adj_list) {
+				if (to_adj_list->vertex == v) {
+					opposite_edge_exists = 1;
+				}
+				to_adj_list = to_adj_list->next;
+			}
+			if (!opposite_edge_exists) {
+				struct edge_list_node *e = (struct edge_list_node *) malloc(sizeof(struct edge_list_node));
+				e->from = v;
+				e->to = adjacency->vertex;
+				e->weight = adjacency->weight;
+				e->next = NULL;
+				if (first) {
+					head = e;
+					first = 0;
+				}
+				else {
+					prev->next = e;
+				}
+				prev = e;
+			}
+			adjacency = adjacency->next;
+		}
+		v = v->next;
+	}
+	free_map(map);
+	if (!head) {
+		return NULL;
+	}
+	return head;
+}
+
 /* return size of list of edge_list_node's */
 int num_edges(void *e_head) {
 	struct edge_list_node *e = (struct edge_list_node *) e_head;
@@ -574,7 +736,7 @@ void add_bidirectional_edge(void *a, void *b) {
 	int *new_data = malloc(sizeof(int));
 	add_vertex(g, new_data);
 	struct vertex_list_node *head = (struct vertex_list_node *) get_head_vertex(g);
-	*(int *) head->data = 1;
+	*(int *) head->data = 0;
 
 	int vertices = 5;
 	int save_vertex_num = 2;
@@ -585,7 +747,7 @@ void add_bidirectional_edge(void *a, void *b) {
 	for (int i = 1; i < vertices; i++) {
 		int *new_data = malloc(sizeof(int));
 		struct vertex_list_node *vertex = (struct vertex_list_node *) add_vertex(g, new_data);
-		*(int *) vertex->data = i+1;
+		*(int *) vertex->data = i;
 
 		if (i == save_vertex_num) {
 			save = vertex;
@@ -599,6 +761,7 @@ void add_bidirectional_edge(void *a, void *b) {
 	add_bidirectional_edge(savedarray[2], savedarray[4]);
 	add_bidirectional_edge(savedarray[3], savedarray[4]);
 	add_bidirectional_edge(savedarray[4], savedarray[0]);
+	add_bidirectional_edge(savedarray[0], savedarray[2]);
 
 	printf("num vertices: %d\n", num_vertices(g));
 
@@ -607,10 +770,6 @@ void add_bidirectional_edge(void *a, void *b) {
 
 	print_data((void *) g);
 
-	void *h = construct_edge_list((void *) g);
-
-	printf("\n%d\n", num_edges(h));
-
 	printf("before entering bfs land *save->data: %d \n", *(int *) save->data);
 
 	struct vertex_list_node **visited = get_bfs_visited_array(g);
@@ -618,6 +777,10 @@ void add_bidirectional_edge(void *a, void *b) {
 	while (get_next_bfs_vertex(visited, queue)) {
 
 	}
+
+	void *edge_list = construct_undirected_edge_list(g);
+	print_edges(edge_list);
+	printf("\n%d\n", num_edges(edge_list));
 
 	cleanup_bfs(visited, queue);
 }*/
