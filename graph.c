@@ -335,11 +335,11 @@ void print_data(void *graph_ptr) {
 	struct graph *g = (struct graph *) graph_ptr;
 	struct vertex_list_node *vertex = g->head;
 	while (vertex) {
-		printf("vertex: %d\n", *vertex->data);
+		printf("vertex: %d\n", *(int *) vertex->data);
 		printf("adjacencies:");
 		struct adj_list_node *adjacency = vertex->adjacencies;
 		while (adjacency) {
-			printf(" %d", *adjacency->vertex->data);
+			printf(" %d", *(int *) adjacency->vertex->data);
 			adjacency = adjacency->next;
 		}
 		printf("\n\n");
@@ -351,7 +351,7 @@ void print_data(void *graph_ptr) {
 //// for_edge ////
 void print_edges(struct edge_list_node *e) {
 	while (e) {
-		printf("from: %d  to: %d weight: %d\n", *e->from->data, *e->to->data, e->weight);
+		printf("from: %d  to: %d weight: %d\n", *(int *) e->from->data, *(int *) e->to->data, e->weight);
 		e = e->next;
 	}
 }
@@ -413,18 +413,18 @@ void *get_next_edge(void *e_in) {
 void print_queue(struct queue_list_node *queue) {
 	fprintf(stderr, "printing queue: ");
 	while (queue && queue->v) {
-		fprintf(stderr, "%d ", *queue->v->data);
+		fprintf(stderr, "%d ", *(int *) queue->v->data);
 		queue = queue->next;
 	}
 	printf("\n");
 }
 
 void print_visited(struct vertex_list_node **visited) {
-	int size = *visited[0]->data;
+	int size = *(int *) visited[0]->data;
 	printf("printing visited (excluding dummy size node): [");
 	for (int i = 1; i <= size; i++) {
 		if (visited[i]) {
-			printf("%d, ", *visited[i]->data);
+			printf("%d, ", *(int *) visited[i]->data);
 		}
 		else {
 			printf("0x0, ");
@@ -451,7 +451,7 @@ void *get_bfs_visited_array(void *g_in) {
 
 /* check if a vertex pointer is already in the visited array */
 int unvisited(struct vertex_list_node *v, struct vertex_list_node **visited) {
-	int size = *visited[0]->data;
+	int size = *(int *) visited[0]->data;
 	for (int i = 1; i <= size; i++) {
 		if (visited[i] == v) {
 			return 0;
@@ -465,7 +465,7 @@ int unvisited(struct vertex_list_node *v, struct vertex_list_node **visited) {
 
 /* add a vertex pointer to the visited array  */
 void add_visited(struct vertex_list_node **visited, struct vertex_list_node *v) {
-	int size = *visited[0]->data;
+	int size = *(int *) visited[0]->data;
 	for (int i = 1; i <= size; i++) {
 		if (!visited[i]) {
 			visited[i] = v;
@@ -574,7 +574,7 @@ void add_bidirectional_edge(void *a, void *b) {
 	int *new_data = malloc(sizeof(int));
 	add_vertex(g, new_data);
 	struct vertex_list_node *head = (struct vertex_list_node *) get_head_vertex(g);
-	*head->data = 1;
+	*(int *) head->data = 1;
 
 	int vertices = 5;
 	int save_vertex_num = 2;
@@ -585,7 +585,7 @@ void add_bidirectional_edge(void *a, void *b) {
 	for (int i = 1; i < vertices; i++) {
 		int *new_data = malloc(sizeof(int));
 		struct vertex_list_node *vertex = (struct vertex_list_node *) add_vertex(g, new_data);
-		*vertex->data = i+1;
+		*(int *) vertex->data = i+1;
 
 		if (i == save_vertex_num) {
 			save = vertex;
@@ -611,7 +611,7 @@ void add_bidirectional_edge(void *a, void *b) {
 
 	printf("\n%d\n", num_edges(h));
 
-	printf("before entering bfs land *save->data: %d \n", *save->data);
+	printf("before entering bfs land *save->data: %d \n", *(int *) save->data);
 
 	struct vertex_list_node **visited = get_bfs_visited_array(g);
 	void *queue = get_bfs_queue(save, visited);
