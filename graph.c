@@ -8,15 +8,23 @@
    a graph, and "node" refers to a single node of a linked list. */
 
 /* A single node of the adjacency list for a single vertex. */
-struct edge_list_node {
+struct adj_list_node {
 	struct vertex_list_node *vertex;
+	struct adj_list_node *next;
+};
+
+/* a single node in the edge list containing relevant edge information */
+struct edge_list_node {
+	struct vertex_list_node *from;
+	struct vertex_list_node *to;
 	struct edge_list_node *next;
+	int weight;	
 };
 
 /* A single vertex in a graph. */
 struct vertex_list_node {
 	int *data;
-	struct edge_list_node *adjacencies;
+	struct adj_list_node *adjacencies;
 	struct vertex_list_node *next;
 };
 
@@ -68,15 +76,15 @@ void add_edge(void *from_ptr, void *to_ptr) {
 	struct vertex_list_node *to = (struct vertex_list_node *) to_ptr;
 
 	if (from->adjacencies == NULL) {
-		from->adjacencies = malloc(sizeof(struct edge_list_node));
+		from->adjacencies = malloc(sizeof(struct adj_list_node));
 		from->adjacencies->vertex = to;
 		from->adjacencies->next = NULL;
 	} else {
-		struct edge_list_node *last_node = from->adjacencies;
+		struct adj_list_node *last_node = from->adjacencies;
 		while (last_node->next) {
 			last_node = last_node->next;
 		}
-		last_node->next = malloc(sizeof(struct edge_list_node));
+		last_node->next = malloc(sizeof(struct adj_list_node));
 		last_node->next->vertex = to;
 		last_node->next->next = NULL;
 	}
@@ -85,6 +93,20 @@ void add_edge(void *from_ptr, void *to_ptr) {
 /* Allocate a new unique data pointer. */
 int *new_data() {
 	return malloc(sizeof(int));
+}
+
+/* Allocate a new unique data pointer. */
+void *new_edge() {
+	return malloc(sizeof(struct edge_list_node));
+}
+
+/* Allocate a new unique data pointer. */
+int *edge_from(void *e) {
+	return ((struct edge_list_node *) e)->from->data;
+}
+
+int *edge_to(void *e) {
+	return ((struct edge_list_node *) e)->to->data;
 }
 
 /* Change the data stored in a data pointer. */
@@ -98,9 +120,7 @@ int get_data(int *data_ptr) {
 }
 
 /* Find and return the vertex_list_node associated with a data pointer.
-   Returns null if there is none.
-   If this ever needs to be called LLVM-side, change struct *'s in header to
-   void *'s. */
+   Returns null if there is none. */
 void *find_vertex(void *g_in, int *data_ptr) {
 	struct graph *g = (struct graph *) g_in;
 	struct vertex_list_node *vertex = g->head;
@@ -118,7 +138,7 @@ void *find_vertex(void *g_in, int *data_ptr) {
    Corresponds to add_node method in giraph. */
 void add_vertex_if_not_present(void *g_in, int *data_ptr) {
 	struct graph *g = (struct graph *) g_in;
-	if (find_vertex(g, data_ptr) == NULL) {
+	if (find_vertex(g_in, data_ptr) == NULL) {
 		add_vertex(g_in, data_ptr);
 	}
 }
@@ -129,7 +149,7 @@ void add_vertex_if_not_present(void *g_in, int *data_ptr) {
    Corresponds to remove_node method in giraph. */
 void remove_vertex(void *g_in, int *data_ptr) {
 	struct graph *g = (struct graph *) g_in;
-	struct vertex_list_node *remove = find_vertex(g, data_ptr);
+	struct vertex_list_node *remove = (struct vertex_list_node *) find_vertex(g_in, data_ptr);
 	if (remove == NULL) {
 		return;
 	}
@@ -141,14 +161,14 @@ void remove_vertex(void *g_in, int *data_ptr) {
 		if (vertex->adjacencies) {
 			/* if we need to remove the first adjacency, set vertex's
 			   "adjacencies" pointer to be the next adjacency */
-			struct edge_list_node *curr_e = vertex->adjacencies;
+			struct adj_list_node *curr_e = vertex->adjacencies;
 			if (curr_e->vertex == remove) {
 				vertex->adjacencies = curr_e->next;
 				free(curr_e); /* woooaaahh */
 			} else {
-				/* else, just remove appropriate edge_list_node from list
+				/* else, just remove appropriate adj_list_node from list
 				   by reconnecting surrounding nodes */
-				struct edge_list_node *prev_e = vertex->adjacencies;
+				struct adj_list_node *prev_e = vertex->adjacencies;
 				curr_e = prev_e->next;
 
 				while (curr_e) {
@@ -194,11 +214,11 @@ void remove_vertex(void *g_in, int *data_ptr) {
    Corresponds to add_edge method in giraph. */
 void add_edge_method(void *g_in, int *from_data_ptr, int *to_data_ptr) {
 	struct graph *g = (struct graph *) g_in;
-	void *from = (void *) find_vertex(g, from_data_ptr);
+	void *from = find_vertex(g_in, from_data_ptr);
 	if (from == NULL) {
 		from = add_vertex(g_in, from_data_ptr);
 	}
-	void *to = (void *) find_vertex(g, to_data_ptr);
+	void *to = find_vertex(g_in, to_data_ptr);
 	if (to == NULL) {
 		to = add_vertex(g_in, to_data_ptr);
 	}
@@ -211,24 +231,24 @@ void add_edge_method(void *g_in, int *from_data_ptr, int *to_data_ptr) {
    Corresponds to remove_edge method in giraph. */
 void remove_edge(void *g_in, int *from_data_ptr, int *to_data_ptr) {
 	struct graph *g = (struct graph *) g_in;
-	struct vertex_list_node *from = find_vertex(g, from_data_ptr);
-	struct vertex_list_node *to = find_vertex(g, to_data_ptr);
+	struct vertex_list_node *from = (struct vertex_list_node *) find_vertex(g_in, from_data_ptr);
+	struct vertex_list_node *to = (struct vertex_list_node *) find_vertex(g_in, to_data_ptr);
 	if (from == NULL || to == NULL) {
 		return;
 	}
 
-	/* Remove edge_list_node for "to" from adjacency list of "from" */
+	/* Remove adj_list_node for "to" from adjacency list of "from" */
 	if (from->adjacencies) {
 		/* if we need to remove the first adjacency, set from's
 		   "adjacencies" pointer to be the next adjacency */
-		struct edge_list_node *curr = from->adjacencies;
+		struct adj_list_node *curr = from->adjacencies;
 		if (curr->vertex == to) {
 			from->adjacencies = curr->next;
 			free(curr);
 		} else {
-			/* else, just remove appropriate edge_list_node from list
+			/* else, just remove appropriate adj_list_node from list
 			   by reconnecting surrounding nodes */
-			struct edge_list_node *prev = from->adjacencies;
+			struct adj_list_node *prev = from->adjacencies;
 			curr = prev->next;
 
 			while (curr) {
@@ -286,7 +306,7 @@ void print_graph(void *graph_ptr) {
 		printf("vertex: %p\n", vertex);
 		printf("data: %p\n", vertex->data);
 		printf("adjacencies:");
-		struct edge_list_node *adjacency = vertex->adjacencies;
+		struct adj_list_node *adjacency = vertex->adjacencies;
 		while (adjacency) {
 			printf(" %p", adjacency->vertex);
 			adjacency = adjacency->next;
@@ -304,7 +324,7 @@ void print_data(void *graph_ptr) {
 	while (vertex) {
 		printf("vertex: %d\n", *vertex->data);
 		printf("adjacencies:");
-		struct edge_list_node *adjacency = vertex->adjacencies;
+		struct adj_list_node *adjacency = vertex->adjacencies;
 		while (adjacency) {
 			printf(" %d", *adjacency->vertex->data);
 			adjacency = adjacency->next;
@@ -315,9 +335,68 @@ void print_data(void *graph_ptr) {
 	printf("\n\n");
 }
 
-/////// BFS //////
-/* allocate an array capable of holding every vertex in the graph */
+//// for_edge ////
+void print_edges(struct edge_list_node *e) {
+	while (e) {
+		printf("from: %d  to: %d \n", *e->from->data, *e->to->data);
+		e = e->next;
+	}
+}
 
+/* construct a list of edge_list_node's and return head */
+void *construct_edge_list(void *g_in) {
+	struct graph *g = (struct graph *) g_in;
+	struct vertex_list_node *v = g->head;
+	struct edge_list_node *head = NULL;
+	int first = 1;
+	struct edge_list_node *prev; 
+	while (v) {
+		struct adj_list_node *adjacency = v->adjacencies;
+		while (adjacency) {
+			struct edge_list_node *e = (struct edge_list_node *) malloc(sizeof(struct edge_list_node));
+			e->from = v;
+			e->to = adjacency->vertex;
+			// e->weight = adjacency->weight;
+			e->next = NULL;
+			if (first) {
+				head = e;
+				first = 0;
+			}
+			else {
+				prev->next = e;
+			}
+			prev = e;
+			adjacency = adjacency->next;
+		}
+		v = v->next;
+	}
+	if (!head) {
+		return NULL;
+	}
+	return head;
+}
+
+/* return size of list of edge_list_node's */
+int num_edges(void *e_head) {
+	struct edge_list_node *e = (struct edge_list_node *) e_head;
+	int count = 0;
+	while (e) {
+		count++;
+		e = e->next;
+	}
+	return count;
+}
+
+/* get next edge_list_node in list */
+void *get_next_edge(void *e_in) {
+	struct edge_list_node *e = (struct edge_list_node *)e_in;
+	return e->next;
+}
+
+
+//////////////////
+
+/////// BFS //////
 void print_queue(struct queue_list_node *queue) {
 	fprintf(stderr, "printing queue: ");
 	while (queue && queue->v) {
@@ -433,7 +512,7 @@ void *get_next_bfs_vertex(void *visited_in, void *queue) {
 	if (!v) {
 		return NULL;
 	}
-	struct edge_list_node *adjacency = v->adjacencies;
+	struct adj_list_node *adjacency = v->adjacencies;
 	while (adjacency) {
 		if (unvisited(adjacency->vertex, visited)) {
 			push_queue(adjacency->vertex, queue);
@@ -514,6 +593,10 @@ void add_bidirectional_edge(void *a, void *b) {
 		*get_data_from_vertex(get_next_vertex(save)));
 
 	print_data((void *) g);
+
+	void *h = construct_edge_list((void *) g);
+
+	printf("\n%d\n", num_edges(h));
 
 	printf("before entering bfs land *save->data: %d \n", *save->data);
 

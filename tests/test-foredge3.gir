@@ -1,0 +1,7 @@
+int main() {
+	graph g = [A:1];
+	for_edge(e : g) {
+		print(e.from().data());
+	}
+	return 0;
+}

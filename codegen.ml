@@ -24,7 +24,7 @@ let translate (globals, functions) =
     | A.Node -> i32_ptr_t
     | A.Graph -> void_ptr_t
     | A.Digraph -> void_ptr_t
-    | A.Edge -> i32_t
+    | A.Edge -> void_ptr_t
     | A.Void -> void_t in
   (* TODO: actually add all types *)
 
@@ -100,6 +100,25 @@ let translate (globals, functions) =
   let bfs_done_t = L.function_type i32_t [| void_ptr_t |] in
   let bfs_done_func = L.declare_function "bfs_done" bfs_done_t the_module in
 
+  (* Declare functions that will be used for edge creation and for_edge *)
+  let edge_from_t = L.function_type i32_ptr_t [| void_ptr_t |] in
+  let edge_from_func = L.declare_function "edge_from" edge_from_t the_module in
+
+  let edge_to_t = L.function_type i32_ptr_t [| void_ptr_t |] in
+  let edge_to_func = L.declare_function "edge_to" edge_to_t the_module in
+
+  let construct_edge_list_t = L.function_type void_ptr_t [| void_ptr_t |] in
+  let construct_edge_list_func = L.declare_function "construct_edge_list" construct_edge_list_t the_module in
+
+  let num_edges_t = L.function_type i32_t [| void_ptr_t |] in
+  let num_edges_func = L.declare_function "num_edges" num_edges_t the_module in
+
+  let get_next_edge_t = L.function_type void_ptr_t [| void_ptr_t |] in
+  let get_next_edge_func = L.declare_function "get_next_edge" get_next_edge_t the_module in
+
+  let new_edge_t = L.function_type void_ptr_t [||] in
+  let new_edge_func = L.declare_function "new_edge" new_edge_t the_module in
+
   let function_decls =
     let function_decl m fdecl =
       let name = fdecl.A.f_name
@@ -169,6 +188,9 @@ let translate (globals, functions) =
              A.Node ->
              let new_data_ptr = L.build_call new_data_func [||] "tmp_data" builder in
              ignore(L.build_store new_data_ptr local_var builder);
+           | A.Edge ->
+             let new_edge_ptr = L.build_call new_edge_func [||] "tmp_data" builder in
+             ignore(L.build_store new_edge_ptr local_var builder);
            | _ -> ());
           (* add new variable to m *)
           StringMap.add n local_var m
@@ -248,6 +270,14 @@ let translate (globals, functions) =
       | A.Method (node_expr, "set_data", [data]) ->
         let data_ptr = expr vars builder node_expr in
         L.build_call set_data_func [| data_ptr ; (expr vars builder data) |] "" builder
+
+      (* edge methods *)
+      | A.Method (edge_expr, "from", []) ->
+        let data_ptr = expr vars builder edge_expr in
+        L.build_call edge_from_func [| data_ptr |] "tmp_edge_from" builder
+      | A.Method (edge_expr, "to", []) ->
+        let data_ptr = expr vars builder edge_expr in
+        L.build_call edge_to_func [| data_ptr |] "tmp_edge_to" builder
 
       (* graph methods *)
       | A.Method (graph_expr, "add_node", [node_expr]) ->
@@ -372,7 +402,56 @@ let translate (globals, functions) =
         ignore (L.build_cond_br done_bool_val body_bb merge_bb pred_builder);
         L.builder_at_end context merge_bb
 
-      | A.For_Edge (e1, e2, e3) -> builder (*not implemented *)
+      | A.For_Edge (e, g, body) -> 
+        let graph_ptr = (expr vars builder g) in
+
+        (* allocate counter variable - counts number of edges seen so far *)
+        let counter = L.build_alloca i32_t "counter" builder in
+        ignore(L.build_store (L.const_int i32_t 0) counter builder);
+
+        (* allocate register for e; then, add to symbol table, so the body can access it *)
+        let edge_var = L.build_alloca (ltype_of_typ A.Edge) e builder in
+        let vars = StringMap.add e edge_var vars in
+
+        (* allocate pointer to current edge struct *)
+        let current_edge_ptr = L.build_alloca void_ptr_t "current" builder in
+        (* construct edge list and get head *)
+        let head_edge = L.build_call construct_edge_list_func [| graph_ptr |] "head" builder in
+        ignore(L.build_store head_edge current_edge_ptr builder);
+
+        (* get number of edges *)
+        let size = L.build_call num_edges_func [| head_edge |] "size" builder in
+
+        let pred_bb = L.append_block context "while" the_function in
+        ignore (L.build_br pred_bb builder);
+
+        let body_bb = L.append_block context "while_body" the_function in
+        let body_builder = L.builder_at_end context body_bb in
+
+        let current_edge = L.build_load current_edge_ptr "current_tmp" body_builder in
+
+        (* load value of current edge into edge_var *)
+        ignore(L.build_store current_edge edge_var body_builder);
+        
+        (* change edge_var to be pointer to next edge *)
+        let next_edge = L.build_call get_next_edge_func [| current_edge |] "next" body_builder in
+        ignore(L.build_store next_edge current_edge_ptr body_builder);
+        (* increment counter *)
+        let counter_val = L.build_load counter "counter_tmp" body_builder in
+        let counter_incr = L.build_add (L.const_int i32_t 1) counter_val "counter_incr" body_builder in
+        ignore(L.build_store counter_incr counter body_builder);
+        (* build body of loop *)
+        add_terminal (stmt vars body_builder body) (L.build_br pred_bb);
+
+        (* branch to while_body iff counter < size *)
+        let pred_builder = L.builder_at_end context pred_bb in
+        let counter_val = L.build_load counter "counter_tmp" pred_builder in
+        let done_bool_val = L.build_icmp L.Icmp.Slt counter_val size "done" pred_builder in
+
+        let merge_bb = L.append_block context "merge" the_function in
+        ignore (L.build_cond_br done_bool_val body_bb merge_bb pred_builder);
+        L.builder_at_end context merge_bb
+
       | A.Bfs (n, g, r, body) -> 
         let graph_ptr = (expr vars builder g) in
         let root_ptr = (expr vars builder r) in
