@@ -20,7 +20,7 @@ let rec convert_expr e env = match e with
     Id(str)                       -> (check_id str env, env)
   | Binop(e1, op, e2)             -> (check_binop e1 op e2 env, env) 
   | Unop(op, e)                   -> (check_unop op e env, env)
-  | Assign(str, e)                -> (check_assign str e env, env)
+  | Assign(str, e)                -> (check_assign str e env)
   | Method(e, "data", e_lst)     -> (check_data e e_lst env, env)
   | Method (e, "set_data", e_lst) -> (check_sdata e e_lst env, env)
   | Method (e, s2, e_lst)        -> (report_meth_not_found s2) (*TODO more methods? will all methods be pre-named? *)
@@ -140,7 +140,7 @@ and check_assign str e env =
             Not_found -> (try StringMap.find str env.env_fformals with 
                 Not_found -> StringMap.find str env.env_globals) in
         (* if types match *)
-        if lvaluet == rvaluet then SAssign(str, r, lvaluet) 
+        if lvaluet == rvaluet then SAssign(str, r, lvaluet), env
         else report_bad_assign lvaluet rvaluet
     else report_undeclared_id_assign str
 
@@ -178,32 +178,14 @@ and check_graph str_lst ed_lst n_lst env =
         List.iter (fun n -> let (sn,_) = convert_expr (snd n) env in
                         let tn = get_sexpr_type sn in
                         if tn != t then raise (Failure("node type mismatch of " ^ string_of_typ t ^ " and " ^ string_of_typ tn))) n_lst; 
-    
-    let def_decl locs str = if (StringMap.mem str env.env_flocals || StringMap.mem str env.env_fformals || StringMap.mem str env.env_globals) 
-    then (
-        let lval = try StringMap.find str env.env_flocals with
-        Not_found -> (try StringMap.find str env.env_fformals with
-                Not_found -> StringMap.find str env.env_globals) in
-       if lval != Node then raise (Failure("variable " ^ str ^ " of type " ^ string_of_typ lval ^ " is already declared")); locs)
-       else StringMap.add str Node locs; locs
-
-        in
-        let flocals = env.env_flocals in 
-        List.fold_left def_decl flocals str_lst;
-          let newenv = 
-         {
-             env_name = env.env_name;
-             env_return_type = env.env_return_type;
-             env_fmap = env.env_fmap;
-             env_sfmap = env.env_sfmap;
-             env_globals = env.env_globals;
-             env_flocals = flocals;
-             env_fformals = env.env_fformals;
-             env_in_loop = env.env_in_loop;
-        }
+         
+  (*(check_vdecl t str e env)*)
+   let newenv = List.fold_left (fun x y -> let (_, z) = check_vdecl Node y Noexpr x in z) env str_lst
     in
-   let nodes = List.map (fun (x,y) -> let (s,_) = convert_expr y newenv in (x,s)) n_lst in
-    SGraph_Lit(str_lst, ed_lst, nodes, Graph, Int), newenv
+   let nodes = List.map (fun (x,y) -> let (s,_) = convert_expr y newenv in (x,s)) n_lst
+    in
+    (SGraph_Lit(str_lst, ed_lst, nodes, Graph, Int), newenv)
+
    (* if elt is already defined don't declare, just add to node list*)
     (* if elt is not defined declare and assign expr to it *)
 
@@ -265,7 +247,7 @@ and convert_stmt stmt env = match stmt with
     | Dfs(str, e1, e2, s)   -> (check_dfs str e1 e2 s env, env) 
     | Break                 -> (check_break env, env)  
     | Continue              -> (check_continue env, env) 
-    | Expr(e)               -> (check_expr_stmt e env, env) 
+    | Expr(e)               -> (check_expr_stmt e env) 
     | Vdecl(t, str, e)      -> (check_vdecl t str e env)
     | Return(e)             -> (check_return e env, env)
 
@@ -432,8 +414,8 @@ and check_continue env =
 
 
 and check_expr_stmt e env = 
-    let (se, _) = convert_expr e env in 
-    let typ = get_sexpr_type se in SExpr(se, typ)
+    let (se, nenv) = convert_expr e env in 
+    let typ = get_sexpr_type se in (SExpr(se, typ), nenv)
 
 
 and convert_fdecl fname fformals env = 
@@ -490,7 +472,6 @@ and check_vdecl t str e env =
     if (StringMap.mem str env.env_flocals || StringMap.mem str env.env_fformals || StringMap.mem str env.env_globals)
     then raise(Failure("cannot reinitialize existing variable"))
     else
-    
     let flocals = StringMap.add str t env.env_flocals in
     let new_env = 
       {
@@ -505,14 +486,15 @@ and check_vdecl t str e env =
       }
     in
 
-    let (se, _) = convert_expr e new_env in
-    let typ = get_sexpr_type se in
+    let (se, nenv) = convert_expr e new_env 
+    in
+    let typ = get_sexpr_type se 
+    in
     if typ != Void then
-      if t != typ then raise(Failure("expression type mismatch " ^ string_of_typ t ^ " and " ^ string_of_typ typ))
-      else
-      (SVdecl(t, str, se), new_env)
+      (if t != typ then (raise(Failure("expression type mismatch " ^ string_of_typ t ^ " and " ^ string_of_typ typ)))
+      else (SVdecl(t, str, se), nenv))
     else 
-      (SVdecl(t, str, se), new_env)
+      (SVdecl(t, str, se), nenv)
 
 
 and check_return e env =
