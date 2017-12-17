@@ -96,11 +96,6 @@ int *new_data() {
 }
 
 /* Allocate a new unique data pointer. */
-void *new_edge() {
-	return malloc(sizeof(struct edge_list_node));
-}
-
-/* Allocate a new unique data pointer. */
 int *edge_from(void *e) {
 	return ((struct edge_list_node *) e)->from->data;
 }

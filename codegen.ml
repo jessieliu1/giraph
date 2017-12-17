@@ -116,9 +116,6 @@ let translate (globals, functions) =
   let get_next_edge_t = L.function_type void_ptr_t [| void_ptr_t |] in
   let get_next_edge_func = L.declare_function "get_next_edge" get_next_edge_t the_module in
 
-  let new_edge_t = L.function_type void_ptr_t [||] in
-  let new_edge_func = L.declare_function "new_edge" new_edge_t the_module in
-
   let function_decls =
     let function_decl m fdecl =
       let name = fdecl.A.f_name
@@ -188,9 +185,6 @@ let translate (globals, functions) =
              A.Node ->
              let new_data_ptr = L.build_call new_data_func [||] "tmp_data" builder in
              ignore(L.build_store new_data_ptr local_var builder);
-           | A.Edge ->
-             let new_edge_ptr = L.build_call new_edge_func [||] "tmp_data" builder in
-             ignore(L.build_store new_edge_ptr local_var builder);
            | _ -> ());
           (* add new variable to m *)
           StringMap.add n local_var m
