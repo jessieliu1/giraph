@@ -26,8 +26,8 @@ open Prshelper %}
 %right NOT NEG
 
 %nonassoc EQ NEQ
-%nonassoc  GEQ LEQ GT LT
-%nonassoc  NOELSE
+%nonassoc GEQ LEQ GT LT
+%nonassoc NOELSE
 %nonassoc ELSE
 
 %left DOT
@@ -45,9 +45,8 @@ program:
 
 decls:
   /* nothing */     { [], [] } /* first list has vdecls, second has fdecls*/
-  | decls vdecl { ($2 :: fst $1), snd $1 }
-  | decls fdecl { fst $1, ($2 :: snd $1) }
-  
+| decls vdecl { ($2 :: fst $1), snd $1 }
+| decls fdecl { fst $1, ($2 :: snd $1) }
   
 fdecl: typ ID LPAREN formals_opt RPAREN LBRACE stmt_list RBRACE
         { { f_typ = $1; f_name = $2; f_formals = $4; f_body = List.rev $7 } }
@@ -66,12 +65,13 @@ formals_opt: /* nothing */  { [] }
         | formal_list { List.rev $1 } 
 
 formal_list: typ ID { [($1, $2)] }
-| formal_list COMMA typ ID { ($3,$4) :: $1 } 
+        | formal_list COMMA typ ID { ($3,$4) :: $1 } 
 
 vdecl: 
-typ ID SEMI { ($1, $2) }
+  typ ID SEMI { ($1, $2) }
 
-stmt_list: { [] }
+stmt_list: 
+  /* nothing */  { [] }
 | stmt_list stmt { $2 :: $1 }
 
 stmt:
@@ -110,7 +110,7 @@ expr:
 | expr LT expr { Binop($1, Less,$3) }
 | MINUS expr %prec NEG { Unop(Neg, $2) }
 | NOT expr              { Unop(Not, $2) }
-| ID ASSIGN expr { Assign($1, $3) }
+| ID ASSIGN expr        { Assign($1, $3) }
 | ID LPAREN actuals_opt RPAREN { Call($1, $3) }
 | expr DOT ID LPAREN actuals_opt RPAREN { Method($1, $3, $5) }
 | LPAREN expr RPAREN { $2 }
@@ -165,8 +165,8 @@ single_node_expr:
 
 
 expr_opt: 
-/* nothing */ { Noexpr }
-| expr { $1 }
+    /* nothing */ { Noexpr }
+  | expr { $1 }
 
 
 actuals_opt:
