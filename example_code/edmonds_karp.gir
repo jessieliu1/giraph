@@ -1,71 +1,70 @@
-function dag augment(dag flow, dag path) {
-	/* Get bottleneck capacity of path. */
+wedigraph augment(wedigraph flow, wedigraph path) {
+	!~ Get bottleneck capacity of path. ~!
 	int min = -1;
 	for_edge (e : path) {
-		if (min > e.weight) {
-			min = e.weight;
+		if (min > e.weight() || min == -1) {
+			min = e.weight();
 		}
 	}
 
-	/* Augment flow. */
+	!~ Augment flow. ~!
 	for_edge (e : path) {
-		if (flow.has_edge(e.from, e.to)) {
-			int current_flow = flow.get_edge(e.from, e.to).weight;
-			/* Add bottleneck capacity to current flow. */
-			flow.add_edge(e.from, e.to, current_flow + min);
+		if (flow.has_edge(e.from(), e.to())) {
+			int current_flow = flow.get_edge_weight(e.from(), e.to());
+			!~ Add bottleneck capacity to current flow. ~!
+			flow.add_edge(e.from(), e.to(), current_flow + min);
 		} else {
-			int current_flow = flow.get_edge(e.to, e.from).weight;
-			/* Subtract bottleneck capacity from current flow. */
-			flow.add_edge(e.to, e.from, current_flow - min);
+			int current_flow = flow.get_edge_weight(e.to(), e.from());
+			!~ Subtract bottleneck capacity from current flow. ~!
+			flow.add_edge(e.to(), e.from(), current_flow - min);
 		}
 	}
 	return flow;
 }
 
-function digraph make_residual_graph(dag flow, dag network) {
-	digraph residual_graph;
+wedigraph make_residual_graph(wedigraph flow, wedigraph network) {
+	wedigraph residual_graph;
 	for_edge (e : flow) {
-		int forward = network.get_edge(e.from, e.to).weight - e.weight;
-		int backward = e.weight;
+		int forward = network.get_edge_weight(e.from(), e.to()) - e.weight();
+		int backward = e.weight();
 		if (forward > 0) {
-			residual_graph.add_edge(e.from, e.to, forward);
+			residual_graph.add_edge(e.from(), e.to(), forward);
 		}
 		if (backward > 0) {
-			residual_graph.add_edge(e.to, e.from, backward);
+			residual_graph.add_edge(e.to(), e.from(), backward);
 		}
 	}
 	return residual_graph;
 }
 
-function dag edmonds_karp(dag network) {
-	/* The argument “network” contains the capacities as weights on edges.
+wedigraph edmonds_karp(wedigraph network, node source, node sink) {
+	!~ The argument “network” contains the capacities as weights on edges.
 	   Flow is represented with a graph exactly equivalent to network, but 
 	   with the flow on each edge as the weight instead of the capacity.
-	   First, set up initial flow of 0 on every edge. */
-	dag flow;
+	   First, set up initial flow of 0 on every edge. ~!
+	wedigraph flow;
 	for_edge (e : network) {
-		flow.add_edge(e.from, e.to, 0);
+		flow.add_edge(e.from(), e.to(), 0);
 	}
-	dag residual = make_residual_graph(flow, network);
+	wedigraph residual = make_residual_graph(flow, network);
 	while (true) {
 		map parents;
-		/* Find shortest s-t path with BFS. */
-		bfs (n : residual ; network.source) {
+		!~ Find shortest s-t path with BFS. ~!
+		bfs (n : residual ; source) {
 			for_node (neighbor : residual.get_neighbors(n)) {
-				/* ^ this means get_neighbors returns an edgeless graph! woah!*/
 				if (!parents.contains_key(neighbor)) {
 					parents[neighbor] = n;
 				}
 			}
 		}
-		/* If we didn’t reach the sink, there is no s-t path in residual */
+		!~ If we didn’t reach the sink, there is no s-t path in residual ~!
 		if (!parents.contains_key(i)) {
 			break;
 		}
-		dag path; 
-		node i = network.sink;
-		while (i != network.source) {
-			path.add_edge(parents[i], i, residual.get_edge(parents[i], i).weight);
+		wedigraph path;
+		node i = sink;
+		while (i != source) {
+			path.add_edge(parents[i], i, residual.get_edge_weight(parents[i], i));
 			i = parents[i];
 		}
 		flow = augment(flow, path);
@@ -74,8 +73,7 @@ function dag edmonds_karp(dag network) {
 }
 
 function void main() {
-	dag network = A -[100]-> (B -[100]-> D, C -[100]-> D)
-				  B -[1]-> C;
-	dag max_flow = edmonds_karp(network);
+	wedigraph network = [A -{100}-> B -{100}-> D <-{100}- C <-{100}- A ; B -{1}-> C];
+	wedigraph max_flow = edmonds_karp(network, A, D);
 	render(max_flow);
 }
