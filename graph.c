@@ -11,6 +11,7 @@
 struct adj_list_node {
 	struct vertex_list_node *vertex;
 	struct adj_list_node *next;
+	int weight;
 };
 
 /* a single node in the edge list containing relevant edge information */
@@ -68,16 +69,14 @@ void *add_vertex(void *graph_ptr, int *data_ptr) {
 	return (void *) vertex;
 }
 
-/* Add a (directed) edge between two vertices. */
-void add_edge(void *from_ptr, void *to_ptr) {
-	/* HOLY SHIT THIS SHIT NEEDS COMMENTING
-	   I WROTE IT LIKE 15 MINUTES AGO AND ALREADY DON'T UNDERSTAND */
+/* Add a directed, weighted edge between two vertices */
+void add_wedge(void *from_ptr, void *to_ptr, int w) {
 	struct vertex_list_node *from = (struct vertex_list_node *) from_ptr;
 	struct vertex_list_node *to = (struct vertex_list_node *) to_ptr;
-
 	if (from->adjacencies == NULL) {
 		from->adjacencies = malloc(sizeof(struct adj_list_node));
 		from->adjacencies->vertex = to;
+		from->adjacencies->weight = w;
 		from->adjacencies->next = NULL;
 	} else {
 		struct adj_list_node *last_node = from->adjacencies;
@@ -86,8 +85,14 @@ void add_edge(void *from_ptr, void *to_ptr) {
 		}
 		last_node->next = malloc(sizeof(struct adj_list_node));
 		last_node->next->vertex = to;
+		last_node->next->weight = w;
 		last_node->next->next = NULL;
 	}
+}
+
+/* Add a (directed) edge between two vertices. Give default weight 0. */
+void add_edge(void *from_ptr, void *to_ptr) {
+	add_wedge(from_ptr, to_ptr, 0);
 }
 
 /* Allocate a new unique data pointer. */
@@ -95,11 +100,7 @@ int *new_data() {
 	return malloc(sizeof(int));
 }
 
-/* Allocate a new unique data pointer. */
-void *new_edge() {
-	return malloc(sizeof(struct edge_list_node));
-}
-
+/////// edge //////
 /* Allocate a new unique data pointer. */
 int *edge_from(void *e) {
 	return ((struct edge_list_node *) e)->from->data;
@@ -107,6 +108,14 @@ int *edge_from(void *e) {
 
 int *edge_to(void *e) {
 	return ((struct edge_list_node *) e)->to->data;
+}
+
+int edge_weight(void *e) {
+	return ((struct edge_list_node *) e)->weight;
+}
+
+void edge_set_weight(void *e, int new_weight) {
+	((struct edge_list_node *) e)->weight = new_weight;
 }
 
 /* Change the data stored in a data pointer. */
@@ -208,11 +217,11 @@ void remove_vertex(void *g_in, int *data_ptr) {
 	}
 }
 
-/* Given a graph and two data pointers, adds a (directed) edge between the
+/* Given a graph and two data pointers, adds a directed, weighted edge between the
    vertices corresponding to each data pointer. If either of such vertices
    does not exist, they are created.
    Corresponds to add_edge method in giraph. */
-void add_edge_method(void *g_in, int *from_data_ptr, int *to_data_ptr) {
+void add_wedge_method(void *g_in, int *from_data_ptr, int *to_data_ptr, int w) {
 	struct graph *g = (struct graph *) g_in;
 	void *from = find_vertex(g_in, from_data_ptr);
 	if (from == NULL) {
@@ -222,7 +231,12 @@ void add_edge_method(void *g_in, int *from_data_ptr, int *to_data_ptr) {
 	if (to == NULL) {
 		to = add_vertex(g_in, to_data_ptr);
 	}
-	add_edge(from, to);
+	add_wedge(from, to, w);
+}
+
+/* calls add_wedge_method with default weight of 0 */
+void add_edge_method(void *g_in, int *from_data_ptr, int *to_data_ptr) {
+	add_wedge_method(g_in, from_data_ptr, to_data_ptr, 0);
 }
 
 /* Given a graph and two data pointers, removes the directed edge between the
@@ -338,7 +352,7 @@ void print_data(void *graph_ptr) {
 //// for_edge ////
 void print_edges(struct edge_list_node *e) {
 	while (e) {
-		printf("from: %d  to: %d \n", *e->from->data, *e->to->data);
+		printf("from: %d  to: %d weight: %d\n", *e->from->data, *e->to->data, e->weight);
 		e = e->next;
 	}
 }
@@ -356,7 +370,7 @@ void *construct_edge_list(void *g_in) {
 			struct edge_list_node *e = (struct edge_list_node *) malloc(sizeof(struct edge_list_node));
 			e->from = v;
 			e->to = adjacency->vertex;
-			// e->weight = adjacency->weight;
+			e->weight = adjacency->weight;
 			e->next = NULL;
 			if (first) {
 				head = e;

@@ -107,6 +107,12 @@ let translate (globals, functions) =
   let edge_to_t = L.function_type i32_ptr_t [| void_ptr_t |] in
   let edge_to_func = L.declare_function "edge_to" edge_to_t the_module in
 
+  let edge_weight_t = L.function_type i32_t [| void_ptr_t |] in
+  let edge_weight_func = L.declare_function "edge_weight" edge_weight_t the_module in
+
+  let edge_set_weight_t = L.function_type void_t [| void_ptr_t ; i32_t |] in
+  let edge_set_weight_func = L.declare_function "edge_set_weight" edge_set_weight_t the_module in
+
   let construct_edge_list_t = L.function_type void_ptr_t [| void_ptr_t |] in
   let construct_edge_list_func = L.declare_function "construct_edge_list" construct_edge_list_t the_module in
 
@@ -115,9 +121,6 @@ let translate (globals, functions) =
 
   let get_next_edge_t = L.function_type void_ptr_t [| void_ptr_t |] in
   let get_next_edge_func = L.declare_function "get_next_edge" get_next_edge_t the_module in
-
-  let new_edge_t = L.function_type void_ptr_t [||] in
-  let new_edge_func = L.declare_function "new_edge" new_edge_t the_module in
 
   let function_decls =
     let function_decl m fdecl =
@@ -188,9 +191,6 @@ let translate (globals, functions) =
              A.Node ->
              let new_data_ptr = L.build_call new_data_func [||] "tmp_data" builder in
              ignore(L.build_store new_data_ptr local_var builder);
-           | A.Edge ->
-             let new_edge_ptr = L.build_call new_edge_func [||] "tmp_data" builder in
-             ignore(L.build_store new_edge_ptr local_var builder);
            | _ -> ());
           (* add new variable to m *)
           StringMap.add n local_var m
@@ -278,6 +278,12 @@ let translate (globals, functions) =
       | A.Method (edge_expr, "to", []) ->
         let data_ptr = expr vars builder edge_expr in
         L.build_call edge_to_func [| data_ptr |] "tmp_edge_to" builder
+      | A.Method (edge_expr, "weight", []) ->
+        let data_ptr = expr vars builder edge_expr in
+        L.build_call edge_weight_func [| data_ptr |] "tmp_edge_weight" builder
+      | A.Method (edge_expr, "set_weight", [data]) ->
+        let data_ptr = expr vars builder edge_expr in
+        L.build_call edge_set_weight_func [| data_ptr ; (expr vars builder data) |] "" builder
 
       (* graph methods *)
       | A.Method (graph_expr, "add_node", [node_expr]) ->
