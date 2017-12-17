@@ -60,6 +60,7 @@ typ:
   | STRING { String }
   | NODE { Node }
   | GRAPH { Graph }
+  | DIGRAPH { Digraph }
 
 formals_opt: /* nothing */  { [] }
         | formal_list { List.rev $1 } 

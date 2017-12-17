@@ -23,6 +23,7 @@ let translate (globals, functions) =
     | A.String -> str_t
     | A.Node -> i32_ptr_t
     | A.Graph -> void_ptr_t
+    | A.Digraph -> void_ptr_t
     | A.Edge -> i32_t
     | A.Void -> void_t in
   (* TODO: actually add all types *)
@@ -220,9 +221,8 @@ let translate (globals, functions) =
         let get_data_ptr node = L.build_load (lookup vars node) node builder in
         let call_add_vertex node = L.build_call add_vertex_func [| g ; (get_data_ptr node) |] ("vertex_struct_" ^ node) builder in
         let nodes_map = List.fold_left (fun map node -> StringMap.add node (call_add_vertex node) map) StringMap.empty nodes in
-        (* add edges in both directions *)
+        (* add edge *)
         ignore(List.map (fun (n1, n2) -> L.build_call add_edge_func [| (StringMap.find n1 nodes_map) ; (StringMap.find n2 nodes_map) |] "" builder) edges);
-        ignore(List.map (fun (n1, n2) -> L.build_call add_edge_func [| (StringMap.find n2 nodes_map) ; (StringMap.find n1 nodes_map) |] "" builder) edges);
         (* initialize nodes with data *)
         let set_data (node, data) = L.build_call set_data_func [| (get_data_ptr node) ; (expr vars builder data) |] "" builder in
         ignore(List.map set_data nodes_init);

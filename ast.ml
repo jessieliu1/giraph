@@ -3,7 +3,7 @@ type binop = Add | Sub | Mult | Div | Mod | Eq | Neq |
 
 type unop = Neg | Not
 
-type typ = Int | Float | Bool | Void | String | Node | Graph | Edge
+type typ = Int | Float | Bool | Void | String | Node | Edge | Graph | Digraph
 
 type bind = typ * string
 
@@ -79,6 +79,7 @@ let string_of_typ = function
   | String -> "str"
   | Node -> "node"
   | Graph -> "graph"
+  | Digraph -> "digraph"
   | Edge -> "edge"
   | Void -> "void"
 
@@ -117,7 +118,9 @@ let rec string_of_stmt = function
       "for (" ^ string_of_expr e1  ^ " ; " ^ string_of_expr e2 ^ " ; " ^
       string_of_expr e3  ^ ") " ^ string_of_stmt s
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
-  | For_Node(n, g, s) -> "for_node (" ^ n ^ " : " ^ string_of_expr g ^ ") " ^ string_of_stmt s
+  | For_Node(n, g, sl) -> "for_node (" ^ n ^ " : " ^ string_of_expr g ^ ") " ^ string_of_stmt sl
+  | Bfs(n, g, src, sl) -> "bfs (" ^ n ^ " : " ^ string_of_expr g ^ " ; " ^
+                          string_of_expr src ^ ") " ^ string_of_stmt sl
 
 
 let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
