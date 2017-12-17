@@ -179,14 +179,16 @@ and check_graph str_lst ed_lst n_lst env =
                         let tn = get_sexpr_type sn in
                         if tn != t then raise (Failure("node type mismatch of " ^ string_of_typ t ^ " and " ^ string_of_typ tn))) n_lst; 
     
-    let def_decl locs str = ignore (if (StringMap.mem str env.env_flocals || StringMap.mem str env.env_fformals || StringMap.mem str env.env_globals) then 
+    let def_decl locs str = if (StringMap.mem str env.env_flocals || StringMap.mem str env.env_fformals || StringMap.mem str env.env_globals) 
+    then (
         let lval = try StringMap.find str env.env_flocals with
         Not_found -> (try StringMap.find str env.env_fformals with
                 Not_found -> StringMap.find str env.env_globals) in
-       if lval != Node then raise (Failure("variable " ^ str ^ " of type " ^ string_of_typ lval ^ " is already declared")));
-          StringMap.add str Node locs
+       if lval != Node then raise (Failure("variable " ^ str ^ " of type " ^ string_of_typ lval ^ " is already declared")); locs)
+       else StringMap.add str Node locs; locs
+
         in
-    let flocals = env.env_flocals in 
+        let flocals = env.env_flocals in 
         List.fold_left def_decl flocals str_lst;
           let newenv = 
          {
@@ -454,7 +456,7 @@ and convert_fdecl fname fformals env =
         env_fmap = env.env_fmap;
         env_sfmap = env.env_sfmap;
         env_globals = env.env_globals;
-        env_flocals = env.env_flocals;
+        env_flocals = StringMap.empty; (* locals should be empty at start check*)
         env_fformals = formals;
         env_in_loop = env.env_in_loop
     }
@@ -593,4 +595,3 @@ let check ast = match ast with
       let sast = convert_ast globals fdecls fmap
       in 
       sast 
-
