@@ -508,6 +508,11 @@ void add_bidirectional_edge(void *a, void *b) {
 	add_bidirectional_edge(savedarray[3], savedarray[4]);
 	add_bidirectional_edge(savedarray[4], savedarray[0]);
 
+	printf("num vertices: %d\n", num_vertices(g));
+
+	printf("vertex with data: %d ... next vertex in list has data: %d\n\n", *get_data_from_vertex(save),
+		*get_data_from_vertex(get_next_vertex(save)));
+
 	print_data((void *) g);
 
 	printf("before entering bfs land *save->data: %d \n", *save->data);

@@ -1,0 +1,13 @@
+int g;
+
+int main() {
+    int i = 7;  
+    if (i > 5) {
+        i = dog(i);
+    }  
+    
+}
+
+int dog(int g) {
+    int g = 6;
+}

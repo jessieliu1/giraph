@@ -335,6 +335,7 @@ let translate (globals, functions) =
         (* allocate register for n; then, add to symbol table, so the body can access it *)
         let node_var = L.build_alloca (ltype_of_typ A.Node) n builder in
         let vars = StringMap.add n node_var vars in
+
         (* allocate pointer to current vertex struct *)
         let current_vertex_ptr = L.build_alloca void_ptr_t "current" builder in
         (* get head of vertex list *)
@@ -351,6 +352,7 @@ let translate (globals, functions) =
         (* get node data pointer from current vertex struct *)
         let data_ptr = L.build_call get_data_from_vertex_func [| current_vertex |] (n ^ "_tmp") body_builder in
         ignore(L.build_store data_ptr node_var body_builder);
+        
         (* change current_vertex to be pointer to next_vertex *)
         let next_vertex = L.build_call get_next_vertex_func [| current_vertex |] "next" body_builder in
         ignore(L.build_store next_vertex current_vertex_ptr body_builder);
