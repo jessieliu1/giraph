@@ -1,0 +1,5 @@
+int main() {
+    graph g = [A:5 -- B:6 -- C:9];
+    g.add_edge(A, B);
+    g.get_edge_weight(A, C);
+}

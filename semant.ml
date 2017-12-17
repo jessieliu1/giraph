@@ -21,9 +21,9 @@ let rec convert_expr e env = match e with
   | Binop(e1, op, e2)             -> (check_binop e1 op e2 env, env) 
   | Unop(op, e)                   -> (check_unop op e env, env)
   | Assign(str, e)                -> (check_assign str e env)
-  | Method (e, "from", e_lst)     -> (check_edgemtd e "from" e_lst env, env)
-  | Method (e, "to", e_lst)     -> (check_edgemtd e "to" e_lst env, env)
-  | Method (e, "weight", e_lst)   -> (check_edgemtd e "weight" e_lst env, env)
+  | Method (e, "from", e_lst)     -> (check_edgemtd e "from" e_lst env)
+  | Method (e, "to", e_lst)     -> (check_edgemtd e "to" e_lst env)
+  | Method (e, "weight", e_lst)   -> (check_edgemtd e "weight" e_lst env)
   | Method(e, "data", e_lst)     -> (check_data e e_lst env, env)
   | Method (e, "set_data", e_lst) -> (check_sdata e e_lst env, env)
   | Method (e, "add_node", e_lst) -> (check_addnode e e_lst env)
@@ -170,7 +170,8 @@ and check_data e e_lst env =
     let (s,_) = convert_expr e env in
     let t = get_sexpr_type s in
     if (t != Node) then (raise(Failure("data() called on type " ^ string_of_typ t ^ " when node was expected")))
-    else SMethod(s,"data", [], Int)  
+    else 
+    SMethod(s,"data", [], Int)  
 
 and check_sdata e e_lst env =
   let len = List.length e_lst in
@@ -242,11 +243,17 @@ and check_graphmtd g name args e_lst env =
 
 and check_edgemtd e n e_lst env = 
   let len = List.length e_lst in
+  let e_lst_checked = List.map (fun e -> let (s, env) = convert_expr e env in s) e_lst in
   if (len != 0) then raise(Failure(n ^ " takes 0 arguments but " ^ string_of_int len ^ " arguments given")) else
-      match e with Id(str) -> 
-        ignore (check_id_typ str Edge env);
-        let (ex,_) = convert_expr e env in
-            (SMethod(ex, n, [], Node))
+      let se, nenv = convert_expr e env in
+      let t = get_sexpr_type se in
+      match t with
+        Edge -> 
+            match n with
+            "from" -> SMethod(se, n, e_lst_checked, Node), nenv
+            | "to" -> SMethod(se, n, e_lst_checked, Node), nenv
+            | "weight" -> SMethod(se, n, e_lst_checked, Int), nenv
+        | _ -> raise(Failure("Edge method " ^ n ^ " called on type " ^ string_of_typ t)) 
 
 
 (* TODO *)
@@ -262,14 +269,13 @@ and check_graph str_lst ed_lst n_lst is_d is_w env =
   let weight_types = List.map (fun (_,_,w_sexpr) -> get_sexpr_type w_sexpr) ed_lst_checked in
   List.iter (fun t -> if t != Int then
                 raise (Failure("edge weights must be of type int"))) weight_types;
-  let t = List.hd(weight_types) in  
   (* TODO: remove all this when generics are implemented *)
   (* first elt must be int *)
   (* match first elt to other elts *)
   match str_lst with
-    [] -> SGraph_Lit([], [], [], Graph, t), env
+    [] -> SGraph_Lit([], [], [], Graph, Int), env
   | _ -> (match n_lst with
-        [] ->  SGraph_Lit(str_lst, ed_lst_checked, [], graph_type, t), env
+        [] ->  SGraph_Lit(str_lst, ed_lst_checked, [], graph_type, Int), env
       | _ ->
         let (s,_) = convert_expr (snd (List.hd n_lst)) env in
         let t = get_sexpr_type s in
