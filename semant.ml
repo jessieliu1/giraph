@@ -26,10 +26,10 @@ let rec convert_expr e env = match e with
   | Method (e, "weight", e_lst)   -> (check_edgemtd e "weight" e_lst env)
   | Method(e, "data", e_lst)     -> (check_data e e_lst env, env)
   | Method (e, "set_data", e_lst) -> (check_sdata e e_lst env, env)
-  | Method (e, "add_node", e_lst) -> (check_addnode e e_lst env)
-  | Method (e, "add_edge", e_lst) -> (check_graphmtd e "add_edge" 2 e_lst env, env)
-  | Method (e, "remove_node", e_lst) -> (check_graphmtd e "remove_node" 1 e_lst env, env)
-  | Method (e, "remove_edge", e_lst) -> (check_graphmtd e "remove_edge" 2 e_lst env, env)
+  | Method (e, "add_node", e_lst) -> (check_graphmtd e "add_node" 1 e_lst Void env, env)
+  | Method (e, "add_edge", e_lst) -> (check_graphmtd e "add_edge" 2 e_lst Void env, env)
+  | Method (e, "remove_node", e_lst) -> (check_graphmtd e "remove_node" 1 e_lst Void env, env)
+  | Method (e, "remove_edge", e_lst) -> (check_graphmtd e "remove_edge" 2 e_lst Void env, env)
   | Method (e, s2, e_lst)        -> (report_meth_not_found s2)
   | Call("print", e_lst)          -> (check_print e_lst env, env)
   | Call("printb", e_lst)         -> (check_print e_lst env, env)
@@ -171,7 +171,7 @@ and check_data e e_lst env =
     let t = get_sexpr_type s in
     if (t != Node) then (raise(Failure("data() called on type " ^ string_of_typ t ^ " when node was expected")))
     else 
-    SMethod(s,"data", [], Int)  
+    SMethod(s,"data", [], Int) (*TODO get actual type, not Int, once graph data types are in*)
 
 and check_sdata e e_lst env =
   let len = List.length e_lst in
@@ -182,64 +182,42 @@ and check_sdata e e_lst env =
     if (t != Node) then raise(Failure("set_data() called on type " ^ string_of_typ t ^ " when node was expected"))
     else
       let (s, _) = convert_expr (List.hd e_lst) env in
-      SMethod(id,"set_data", [s], Node) (*TODO get actual type, not Int, once graph data types are in*)
+      SMethod(id,"set_data", [s], Void)
 
-and check_addnode g e_lst env =
+and check_graphmtd g name args e_lst ret_typ env =
+  let (id,_) = convert_expr g env in
+  let t = get_sexpr_type id in
+  let tcheck = match t with Graph -> true
+                          | Digraph -> true
+                          | Wegraph -> true
+                          | Wedigraph -> true
+                          | _ -> 
+                            raise(Failure(name ^ " called on type " ^ string_of_typ t ^ " when graph was expected")) in
   let len = List.length e_lst in
-  if (len != 1) then raise(Failure("add_node() takes 1 arguments but " ^ string_of_int len ^ " arguments given")) else
+  if (len != args) then raise(Failure( name ^ " takes " ^ string_of_int args ^ " arguments but " ^ string_of_int len ^ " arguments given")) ;
 
-    let (id,_) = convert_expr g env in
-    let t = get_sexpr_type id in
-    let tcheck = match t with Graph -> true
-                        | Digraph -> true
-                        | Wegraph -> true
-                        | Wedigraph -> true
-                        | _ -> 
-                raise(Failure("add_node() called on type " ^ string_of_typ t ^ " when graph was expected")) in
-      let e = (List.hd e_lst) in
-        let (ex,_) = convert_expr e env in
-        let t = get_sexpr_type ex in 
-        if t != Node then raise(Failure("add_node() expects type Node but "             ^ string_of_typ t ^ " was given"));
-            (SMethod(id, "add_node", [ex], t), env)
-
-
-
-and check_graphmtd g name args e_lst env =
-    let (id,_) = convert_expr g env in
-    let t = get_sexpr_type id in
-    let tcheck = match t with Graph -> true
-                        | Digraph -> true
-                        | Wegraph -> true
-                        | Wedigraph -> true
-                        | _ -> 
-                raise(Failure(name ^ " called on type " ^ string_of_typ t ^ " when graph was expected")) in
-      let len = List.length e_lst in
-      if (len != args) then raise(Failure( name ^ " takes " ^ string_of_int args ^ " arguments but " ^ string_of_int len ^ " arguments given")) ;
-
-      let sexpr =  
-      match args with 1 -> (
-      let e1 = (List.hd e_lst) in
+  let sexpr =  
+    match args with 
+      1 -> (
+        let e1 = (List.hd e_lst) in
         let (ex,_) = convert_expr e1 env in
         let t1 = get_sexpr_type ex in
         if ( t1 != Node )
         then raise(Failure("graph method " ^ name ^ "may not be called 
                 on type " ^ string_of_typ t1));
-            (SMethod(id, name, [ex], t)))
+        (SMethod(id, name, [ex], ret_typ)))
 
-      | 2 -> 
+    | 2 -> 
       let e1 = (List.hd e_lst) and e2 = (List.nth e_lst 1) in
-
-        let (ex,_) = convert_expr e1 env in
-        let (ex2,_) = convert_expr e2 env in
-        let t1 = get_sexpr_type ex and t2 = get_sexpr_type ex2 in 
-        if ( t1 != Node || t2 != Node )
-        then raise(Failure("graph method " ^ name ^ "may not be called 
+      let (ex,_) = convert_expr e1 env in
+      let (ex2,_) = convert_expr e2 env in
+      let t1 = get_sexpr_type ex and t2 = get_sexpr_type ex2 in 
+      if ( t1 != Node || t2 != Node )
+      then raise(Failure("graph method " ^ name ^ "may not be called 
                 on types " ^ string_of_typ t1 ^ ", " ^ string_of_typ t2));
-            (SMethod(id, name, [ex; ex2], t))
+      (SMethod(id, name, [ex; ex2], ret_typ))
 
-
-        in sexpr
-
+  in sexpr
 
 and check_edgemtd e n e_lst env = 
   let len = List.length e_lst in
