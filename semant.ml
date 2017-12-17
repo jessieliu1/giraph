@@ -33,7 +33,8 @@ let rec convert_expr e env = match e with
   | Float_Lit(f)                  -> (SFloat_Lit(f), env)
   | String_Lit(str)               -> (SString_Lit(str), env)
   (* todo below *)
-  | Graph_Lit(str_lst, ed_lst, n_lst) -> (check_graph str_lst ed_lst n_lst env)
+  | Graph_Lit(str_lst, ed_lst, n_lst, is_d, is_w) ->
+    (check_graph str_lst ed_lst n_lst is_d is_w env)
   | Noexpr                        -> (SNoexpr, env)
 
 
@@ -44,18 +45,18 @@ and convert_expr_list expr_lst env =
 
 
 and get_sexpr_type sexpr = match sexpr with
-    SId(_, typ)                -> typ
-  | SBinop(_, _, _, typ)       -> typ
-  | SUnop(_, _, typ)           -> typ
-  | SAssign(_, _, typ)         -> typ
-  | SCall(_, _, typ)           -> typ
-  | SMethod(_,_,_, typ)        -> typ
-  | SBool_Lit(_)               -> Bool
-  | SInt_Lit(_)                -> Int
-  | SFloat_Lit(_)              -> Float
-  | SString_Lit(_)             -> String
-  | SGraph_Lit(_,_,_,t,typ)    -> t
-  | SNoexpr                    -> Void
+    SId(_, typ)                 -> typ
+  | SBinop(_, _, _, typ)        -> typ
+  | SUnop(_, _, typ)            -> typ
+  | SAssign(_, _, typ)          -> typ
+  | SCall(_, _, typ)            -> typ
+  | SMethod(_,_,_, typ)         -> typ
+  | SBool_Lit(_)                -> Bool
+  | SInt_Lit(_)                 -> Int
+  | SFloat_Lit(_)               -> Float
+  | SString_Lit(_)              -> String
+  | SGraph_Lit(_,_,_,subtype,_) -> subtype
+  | SNoexpr                     -> Void
 
 
 and get_sexpr_lst_type sexpr_lst = 
@@ -141,6 +142,7 @@ and check_assign str e env =
                 Not_found -> StringMap.find str env.env_globals) in
         (* if types match *)
         if lvaluet == rvaluet then SAssign(str, r, lvaluet), env
+        (* TODO: check if rvalue is an edgeless graph and lvaluet is a graph subtype (this should pass) *)
         else report_bad_assign lvaluet rvaluet
     else report_undeclared_id_assign str
 
@@ -167,27 +169,41 @@ and check_sdata e e_lst env =
         SMethod(e,"set_data", [s], Int) (*TODO get actual type, not Int, once graph data types are in*)
 
 (* TODO *)
-and check_graph str_lst ed_lst n_lst env =
-    (* first elt must be int *)
-    (* match first elt to other elts *)
-    match str_lst with
-    [] -> SGraph_Lit([],[],[],Graph, Void), env
-    | _ -> 
+and check_graph str_lst ed_lst n_lst is_d is_w env =
+  let graph_type = match (is_d, is_w) with
+      (true, true) -> Wedigraph
+    | (true, false) -> Digraph
+    | (false, true) -> Wegraph
+    | (false, false) -> Graph
+  in
+  (* convert each weight expression *)
+  let ed_lst_checked = List.map (fun (f,t,w) -> (f, t, fst (convert_expr w env))) ed_lst in
+  let weight_types = List.map (fun (_,_,w_sexpr) -> get_sexpr_type w_sexpr) ed_lst_checked in
+  List.iter (fun t -> if t != Int then
+                raise (Failure("edge weights must be of type int"))) weight_types;
+  (* TODO: remove all this when generics are implemented *)
+  (* first elt must be int *)
+  (* match first elt to other elts *)
+  match str_lst with
+    [] -> SGraph_Lit([], [], [], Graph, Int), env
+  | _ -> (match n_lst with
+        [] ->  SGraph_Lit(str_lst, ed_lst_checked, [], graph_type, Int), env
+      | _ ->
         let (s,_) = convert_expr (snd (List.hd n_lst)) env in
         let t = get_sexpr_type s in
         List.iter (fun n -> let (sn,_) = convert_expr (snd n) env in
-                        let tn = get_sexpr_type sn in
-                        if tn != t then raise (Failure("node type mismatch of " ^ string_of_typ t ^ " and " ^ string_of_typ tn))) n_lst; 
-         
-  (*(check_vdecl t str e env)*)
-   let newenv = List.fold_left (fun x y -> let (_, z) = check_vdecl Node y Noexpr x in z) env str_lst
-    in
-   let nodes = List.map (fun (x,y) -> let (s,_) = convert_expr y newenv in (x,s)) n_lst
-    in
-    (SGraph_Lit(str_lst, ed_lst, nodes, Graph, Int), newenv)
+                    let tn = get_sexpr_type sn in
+                    if tn != t then raise (Failure("node type mismatch of " ^ string_of_typ t ^ " and " ^ string_of_typ tn))) n_lst;
 
-   (* if elt is already defined don't declare, just add to node list*)
-    (* if elt is not defined declare and assign expr to it *)
+        (*(check_vdecl t str e env)*)
+        let newenv = List.fold_left (fun x y -> let (_, z) = check_vdecl Node y Noexpr x in z) env str_lst
+        in
+        let nodes = List.map (fun (x,y) -> let (s,_) = convert_expr y newenv in (x,s)) n_lst
+        in
+        (SGraph_Lit(str_lst, ed_lst_checked, nodes, graph_type, Int), newenv))
+
+(* if elt is already defined don't declare, just add to node list*)
+(* if elt is not defined declare and assign expr to it *)
 
 and check_call str e_lst env = 
     (* can't call main *)

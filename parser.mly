@@ -32,8 +32,7 @@ open Prshelper %}
 
 %left DOT
 
-%right RARROW DIARROW EDGE
-%right LARROW
+%right LARROW RARROW DIARROW EDGE
 %nonassoc COLON
 
 %start program
@@ -60,6 +59,8 @@ typ:
   | NODE { Node }
   | GRAPH { Graph }
   | DIGRAPH { Digraph }
+  | WEGRAPH { Wegraph }
+  | WEDIGRAPH { Wedigraph }
 
 formals_opt: /* nothing */  { [] }
         | formal_list { List.rev $1 } 
@@ -114,14 +115,17 @@ expr:
 | ID LPAREN actuals_opt RPAREN { Call($1, $3) }
 | expr DOT ID LPAREN actuals_opt RPAREN { Method($1, $3, $5) }
 | LPAREN expr RPAREN { $2 }
-| LBRACK graph_expr_opt RBRACK { match $2 with (n, e, n_i) -> Graph_Lit(n, e, n_i) }
+| LBRACK graph_expr_opt RBRACK { match $2 with (n, e, n_i, is_d, is_w) ->
+                                   Graph_Lit(n, e, n_i, is_d, is_w) }
 
 graph_expr_opt:
-  /* nothing */ { [], [], [] }
-| single_node_expr { match $1 with (n, e, n_i) -> (List.rev n, List.rev e, List.rev n_i) }
-| single_node_exprs_list { match $1 with (n, e, n_i) -> (List.rev n, List.rev e, List.rev n_i) }
-| ugraph_exprs_list { match $1 with (n, e, n_i) -> (List.rev n, List.rev e, List.rev n_i) }
-| digraph_exprs_list { match $1 with (n, e, n_i) -> (List.rev n, List.rev e, List.rev n_i) }
+  /* nothing */ { [], [], [], false, false }
+| single_node_expr { match $1 with (n, e, n_i) -> (List.rev n, List.rev e, List.rev n_i, false, false) }
+| single_node_exprs_list { match $1 with (n, e, n_i) -> (List.rev n, List.rev e, List.rev n_i, false, false) }
+| ugraph_exprs_list { match $1 with (n, e, n_i) -> (List.rev n, List.rev e, List.rev n_i, false, false) }
+| digraph_exprs_list { match $1 with (n, e, n_i) -> (List.rev n, List.rev e, List.rev n_i, true, false) }
+| wegraph_exprs_list { match $1 with (n, e, n_i) -> (List.rev n, List.rev e, List.rev n_i, false, true) }
+| wedigraph_exprs_list { match $1 with (n, e, n_i) -> (List.rev n, List.rev e, List.rev n_i, true, true) }
 
 single_node_exprs_list:
   single_node_expr SEMI single_node_expr { merge_graph_exprs $1 $3 }
@@ -140,24 +144,59 @@ digraph_exprs_list:
 | single_node_expr SEMI digraph_exprs_list { merge_graph_exprs $3 $1 }
 
 ugraph_expr:
-  single_node_expr EDGE ID { update_graph $1 $3 }
-| single_node_expr EDGE ID COLON expr { update_graph_e $1 $3 $5 }
-| ugraph_expr EDGE ID { update_graph $1 $3 }
-| ugraph_expr EDGE ID COLON expr { update_graph_e $1 $3 $5}
+  single_node_expr EDGE ID { update_graph $1 $3 (Int_Lit(0)) }
+| single_node_expr EDGE ID COLON expr { update_graph_e $1 $3 $5 (Int_Lit(0)) }
+| ugraph_expr EDGE ID { update_graph $1 $3 (Int_Lit(0)) }
+| ugraph_expr EDGE ID COLON expr { update_graph_e $1 $3 $5 (Int_Lit(0)) }
 
 digraph_expr:
-  single_node_expr RARROW ID { update_digraph $1 $3 0 }
-| single_node_expr LARROW ID { update_digraph $1 $3 1 }
-| single_node_expr DIARROW ID { update_digraph_b $1 $3 }
-| single_node_expr RARROW ID COLON expr { update_digraph_e $1 $3 $5 0 }
-| single_node_expr LARROW ID COLON expr { update_digraph_e $1 $3 $5 1 }
-| single_node_expr DIARROW ID COLON expr { update_digraph_be $1 $3 $5 }
-| digraph_expr RARROW ID { update_digraph $1 $3 0 }
-| digraph_expr LARROW ID { update_digraph $1 $3 1 }
-| digraph_expr DIARROW ID { update_digraph_b $1 $3 }
-| digraph_expr RARROW ID COLON expr { update_digraph_e $1 $3 $5 0 }
-| digraph_expr LARROW ID COLON expr { update_digraph_e $1 $3 $5 1 }
-| digraph_expr DIARROW ID COLON expr { update_digraph_be $1 $3 $5 }
+  single_node_expr RARROW ID { update_digraph $1 $3 (Int_Lit(0)) 0 }
+| single_node_expr LARROW ID { update_digraph $1 $3 (Int_Lit(0)) 1 }
+| single_node_expr DIARROW ID { update_digraph_b $1 $3 (Int_Lit(0)) }
+| single_node_expr RARROW ID COLON expr { update_digraph_e $1 $3 $5 (Int_Lit(0)) 0 }
+| single_node_expr LARROW ID COLON expr { update_digraph_e $1 $3 $5 (Int_Lit(0)) 1 }
+| single_node_expr DIARROW ID COLON expr { update_digraph_be $1 $3 $5 (Int_Lit(0)) }
+| digraph_expr RARROW ID { update_digraph $1 $3 (Int_Lit(0)) 0 }
+| digraph_expr LARROW ID { update_digraph $1 $3 (Int_Lit(0)) 1 }
+| digraph_expr DIARROW ID { update_digraph_b $1 $3 (Int_Lit(0)) }
+| digraph_expr RARROW ID COLON expr { update_digraph_e $1 $3 $5 (Int_Lit(0)) 0 }
+| digraph_expr LARROW ID COLON expr { update_digraph_e $1 $3 $5 (Int_Lit(0)) 1 }
+| digraph_expr DIARROW ID COLON expr { update_digraph_be $1 $3 $5 (Int_Lit(0)) }
+
+/* weighted graphs */
+wegraph_exprs_list:
+  wegraph_expr { $1 }
+| wegraph_exprs_list SEMI wegraph_expr { merge_graph_exprs $1 $3 }
+| wegraph_exprs_list SEMI single_node_expr { merge_graph_exprs $1 $3 }
+| single_node_expr SEMI wegraph_exprs_list { merge_graph_exprs $3 $1 }
+
+wegraph_expr:
+  single_node_expr MINUS LBRACE expr RBRACE MINUS ID %prec EDGE { update_graph $1 $7 $4 }
+| single_node_expr MINUS LBRACE expr RBRACE MINUS ID COLON expr %prec EDGE { update_graph_e $1 $7 $9 $4 }
+| wegraph_expr MINUS LBRACE expr RBRACE MINUS ID %prec EDGE { update_graph $1 $7 $4 }
+| wegraph_expr MINUS LBRACE expr RBRACE MINUS ID COLON expr %prec EDGE { update_graph_e $1 $7 $9 $4 }
+
+wedigraph_exprs_list:
+  wedigraph_expr { $1 }
+| wedigraph_exprs_list SEMI wedigraph_expr { merge_graph_exprs $1 $3 }
+| wedigraph_exprs_list SEMI single_node_expr { merge_graph_exprs $1 $3 }
+| single_node_expr SEMI wedigraph_exprs_list { merge_graph_exprs $3 $1 }
+
+wedigraph_expr:
+  single_node_expr MINUS LBRACE expr RBRACE RARROW ID %prec EDGE { update_digraph $1 $7 $4 0 }
+| single_node_expr LARROW LBRACE expr RBRACE MINUS ID %prec EDGE { update_digraph $1 $7 $4 1 }
+| single_node_expr LARROW LBRACE expr RBRACE RARROW ID %prec EDGE { update_digraph_b $1 $7 $4 }
+| single_node_expr MINUS LBRACE expr RBRACE RARROW ID COLON expr %prec EDGE { update_digraph_e $1 $7 $9 $4 0 }
+| single_node_expr LARROW LBRACE expr RBRACE MINUS ID COLON expr %prec EDGE { update_digraph_e $1 $7 $9 $4 1 }
+| single_node_expr LARROW LBRACE expr RBRACE RARROW ID COLON expr %prec EDGE { update_digraph_be $1 $7 $9 $4 }
+| wedigraph_expr MINUS LBRACE expr RBRACE RARROW ID %prec EDGE { update_digraph $1 $7 $4 0 }
+| wedigraph_expr LARROW LBRACE expr RBRACE MINUS ID %prec EDGE { update_digraph $1 $7 $4 1 }
+| wedigraph_expr LARROW LBRACE expr RBRACE RARROW ID %prec EDGE { update_digraph_b $1 $7 $4 }
+| wedigraph_expr MINUS LBRACE expr RBRACE RARROW ID COLON expr %prec EDGE { update_digraph_e $1 $7 $9 $4 0 }
+| wedigraph_expr LARROW LBRACE expr RBRACE MINUS ID COLON expr %prec EDGE { update_digraph_e $1 $7 $9 $4 1 }
+| wedigraph_expr LARROW LBRACE expr RBRACE RARROW ID COLON expr %prec EDGE { update_digraph_be $1 $7 $9 $4 }
+
+
 
 single_node_expr:
   ID { [$1], [], [] }

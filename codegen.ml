@@ -24,6 +24,8 @@ let translate (globals, functions) =
     | A.Node -> i32_ptr_t
     | A.Graph -> void_ptr_t
     | A.Digraph -> void_ptr_t
+    | A.Wegraph -> void_ptr_t
+    | A.Wedigraph -> void_ptr_t
     | A.Edge -> void_ptr_t
     | A.Void -> void_t in
   (* TODO: actually add all types *)
@@ -48,6 +50,9 @@ let translate (globals, functions) =
 
   let add_edge_t = L.function_type void_t [| void_ptr_t ; void_ptr_t |] in
   let add_edge_func = L.declare_function "add_edge" add_edge_t the_module in
+
+  let add_wedge_t = L.function_type void_t [| void_ptr_t ; void_ptr_t ; i32_t |] in
+  let add_wedge_func = L.declare_function "add_wedge" add_wedge_t the_module in
 
   let new_data_t = L.function_type i32_ptr_t [||] in
   let new_data_func = L.declare_function "new_data" new_data_t the_module in
@@ -163,7 +168,7 @@ let translate (globals, functions) =
          it uses as local variables. The following function handles this. *)
       let add_nodes_from_graph_lits m expr = match expr with
           A.Assign(id, e) -> (match e with
-              A.Graph_Lit(nodes, edges, _) ->
+              A.Graph_Lit(nodes, edges, _, _, _) ->
               let add_node m node =
                 if (StringMap.mem node m) then
                   m
@@ -238,7 +243,7 @@ let translate (globals, functions) =
          | A.Not     -> L.build_not) e' "tmp" builder
       | A.Assign(id, e) -> let e' = expr vars builder e in
         ignore (L.build_store e' (lookup vars id) builder); e'
-      | A.Graph_Lit (nodes, edges, nodes_init) ->
+      | A.Graph_Lit (nodes, edges, nodes_init, _, is_weighted) ->
         (* create new graph struct, return pointer *)
         let g = L.build_call new_graph_func [||] "tmp" builder in
         (* map node names to vertex_list_node pointers created by calling add_vertex *)
@@ -246,7 +251,14 @@ let translate (globals, functions) =
         let call_add_vertex node = L.build_call add_vertex_func [| g ; (get_data_ptr node) |] ("vertex_struct_" ^ node) builder in
         let nodes_map = List.fold_left (fun map node -> StringMap.add node (call_add_vertex node) map) StringMap.empty nodes in
         (* add edge *)
-        ignore(List.map (fun (n1, n2) -> L.build_call add_edge_func [| (StringMap.find n1 nodes_map) ; (StringMap.find n2 nodes_map) |] "" builder) edges);
+        let add_edge n1 n2 =
+          L.build_call add_edge_func [| (StringMap.find n1 nodes_map) ; (StringMap.find n2 nodes_map) |] "" builder
+        and add_wedge n1 n2 w =
+          L.build_call add_wedge_func [| (StringMap.find n1 nodes_map) ; (StringMap.find n2 nodes_map) ; (expr vars builder w) |] "" builder
+        in ignore(if is_weighted then
+                    List.map (fun (n1, n2, w) -> add_wedge n1 n2 w) edges
+                  else
+                    List.map (fun (n1, n2, _) -> add_edge n1 n2) edges);
         (* initialize nodes with data *)
         let set_data (node, data) = L.build_call set_data_func [| (get_data_ptr node) ; (expr vars builder data) |] "" builder in
         ignore(List.map set_data nodes_init);
@@ -478,7 +490,7 @@ let translate (globals, functions) =
 
         let queue = L.build_call get_bfs_queue_func [| root_vertex ; visited |] "queue" builder in
         (* populate queue and visited on the root node, but do not need to save returned vertex
-          because current_vertex_ptr is already root_vertex during first iteration of the loop *)
+           because current_vertex_ptr is already root_vertex during first iteration of the loop *)
         ignore(L.build_call get_next_bfs_vertex_func [| visited ; queue |] "get_next" builder);
 
         let pred_bb = L.append_block context "while" the_function in

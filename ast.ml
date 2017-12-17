@@ -3,11 +3,9 @@ type binop = Add | Sub | Mult | Div | Mod | Eq | Neq |
 
 type unop = Neg | Not
 
-type typ = Int | Float | Bool | Void | String | Node | Edge | Graph | Digraph
+type typ = Int | Float | Bool | Void | String | Node | Edge | Graph | Digraph | Wegraph | Wedigraph
 
 type bind = typ * string
-
-type edge = string * string
 
 type expr =
     Id of string
@@ -20,7 +18,8 @@ type expr =
   | Int_Lit of int
   | Float_Lit of float
   | String_Lit of string
-  | Graph_Lit of string list * edge list * (string * expr) list
+  (* first bool is true if graph is directed; second bool is true if graph is weighted *)
+  | Graph_Lit of string list * (string * string * expr) list * (string * expr) list * bool * bool
   | Noexpr
 
 type stmt =
@@ -80,6 +79,8 @@ let string_of_typ = function
   | Node -> "node"
   | Graph -> "graph"
   | Digraph -> "digraph"
+  | Wegraph -> "wegraph"
+  | Wedigraph -> "wedigraph"
   | Edge -> "edge"
   | Void -> "void"
 
@@ -98,9 +99,9 @@ let rec string_of_expr = function
   | Call(f, el) ->
     f ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
   | Method(e, m, el) -> string_of_expr e ^ "." ^ m ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
-  | Graph_Lit(node_l, edge_l, node_init_l) ->
+  | Graph_Lit(node_l, edge_l, node_init_l, _, _) ->
     "[" ^ String.concat ", " node_l ^ "] " ^
-    "[" ^ String.concat ", " (List.map (fun(a,b) -> "(" ^ a ^ "," ^ b ^ ")") edge_l) ^ "] " ^
+    "[" ^ String.concat ", " (List.map (fun(f,t,w) -> "(" ^ f ^ "," ^ t ^ "," ^ string_of_expr w ^ ")") edge_l) ^ "] " ^
     "[" ^ String.concat ", " (List.map (fun(n,e) -> "(" ^ n ^ "," ^ string_of_expr e ^ ")") node_init_l) ^ "]"
   | Noexpr -> ""
 
@@ -119,6 +120,7 @@ let rec string_of_stmt = function
       string_of_expr e3  ^ ") " ^ string_of_stmt s
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
   | For_Node(n, g, sl) -> "for_node (" ^ n ^ " : " ^ string_of_expr g ^ ") " ^ string_of_stmt sl
+  | For_Edge(e, g, sl) -> "for_edge (" ^ e ^ " : " ^ string_of_expr g ^ ") " ^ string_of_stmt sl
   | Bfs(n, g, src, sl) -> "bfs (" ^ n ^ " : " ^ string_of_expr g ^ " ; " ^
                           string_of_expr src ^ ") " ^ string_of_stmt sl
 

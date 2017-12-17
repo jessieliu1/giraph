@@ -13,8 +13,8 @@ type sexpr =
   | SInt_Lit of int
   | SFloat_Lit of float
   | SString_Lit of string
-              (*First typ is graph, second is the typ of node data*)
-  | SGraph_Lit of string list * edge list * (string * sexpr) list * typ * typ 
+  (* 1st typ is graph subtype (graph, digraph, wegraph, wedigraph), 2nd is the type of node data *)
+  | SGraph_Lit of string list * (string * string * sexpr) list * (string * sexpr) list * typ * typ
   | SNoexpr
 
 type svdecl = {
@@ -55,40 +55,7 @@ type sfdecl = {
 type sprogram = bind list * sfdecl list
 
 
-(* THESE will work because we did open AST but they will pretty print AST types rather than SAST types *)
 (* Pretty-printing functions *)
-
-let string_of_op = function
-    Add -> "+"
-  | Sub -> "-"
-  | Mult -> "*"
-  | Div -> "/"
-  | Mod -> "%"
-  | Eq -> "=="
-  | Neq -> "!="
-  | Less -> "<"
-  | Leq -> "<="
-  | Greater -> ">"
-  | Geq -> ">="
-  | And -> "&&"
-  | Or -> "||"
-
-
-let string_of_uop = function
-    Neg -> "-"
-  | Not -> "!"
-
-
-let string_of_typ = function
-    Int -> "int"
-  | Float -> "float"
-  | Bool -> "bool"
-  | String -> "str"
-  | Node -> "node"
-  | Graph -> "graph"
-  | Edge -> "edge"
-  | Void -> "void"
-
 
 let rec string_of_sexpr = function
     SBool_Lit(true) -> "true"
@@ -104,9 +71,11 @@ let rec string_of_sexpr = function
   | SAssign(v, e, t) -> v ^ " = " ^ string_of_sexpr e^ ":" ^ string_of_typ t
   | SCall(f, el, t) ->
       f ^ "(" ^ String.concat ", " (List.map string_of_sexpr el) ^ ")"^ ":" ^ string_of_typ t
-  | SGraph_Lit(node_l, edge_l, node_init_list, t, t2) ->
+  | SGraph_Lit(node_l, edge_l, node_init_l, _, _) ->
     "[" ^ String.concat ", " node_l ^ "] " ^
-    "[" ^ String.concat ", " (List.map (fun(a,b) -> "(" ^ a ^ "," ^ b ^ ")") edge_l) ^ "]"
+    "[" ^ String.concat ", " (List.map (fun(f,t,w) -> "(" ^ f ^ "," ^ t ^ "," ^ string_of_sexpr w ^ ")") edge_l) ^ "] " ^
+    "[" ^ String.concat ", " (List.map (fun(n,e) -> "(" ^ n ^ "," ^ string_of_sexpr e ^ ")") node_init_l) ^ "]"
+
   | SNoexpr -> ""
 
 
