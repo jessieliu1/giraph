@@ -1,0 +1,1 @@
+Fatal error: exception Failure("variable b is of type str when node was expected")
