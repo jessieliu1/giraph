@@ -61,7 +61,7 @@ and get_sexpr_type sexpr = match sexpr with
   | SBool_Lit(_)                -> Bool
   | SInt_Lit(_)                 -> Int
   | SFloat_Lit(_)               -> Float
-  | SString_Lit(_)              -> String
+ | SString_Lit(_)              -> String
   | SGraph_Lit(_,_,_,subtype,_) -> subtype
   | SNoexpr                     -> Void
 
@@ -196,9 +196,9 @@ and check_addnode g e_lst env =
                         | _ -> 
                 raise(Failure("add_node() called on type " ^ string_of_typ t ^ " when graph was expected")) in
       let e = (List.hd e_lst) in
-      match e with Id(str) ->
-        ignore (check_id_typ str Node env);
         let (ex,_) = convert_expr e env in
+        let t = get_sexpr_type ex in 
+        if t != Node then raise(Failure("add_node() expects type Node but "             ^ string_of_typ t ^ " was given"));
             (SMethod(id, "add_node", [ex], t), env)
 
 
@@ -218,20 +218,25 @@ and check_graphmtd g name args e_lst env =
       let sexpr =  
       match args with 1 -> (
       let e1 = (List.hd e_lst) in
-      match e1  with Id(str1) -> 
-        ignore (check_id_typ str1 Node env);
         let (ex,_) = convert_expr e1 env in
+        let t1 = get_sexpr_type ex in
+        if ( t1 != Node )
+        then raise(Failure("graph method " ^ name ^ "may not be called 
+                on type " ^ string_of_typ t1));
             (SMethod(id, name, [ex], t)))
 
-      | 2 -> (
+      | 2 -> 
       let e1 = (List.hd e_lst) and e2 = (List.nth e_lst 1) in
-      match e1, e2 with Id(str1), Id(str2) -> 
-        ignore (check_id_typ str1 Node env);
-        ignore (check_id_typ str2 Node env);
 
         let (ex,_) = convert_expr e1 env in
         let (ex2,_) = convert_expr e2 env in
-            (SMethod(id, name, [ex; ex2], t) ))
+        let t1 = get_sexpr_type ex and t2 = get_sexpr_type ex2 in 
+        if ( t1 != Node || t2 != Node )
+        then raise(Failure("graph method " ^ name ^ "may not be called 
+                on types " ^ string_of_typ t1 ^ ", " ^ string_of_typ t2));
+            (SMethod(id, name, [ex; ex2], t))
+
+
         in sexpr
 
 
@@ -520,7 +525,7 @@ and convert_fdecl fname fformals env =
 
     let formals_to_map m formal = 
       match formal with
-      (t, str) -> StringMap.add str t m
+      (t, str) -> if t == Void then raise(Failure("cannot declare " ^ str ^ " as type void")) else StringMap.add str t m
     in
     let formals = List.fold_left formals_to_map StringMap.empty fformals 
     in 
@@ -563,7 +568,8 @@ and convert_fdecl fname fformals env =
 
 and check_vdecl t str e env = 
     if (StringMap.mem str env.env_flocals || StringMap.mem str env.env_fformals || StringMap.mem str env.env_globals)
-    then raise(Failure("cannot reinitialize existing variable"))
+    then raise(Failure("cannot reinitialize existing variable")); 
+    if t == Void then raise(Failure("cannot declare " ^ str ^ " as type void"))
     else
     let flocals = StringMap.add str t env.env_flocals in
     let new_env = 
@@ -615,12 +621,12 @@ let convert_ast globals fdecls fmap =
     let globals_map = List.fold_left convert_globals StringMap.empty globals
     in 
 
-    let globals_lst = List.rev(List.fold_left (fun acc binding -> match binding with (sfname, _) -> sfname::acc) [] (StringMap.bindings globals_map))
-    in 
-
     (* check for duplicate functions *)
     report_duplicate (fun f -> "duplicate function " ^ f.f_name) fdecls;
+   
+    (*List.iter (fun x -> convert_fdecl x x.f_name env) fdecls; *)
     
+ 
     let env = {
         env_name = "main";
         env_return_type = Int;
@@ -638,7 +644,7 @@ let convert_ast globals fdecls fmap =
 
     let sfdecls = List.rev(List.fold_left (fun lst (_, sfdecl) -> sfdecl :: lst)
                   [] (StringMap.bindings sfdecl_env.env_sfmap)) 
-    in (globals_lst, sfdecls)
+    in (globals, sfdecls)
 
 
 let build_fmap fdecls = 
