@@ -71,11 +71,12 @@ let rec string_of_sexpr = function
   | SAssign(v, e, t) -> v ^ " = " ^ string_of_sexpr e^ ":" ^ string_of_typ t
   | SCall(f, el, t) ->
       f ^ "(" ^ String.concat ", " (List.map string_of_sexpr el) ^ ")"^ ":" ^ string_of_typ t
-  | SGraph_Lit(node_l, edge_l, node_init_l, _, _) ->
+  | SGraph_Lit(node_l, edge_l, node_init_l, g_typ, n_typ) ->
     "[" ^ String.concat ", " node_l ^ "] " ^
     "[" ^ String.concat ", " (List.map (fun(f,t,w) -> "(" ^ f ^ "," ^ t ^ "," ^ string_of_sexpr w ^ ")") edge_l) ^ "] " ^
-    "[" ^ String.concat ", " (List.map (fun(n,e) -> "(" ^ n ^ "," ^ string_of_sexpr e ^ ")") node_init_l) ^ "]"
-
+    "[" ^ String.concat ", " (List.map (fun(n,e) -> "(" ^ n ^ "," ^ string_of_sexpr e ^ ")") node_init_l) ^
+    "] : " ^ string_of_typ g_typ ^ ", " ^ string_of_typ n_typ
+  | SMethod(i, m, e, r_typ) -> string_of_sexpr i ^ "." ^ m ^ "(" ^ String.concat ", " (List.map string_of_sexpr e) ^ "):" ^ string_of_typ r_typ
   | SNoexpr -> ""
 
 
@@ -83,7 +84,8 @@ let rec string_of_sstmt = function
     SBlock(stmts) ->
       "{\n" ^ String.concat "" (List.map string_of_sstmt stmts) ^ "}\n"
   | SExpr(expr, t) -> string_of_sexpr expr ^ " : " ^ string_of_typ t ^ ";\n";
-  | SVdecl(t, id, x) -> string_of_typ t ^ " " ^ id ^ ";\n"
+  | SVdecl(t, id, SNoexpr) -> string_of_typ t ^ " " ^ id ^ ";\n"
+  | SVdecl(t, id, a_expr) -> string_of_typ t ^ " " ^ string_of_sexpr a_expr ^ ";\n"
   | SReturn(expr) -> "return " ^ string_of_sexpr expr ^ ";\n";
   | SIf(e, s, SBlock([])) -> "if (" ^ string_of_sexpr e ^ ")\n" ^ string_of_sstmt s
   | SIf(e, s1, s2) ->  "if (" ^ string_of_sexpr e ^ ")\n" ^
@@ -92,6 +94,11 @@ let rec string_of_sstmt = function
       "for (" ^ string_of_sexpr e1  ^ " ; " ^ string_of_sexpr e2 ^ " ; " ^
       string_of_sexpr e3  ^ ") " ^ string_of_sstmt s
   | SWhile(e, s) -> "while (" ^ string_of_sexpr e ^ ") " ^ string_of_sstmt s
+  | SFor_Node(n, g, sl) -> "for_node (" ^ n ^ " : " ^ string_of_sexpr g ^ ") " ^ string_of_sstmt sl
+  | SFor_Edge(e, g, sl) -> "for_edge (" ^ e ^ " : " ^ string_of_sexpr g ^ ") " ^ string_of_sstmt sl
+  | SBfs(n, g, src, sl) -> "bfs (" ^ n ^ " : " ^ string_of_sexpr g ^ " ; " ^
+                          string_of_sexpr src ^ ") " ^ string_of_sstmt sl
+
 
 
 let string_of_svdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
