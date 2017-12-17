@@ -1,5 +1,5 @@
 type binop = Add | Sub | Mult | Div | Mod | Eq | Neq | 
-          Less | Leq | Greater | Geq | And | Or
+             Less | Leq | Greater | Geq | And | Or
 
 type unop = Neg | Not
 
@@ -15,13 +15,12 @@ type expr =
   | Unop of unop * expr
   | Assign of string * expr
   | Call of string * expr list
+  | Method of expr * string * expr list
   | Bool_Lit of bool
   | Int_Lit of int
   | Float_Lit of float
   | String_Lit of string
-  | Node of string
-  | Edge of edge
-  | Graph of string list * edge list
+  | Graph_Lit of string list * edge list * (string * expr) list
   | Noexpr
 
 type stmt =
@@ -29,10 +28,10 @@ type stmt =
   | If of expr * stmt * stmt
   | For of expr * expr * expr * stmt
   | While of expr * stmt
-  | For_Node of expr * expr * stmt
-  | For_Edge of expr * expr * stmt
-  | Bfs of expr * expr * expr * stmt
-  | Dfs of expr * expr * expr * stmt
+  | For_Node of string * expr * stmt
+  | For_Edge of string * expr * stmt
+  | Bfs of string * expr * expr * stmt
+  | Dfs of string * expr * expr * stmt
   | Break
   | Continue
   | Expr of expr
@@ -96,17 +95,20 @@ let rec string_of_expr = function
   | Unop(o, e) -> string_of_uop o ^ string_of_expr e
   | Assign(v, e) -> v ^ " = " ^ string_of_expr e
   | Call(f, el) ->
-      f ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
-  | Graph(node_l, edge_l) ->
+    f ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
+  | Method(e, m, el) -> string_of_expr e ^ "." ^ m ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
+  | Graph_Lit(node_l, edge_l, node_init_l) ->
     "[" ^ String.concat ", " node_l ^ "] " ^
-    "[" ^ String.concat ", " (List.map (fun(a,b) -> "(" ^ a ^ "," ^ b ^ ")") edge_l) ^ "]"
+    "[" ^ String.concat ", " (List.map (fun(a,b) -> "(" ^ a ^ "," ^ b ^ ")") edge_l) ^ "] " ^
+    "[" ^ String.concat ", " (List.map (fun(n,e) -> "(" ^ n ^ "," ^ string_of_expr e ^ ")") node_init_l) ^ "]"
   | Noexpr -> ""
 
 let rec string_of_stmt = function
     Block(stmts) ->
       "{\n" ^ String.concat "" (List.map string_of_stmt stmts) ^ "}\n"
   | Expr(expr) -> string_of_expr expr ^ ";\n";
-  | Vdecl(t, id, x) -> string_of_typ t ^ " " ^ id ^ ";\n"
+  | Vdecl(t, id, Noexpr) -> string_of_typ t ^ " " ^ id ^ ";\n"
+  | Vdecl(t, id, e) -> string_of_typ t ^ " " ^ string_of_expr e ^  ";\n"
   | Return(expr) -> "return " ^ string_of_expr expr ^ ";\n";
   | If(e, s, Block([])) -> "if (" ^ string_of_expr e ^ ")\n" ^ string_of_stmt s
   | If(e, s1, s2) ->  "if (" ^ string_of_expr e ^ ")\n" ^
@@ -115,6 +117,7 @@ let rec string_of_stmt = function
       "for (" ^ string_of_expr e1  ^ " ; " ^ string_of_expr e2 ^ " ; " ^
       string_of_expr e3  ^ ") " ^ string_of_stmt s
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
+  | For_Node(n, g, s) -> "for_node (" ^ n ^ " : " ^ string_of_expr g ^ ") " ^ string_of_stmt s
 
 
 let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"

@@ -11,7 +11,9 @@ rule token = parse
     [ ' ' '\t' '\r' '\n'] { token lexbuf } (* to ignore whitespace *)
   | "!~" { comment lexbuf }
   | ',' { COMMA }
+  | '.' { DOT }
   | ';' { SEMI }
+  | ':' { COLON }
   | '\'' { SINGLEQUOTE }
   | '\"' { DOUBLEQUOTE }
 
@@ -45,7 +47,6 @@ rule token = parse
   | "wedigraph" { WEDIGRAPH }
   | "break" { BREAK }
   | "continue" { CONTINUE }
-  | "function" { FUNCTION }
   | "return" { RETURN }
   | "void" { VOID }
 
@@ -66,6 +67,7 @@ rule token = parse
      | '|' { UNION } *)
   | '!' { NOT }
   | "==" { EQ }
+  | "!=" { NEQ }
   | ">=" { GEQ }
   | "<=" { LEQ }
   | '>' { GT }
@@ -74,7 +76,6 @@ rule token = parse
   | "<-" { LARROW }
   | "<->" { DIARROW }
   | "--" { EDGE }
-  | ':' { COLON }
 
   (* literals and IDs *)
   | digit+ as lxm                               { INT_LIT(int_of_string lxm) }

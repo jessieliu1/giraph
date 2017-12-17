@@ -1,0 +1,12 @@
+!~ order of bfs executions depends on parsing logic 
+(i.e. order in which for_node iterates through nodes)
+but should be consistent across calls ~!
+int main() {
+	graph g = [A:1 -- B:2 ; C:3 -- D:4];
+	for_node(n2 : g) {
+		bfs(b : g ; n2) {
+			print(b.data());
+		}
+	}
+	return 0;
+}
