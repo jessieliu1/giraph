@@ -16,6 +16,8 @@ open Prshelper %}
 %token <string> ID
 %token EOF
 
+%right SEMI
+
 /*arithmetic ops*/
 %right ASSIGN
 %left PLUS MINUS
@@ -30,7 +32,7 @@ open Prshelper %}
 
 %left DOT
 
-%left RARROW DIARROW EDGE
+%right RARROW DIARROW EDGE
 %right LARROW
 %nonassoc COLON
 
@@ -115,25 +117,26 @@ expr:
 
 graph_expr_opt:
   /* nothing */ { [], [], [] }
-| graph_exprs_list { match $1 with (n, e, n_i) -> (List.rev n, List.rev e, List.rev n_i) }
+| single_node_expr { match $1 with (n, e, n_i) -> (List.rev n, List.rev e, List.rev n_i) }
+| single_node_exprs_list { match $1 with (n, e, n_i) -> (List.rev n, List.rev e, List.rev n_i) }
+| ugraph_exprs_list { match $1 with (n, e, n_i) -> (List.rev n, List.rev e, List.rev n_i) }
+| digraph_exprs_list { match $1 with (n, e, n_i) -> (List.rev n, List.rev e, List.rev n_i) }
 
-graph_exprs_list:
-  graph_expr { $1 }
-| graph_exprs_list SEMI graph_expr { match $1 with (n1, e1, n_i1) ->
-                                       match $3 with (n2, e2, n_i2) ->
-                                         (* essentially, take the union of node/edge/node_init lists. *)
-                                         let add_if_missing list elem = if (List.mem elem list) then
-                                                                          list
-                                                                        else
-                                                                          elem :: list
-                                         in (List.fold_left add_if_missing n1 (List.rev n2),
-                                             List.fold_left add_if_missing e1 (List.rev e2),
-                                             List.fold_left add_if_missing n_i1 (List.rev n_i2))
-                                   }
-graph_expr:
-  single_node_expr { $1 } 
-| ugraph_expr { $1 }
-| digraph_expr { $1 }
+single_node_exprs_list:
+  single_node_expr SEMI single_node_expr { merge_graph_exprs $1 $3 }
+| single_node_exprs_list SEMI single_node_expr { merge_graph_exprs $1 $3 }
+
+ugraph_exprs_list:
+  ugraph_expr { $1 }
+| ugraph_exprs_list SEMI ugraph_expr { merge_graph_exprs $1 $3 }
+| ugraph_exprs_list SEMI single_node_expr { merge_graph_exprs $1 $3 }
+| single_node_expr SEMI ugraph_exprs_list { merge_graph_exprs $3 $1 }
+
+digraph_exprs_list:
+  digraph_expr { $1 }
+| digraph_exprs_list SEMI digraph_expr { merge_graph_exprs $1 $3 }
+| digraph_exprs_list SEMI single_node_expr { merge_graph_exprs $1 $3 }
+| single_node_expr SEMI digraph_exprs_list { merge_graph_exprs $3 $1 }
 
 ugraph_expr:
   single_node_expr EDGE ID { update_graph $1 $3 }
