@@ -96,12 +96,15 @@ void add_edge(void *from_ptr, void *to_ptr) {
 }
 
 /* Allocate a new unique data pointer. */
+<<<<<<< HEAD
 int *new_data() {
 	return malloc(sizeof(int));
 }
 
 /////// edge //////
 /* Allocate a new unique data pointer. */
+=======
+>>>>>>> c0adb842ab3f292d5a4148bef870d75240125581
 int *edge_from(void *e) {
 	return ((struct edge_list_node *) e)->from->data;
 }
