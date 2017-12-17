@@ -47,6 +47,11 @@ void *new_graph() {
 	return (void *) g;
 }
 
+/* Allocate a new unique data pointer. */
+int *new_data() {
+	return malloc(sizeof(int));
+}
+
 /* Add a new vertex to the end of the vertex list in a graph, and return a
    pointer to the new vertex. */
 void *add_vertex(void *graph_ptr, int *data_ptr) {
@@ -95,16 +100,7 @@ void add_edge(void *from_ptr, void *to_ptr) {
 	add_wedge(from_ptr, to_ptr, 0);
 }
 
-/* Allocate a new unique data pointer. */
-<<<<<<< HEAD
-int *new_data() {
-	return malloc(sizeof(int));
-}
-
 /////// edge //////
-/* Allocate a new unique data pointer. */
-=======
->>>>>>> c0adb842ab3f292d5a4148bef870d75240125581
 int *edge_from(void *e) {
 	return ((struct edge_list_node *) e)->from->data;
 }
