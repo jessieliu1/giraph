@@ -14,23 +14,24 @@ struct map_node *get_node(unsigned int key, void *value) {
 	out->key = key;
 	out->value = value;
 	out->next = NULL;
-
 	return out;
 }
 
+/* returns pointer to map */
 void *make_map() {
-	int default_size = 431;
+	/* (size - 1) is hashable. 432 is the the 83rd prime number (431) plus 1. */
+	int default_size = 432;
 	struct map_node **map = (struct map_node **) malloc(sizeof(struct map_node *) * default_size);
 	memset(map, 0, sizeof(struct map_node *) * default_size);
 	int *size = (int *) malloc(sizeof(int));
 	*size = default_size;
 	map[0] = get_node(0, size);
-
 	return map;
 }
 
+/* hash function: hash 0 is reserved for table size */
 int hash(unsigned int in, int size) {
-	return (in * 997) % size;
+	return 1 + ((in * 997) % (size - 1));
 }
 
 void put(void *map_in, int *key, void *value) {
@@ -50,6 +51,7 @@ void put(void *map_in, int *key, void *value) {
 	bucket->next = get_node((unsigned int) key, value);
 }
 
+/* returns NULL if not found */
 void *get(void *map_in, int *key) {
 	struct map_node **map = (struct map_node **) map_in;
 	int size = *((int *) map[0]->value);
