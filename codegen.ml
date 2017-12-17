@@ -179,12 +179,14 @@ let translate (globals, functions) =
           (* if e contains a graph literal, adds new nodes to m; else m unchanged *)
           let m = add_nodes_from_graph_lits m e in
           let local_var = L.build_alloca (ltype_of_typ t) n builder in
-          (* if we're declaring a node, we need to call new_data() from C to get a unique
-             data pointer and store it in the allocated register *)
+          (* if we're declaring a node (and not immediately initializing it to another node)
+             we need to call new_data() from C to get a unique data pointer and store it in
+             the allocated register *)
           (match t with
-             A.Node ->
-             let new_data_ptr = L.build_call new_data_func [||] "tmp_data" builder in
-             ignore(L.build_store new_data_ptr local_var builder);
+             A.Node -> if e == A.Noexpr then
+               let new_data_ptr = L.build_call new_data_func [||] "tmp_data" builder in
+               ignore(L.build_store new_data_ptr local_var builder);
+             else ()
            | _ -> ());
           (* add new variable to m *)
           StringMap.add n local_var m
