@@ -170,7 +170,7 @@ and check_data e e_lst env =
     let (s,_) = convert_expr e env in
     let t = get_sexpr_type s in
     if (t != Node) then (raise(Failure("data() called on type " ^ string_of_typ t ^ " when node was expected")))
-    else SMethod(s,"data", [], t)  
+    else SMethod(s,"data", [], Int)  
 
 and check_sdata e e_lst env =
   let len = List.length e_lst in
@@ -181,14 +181,20 @@ and check_sdata e e_lst env =
     if (t != Node) then raise(Failure("set_data() called on type " ^ string_of_typ t ^ " when node was expected"))
     else
       let (s, _) = convert_expr (List.hd e_lst) env in
-      SMethod(id,"set_data", [s], t) (*TODO get actual type, not Int, once graph data types are in*)
+      SMethod(id,"set_data", [s], Node) (*TODO get actual type, not Int, once graph data types are in*)
 
 and check_addnode g e_lst env =
   let len = List.length e_lst in
   if (len != 1) then raise(Failure("add_node() takes 1 arguments but " ^ string_of_int len ^ " arguments given")) else
+
     let (id,_) = convert_expr g env in
     let t = get_sexpr_type id in
-    if (t != Graph) then raise(Failure("add_node() called on type " ^ string_of_typ t ^ " when graph was expected")) else
+    let tcheck = match t with Graph -> true
+                        | Digraph -> true
+                        | Wegraph -> true
+                        | Wedigraph -> true
+                        | _ -> 
+                raise(Failure("add_node() called on type " ^ string_of_typ t ^ " when graph was expected")) in
       let e = (List.hd e_lst) in
       match e with Id(str) ->
         ignore (check_id_typ str Node env);
@@ -205,9 +211,9 @@ and check_graphmtd g name args e_lst env =
                         | Wegraph -> true
                         | Wedigraph -> true
                         | _ -> 
-                raise(Failure("add_edge() called on type " ^ string_of_typ t ^ " when graph was expected")) in
+                raise(Failure(name ^ " called on type " ^ string_of_typ t ^ " when graph was expected")) in
       let len = List.length e_lst in
-      if (len != args) then raise(Failure("add_edge() takes " ^ string_of_int args ^ " arguments but " ^ string_of_int len ^ " arguments given")) ;
+      if (len != args) then raise(Failure( name ^ " takes " ^ string_of_int args ^ " arguments but " ^ string_of_int len ^ " arguments given")) ;
 
       let sexpr =  
       match args with 1 -> (
@@ -235,7 +241,7 @@ and check_edgemtd e n e_lst env =
       match e with Id(str) -> 
         ignore (check_id_typ str Edge env);
         let (ex,_) = convert_expr e env in
-            (SMethod(ex, n, [], Edge))
+            (SMethod(ex, n, [], Node))
 
 
 (* TODO *)
@@ -251,13 +257,14 @@ and check_graph str_lst ed_lst n_lst is_d is_w env =
   let weight_types = List.map (fun (_,_,w_sexpr) -> get_sexpr_type w_sexpr) ed_lst_checked in
   List.iter (fun t -> if t != Int then
                 raise (Failure("edge weights must be of type int"))) weight_types;
+  let t = List.hd(weight_types) in  
   (* TODO: remove all this when generics are implemented *)
   (* first elt must be int *)
   (* match first elt to other elts *)
   match str_lst with
-    [] -> SGraph_Lit([], [], [], Graph, Int), env
+    [] -> SGraph_Lit([], [], [], Graph, t), env
   | _ -> (match n_lst with
-        [] ->  SGraph_Lit(str_lst, ed_lst_checked, [], graph_type, Int), env
+        [] ->  SGraph_Lit(str_lst, ed_lst_checked, [], graph_type, t), env
       | _ ->
         let (s,_) = convert_expr (snd (List.hd n_lst)) env in
         let t = get_sexpr_type s in
@@ -270,7 +277,7 @@ and check_graph str_lst ed_lst n_lst is_d is_w env =
         in
         let nodes = List.map (fun (x,y) -> let (s,_) = convert_expr y newenv in (x,s)) n_lst
         in
-        (SGraph_Lit(str_lst, ed_lst_checked, nodes, graph_type, Int), newenv))
+        (SGraph_Lit(str_lst, ed_lst_checked, nodes, graph_type, t), newenv))
 
 (* if elt is already defined don't declare, just add to node list*)
 (* if elt is not defined declare and assign expr to it *)
