@@ -23,6 +23,7 @@ let rec convert_expr e env = match e with
   | Assign(str, e)                -> (check_assign str e env)
   | Method(e, "data", e_lst)     -> (check_data e e_lst env, env)
   | Method (e, "set_data", e_lst) -> (check_sdata e e_lst env, env)
+  | Method (e, "add_node", e_lst) -> (check_addnode e e_lst env)
   | Method (e, s2, e_lst)        -> (report_meth_not_found s2) (*TODO more methods? will all methods be pre-named? *)
   | Call("print", e_lst)          -> (check_print e_lst env, env)
   | Call("printb", e_lst)         -> (check_print e_lst env, env)
@@ -147,26 +148,43 @@ and check_assign str e env =
     else report_undeclared_id_assign str
 
 and check_data e e_lst env =
-    let len = List.length e_lst in
-    if (len != 0) then (raise(Failure("data takes 0 arguments but " ^ string_of_int len ^ " arguments given")))
-    else 
+  let len = List.length e_lst in
+  if (len != 0) then (raise(Failure("data takes 0 arguments but " ^ string_of_int len ^ " arguments given")))
+  else
     let (s,_) = convert_expr e env in
     let t = get_sexpr_type s in
     if (t != Node) then (raise(Failure("data() called on type " ^ string_of_typ t ^ " when node was expected")))
-    else SMethod(e,"data", [], Int)  (*TODO get actual type, not Int, once graph data types are in*)
-
-
+    else SMethod(s,"data", [], Int)  (*TODO get actual type, not Int, once graph data types are in*)
 
 and check_sdata e e_lst env =
-        let len = List.length e_lst in
-        if (len != 1) then raise(Failure("set_data() takes 1 arguments but " ^ string_of_int len ^ " arguments given"))
-        else 
-        let (id,_) = convert_expr e env in
-        let t = get_sexpr_type id in 
-        if (t != Node) then raise(Failure("set_data() called on type " ^ string_of_typ t ^ " when node was expected"))
+  let len = List.length e_lst in
+  if (len != 1) then raise(Failure("set_data() takes 1 arguments but " ^ string_of_int len ^ " arguments given"))
+  else
+    let (id,_) = convert_expr e env in
+    let t = get_sexpr_type id in
+    if (t != Node) then raise(Failure("set_data() called on type " ^ string_of_typ t ^ " when node was expected"))
+    else
+      let (s, _) = convert_expr (List.hd e_lst) env in
+      SMethod(id,"set_data", [s], Int) (*TODO get actual type, not Int, once graph data types are in*)
+
+and check_addnode g e_lst env =
+  let len = List.length e_lst in
+  if (len != 1) then raise(Failure("add_node() takes 1 arguments but " ^ string_of_int len ^ " arguments given")) else
+    let (id,_) = convert_expr g env in
+    let t = get_sexpr_type id in
+    if (t != Graph) then raise(Failure("add_node() called on type " ^ string_of_typ t ^ " when graph was expected")) else
+      let e = (List.hd e_lst) in
+      match e with Id(str) ->
+        let (ex,_) = convert_expr e env in
+        if not (StringMap.mem str env.env_flocals || StringMap.mem str env.env_fformals || StringMap.mem str env.env_globals)
+        then (ignore (StringMap.add str t env.env_flocals);
+              (SMethod(id, "add_node", [ex], Int), env))
         else
-        let (s, _) = convert_expr (List.hd e_lst) env in 
-        SMethod(e,"set_data", [s], Int) (*TODO get actual type, not Int, once graph data types are in*)
+          let lval = try StringMap.find str env.env_flocals with
+              Not_found -> (try StringMap.find str env.env_fformals with
+                  Not_found -> StringMap.find str env.env_globals) in
+          if lval != Node then raise(Failure("variable " ^ str ^ " of type " ^ string_of_typ lval ^ " is already declared")) else
+            (SMethod(id, "add_node", [ex], Int), env)
 
 (* TODO *)
 and check_graph str_lst ed_lst n_lst is_d is_w env =
