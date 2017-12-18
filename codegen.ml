@@ -141,6 +141,9 @@ let translate (globals, functions) =
   let construct_edge_list_t = L.function_type void_ptr_t [| void_ptr_t |] in
   let construct_edge_list_func = L.declare_function "construct_edge_list" construct_edge_list_t the_module in
 
+  let construct_undirected_edge_list_t = L.function_type void_ptr_t [| void_ptr_t |] in
+  let construct_undirected_edge_list_func = L.declare_function "construct_undirected_edge_list" construct_undirected_edge_list_t the_module in
+  
   let num_edges_t = L.function_type i32_t [| void_ptr_t |] in
   let num_edges_func = L.declare_function "num_edges" num_edges_t the_module in
 
@@ -455,8 +458,7 @@ let translate (globals, functions) =
         ignore (L.build_cond_br done_bool_val body_bb merge_bb pred_builder);
         L.builder_at_end context merge_bb
 
-      | S.SFor_Edge (e, g, body) -> (* TODO: match on g's type to figure out
-                                       whether to call construct_edge_list_func or another *)
+      | S.SFor_Edge (e, g, body) ->
         let graph_ptr = (expr vars builder g) in
 
         (* allocate counter variable - counts number of edges seen so far *)
@@ -470,7 +472,11 @@ let translate (globals, functions) =
         (* allocate pointer to current edge struct *)
         let current_edge_ptr = L.build_alloca void_ptr_t "current" builder in
         (* construct edge list and get head *)
-        let head_edge = L.build_call construct_edge_list_func [| graph_ptr |] "head" builder in
+        let graph_type = get_sexpr_type g in
+        let construct_func = (match graph_type with
+              A.Digraph | A.Wedigraph -> construct_edge_list_func
+            | _ -> construct_undirected_edge_list_func) in
+        let head_edge = L.build_call construct_func [| graph_ptr |] "head" builder in
         ignore(L.build_store head_edge current_edge_ptr builder);
 
         (* get number of edges *)

@@ -4,7 +4,7 @@ int main() {
 	for_edge(e : g) {
 		g2.add_edge(e.from(), e.to());
 	}
-	for_edge(e : g) {
+	for_edge(e : g2) {
 		print(e.from().data());
 		print(e.to().data());
 	}
