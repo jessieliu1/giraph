@@ -462,8 +462,11 @@ void *graph_neighbors(void *g_in, void *data_ptr) {
 	struct vertex_list_node *v = find_vertex(g_in, data_ptr);
 
 	struct graph *g_out = (struct graph *) malloc(sizeof(struct graph));
-	/* if there are no adjs, return graph * with NULL head */
+	/* if there are no adjs, or if data_ptr is not in g, return graph * with NULL head */
 	g_out->head = NULL;
+	if (v == NULL) {
+		return (void *)g_out;
+	}
 
 	struct adj_list_node *curr_adj = (struct adj_list_node *) v->adjacencies;
 
@@ -487,7 +490,7 @@ void *graph_neighbors(void *g_in, void *data_ptr) {
 		}
 	}
 
-	return g_out;
+	return (void *)g_out;
 }
 
 int graph_get_edge_weight(void *g_in, void *from_data_ptr, void *to_data_ptr) {
