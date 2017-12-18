@@ -24,6 +24,7 @@ let rec convert_expr e env = match e with
   | Method (e, "from", e_lst)     -> (check_edgemtd e "from" e_lst env, env)
   | Method (e, "to", e_lst)     -> (check_edgemtd e "to" e_lst env, env)
   | Method (e, "weight", e_lst)   -> (check_edgemtd e "weight" e_lst env, env)
+  | Method (e, "set_weight", e_lst)   -> (check_edgemtd e "set_weight" e_lst env, env)
   | Method(e, "data", e_lst)     -> (check_data e e_lst env)
   | Method (e, "set_data", e_lst) -> (check_sdata e e_lst env)
   | Method (e, "add_node", e_lst) -> (check_graphmtd e "add_node" 1 e_lst Void env, env)
@@ -251,7 +252,9 @@ and check_graphmtd g name args e_lst ret_typ env =
 and check_edgemtd e n e_lst env = 
   let len = List.length e_lst in
   let e_lst_checked = List.map (fun e -> let (s, env) = convert_expr e env in s) e_lst in
-  if (len != 0) then raise(Failure(n ^ " takes 0 arguments but " ^ string_of_int len ^ " arguments given")) else
+  let correct_len = match n with "set_weight" -> 1 | _ -> 0 in
+  if (len != correct_len) then
+    raise(Failure(n ^ " takes " ^ string_of_int correct_len ^ " arguments but " ^ string_of_int len ^ " arguments given")) else
     let se, _ = convert_expr e env in
     let t = get_sexpr_type se in
     match t with
@@ -259,12 +262,14 @@ and check_edgemtd e n e_lst env =
       (match n with
          "from" -> SMethod(se, n, e_lst_checked, Node)
        | "to" -> SMethod(se, n, e_lst_checked, Node)
-       | "weight" -> SMethod(se, n, e_lst_checked, Int))
+       | "weight" -> SMethod(se, n, e_lst_checked, Int)
+       | "set_weight" -> SMethod(se, n, e_lst_checked, Void))
     | Edge -> 
       (match n with
          "from" -> SMethod(se, n, e_lst_checked, Node)
        | "to" -> SMethod(se, n, e_lst_checked, Node)
-       | "weight" -> raise(Failure("weight() cannot be called on edges of unweighted graphs"));)
+       | "weight" -> raise(Failure("weight() cannot be called on edges of unweighted graphs"));
+       | "set_weight" -> raise(Failure("set_weight() cannot be called on edges of unweighted graphs"));)
     | _ -> raise(Failure("Edge method " ^ n ^ " called on type " ^ string_of_typ t));
 
 

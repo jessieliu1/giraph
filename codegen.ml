@@ -167,6 +167,9 @@ let translate (globals, functions) =
   let edge_set_weight_t = L.function_type void_t [| void_ptr_t ; i32_t |] in
   let edge_set_weight_func = L.declare_function "edge_set_weight" edge_set_weight_t the_module in
 
+  let undirected_edge_set_weight_t = L.function_type void_t [| void_ptr_t ; i32_t |] in
+  let undirected_edge_set_weight_func = L.declare_function "undirected_edge_set_weight" undirected_edge_set_weight_t the_module in
+
   let construct_edge_list_t = L.function_type void_ptr_t [| void_ptr_t |] in
   let construct_edge_list_func = L.declare_function "construct_edge_list" construct_edge_list_t the_module in
 
@@ -348,7 +351,10 @@ let translate (globals, functions) =
         L.build_call edge_weight_func [| data_ptr |] "tmp_edge_weight" builder
       | S.SMethod (edge_expr, "set_weight", [data], _) ->
         let data_ptr = expr vars builder edge_expr in
-        L.build_call edge_set_weight_func [| data_ptr ; (expr vars builder data) |] "" builder
+        let edge_type = get_sexpr_type edge_expr in
+        let which_func = match edge_type with Diwedge -> edge_set_weight_func
+                                            | _ -> undirected_edge_set_weight_func in
+        L.build_call which_func [| data_ptr ; (expr vars builder data) |] "" builder
 
       (* graph methods *)
       | S.SMethod (graph_expr, "add_node", [node_expr], _) ->
