@@ -456,6 +456,35 @@ void remove_edge(void *g_in, int *from_data_ptr, int *to_data_ptr) {
 	}
 }
 
+/* Checks if a graph contains a vertex. Returns 1 if so, 0 otherwise.
+   Corresponds to graph.has_node() method in giraph. */
+int has_vertex(void *g_in, int *data_ptr) {
+	return (find_vertex(g_in, data_ptr) != NULL);
+}
+
+/* Checks if a graph contains an edge between two vertices. 
+   Returns 1 if so, 0 otherwise.
+   Corresponds to graph.has_edge() method in giraph. */
+int has_edge(void *g_in, int *from_data_ptr, int *to_data_ptr) {
+	struct graph *g = (struct graph *) g_in;
+	struct vertex_list_node *from = (struct vertex_list_node *) find_vertex(g_in, from_data_ptr);
+	struct vertex_list_node *to = (struct vertex_list_node *) find_vertex(g_in, to_data_ptr);
+
+	/* If either of the vertices is not in the graph, neither is the edge. */
+	if (from == NULL || to == NULL) {
+		return 0;
+	}
+
+	struct adj_list_node *curr_adj = ((struct vertex_list_node *) from)->adjacencies;
+	while (curr_adj) {
+		if (curr_adj->vertex == to) {
+			return 1;
+		}
+		curr_adj = curr_adj->next;
+	}
+	return 0;
+}
+
 /* return a graph pointer to a graph containing every neighboring vertex */
 void *graph_neighbors(void *g_in, void *data_ptr) {
 	struct graph *g = (struct graph *) g_in;

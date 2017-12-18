@@ -1,0 +1,31 @@
+int main() {
+	graph g = [A:3 -- B:4 -- C:5];
+	digraph d = [A <-> C -> D:5];
+	wegraph w = [A -{6}- D -{3}- B];
+	wedigraph wd = [A -{7}-> C];
+
+	if (g.has_node(D)) {
+		prints("yup");
+	} else {
+		prints("nope");
+	}
+
+	if (d.has_node(D)) {
+		prints("yup");
+	} else {
+		prints("nope");
+	}
+
+	if (!w.has_node(D)) {
+		prints("nope");
+	} else {
+		prints("yup");
+	}
+
+	if (!wd.has_node(D)) {
+		prints("nope");
+	} else {
+		prints("yup");
+	}
+	return 0;
+}

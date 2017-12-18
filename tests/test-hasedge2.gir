@@ -1,0 +1,22 @@
+int main() {
+	graph g = [A:3 -- C:4 -- D:5 -- B:8];
+	wedigraph wd = [A -{7}-> C -{3}-> B];
+
+	for_edge(e : g) {
+		if (wd.has_edge(e.from(), e.to())) {
+			prints("yup");
+		} else {
+			prints("nope");
+		}
+	}
+
+	for_edge(e : wd) {
+		if (g.has_edge(e.from(), e.to())) {
+			prints("yup");
+		} else {
+			prints("nope");
+		}
+	}
+
+	return 0;
+}

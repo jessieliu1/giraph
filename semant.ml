@@ -27,10 +27,12 @@ let rec convert_expr e env = match e with
   | Method(e, "data", e_lst)     -> (check_data e e_lst env)
   | Method (e, "set_data", e_lst) -> (check_sdata e e_lst env)
   | Method (e, "add_node", e_lst) -> (check_graphmtd e "add_node" 1 e_lst Void env, env)
+  | Method (e, "remove_node", e_lst) -> (check_graphmtd e "remove_node" 1 e_lst Void env, env)
+  | Method (e, "has_node", e_lst) -> (check_graphmtd e "has_node" 1 e_lst Bool env, env)
   | Method (e, "add_edge", [f;t]) -> (check_graphmtd e "add_edge" 2 [f;t] Void env, env)
   | Method (e, "add_edge", [f;t;w]) -> (check_graphmtd e "add_edge" 3 [f;t;w] Void env, env)
-  | Method (e, "remove_node", e_lst) -> (check_graphmtd e "remove_node" 1 e_lst Void env, env)
   | Method (e, "remove_edge", e_lst) -> (check_graphmtd e "remove_edge" 2 e_lst Void env, env)
+  | Method (e, "has_edge", e_lst) -> (check_graphmtd e "has_edge" 2 e_lst Bool env, env)
   | Method (e, "neighbors", e_lst) -> (check_graphmtd e "neighbors" 1 e_lst Graph env, env)
   | Method (e, "get_edge_weight", e_lst) -> (check_graphmtd e "get_edge_weight" 2 e_lst Int env, env)
   | Method (e, "set_edge_weight", e_lst) -> (check_graphmtd e "set_edge_weight" 3 e_lst Int env, env)
@@ -285,7 +287,7 @@ and check_graph str_lst ed_lst n_lst is_d is_w env =
   match str_lst with
     [] -> SGraph_Lit([], [], [], Graph, Int), env
   | _ ->
-    let newenv = List.fold_left (fun x y -> let (_, z) = check_vdecl Node y Noexpr x in z) env str_lst in
+    let newenv = List.fold_left (fun x y -> let (_, z) = check_vdecl Node y Noexpr true x in z) env str_lst in
     (match n_lst with
        [] -> SGraph_Lit(str_lst, ed_lst_checked, [], graph_type, Int), newenv
      | _ ->
@@ -365,7 +367,7 @@ and convert_stmt stmt env = match stmt with
     | Break                 -> (check_break env, env)  
     | Continue              -> (check_continue env, env) 
     | Expr(e)               -> (check_expr_stmt e env) 
-    | Vdecl(t, str, e)      -> (check_vdecl t str e env)
+    | Vdecl(t, str, e)      -> (check_vdecl t str e false env)
     | Return(e)             -> (check_return e env)
 
 
@@ -684,9 +686,16 @@ and convert_fdecl fname fformals env =
   in new_env
     
 
-and check_vdecl t str e env = 
+and check_vdecl t str e from_graph_lit env =
     if (StringMap.mem str env.env_flocals || StringMap.mem str env.env_fformals || StringMap.mem str env.env_globals)
-    then raise(Failure("cannot reinitialize existing variable")); 
+    then
+      (* if this vdecl is from a graph literal and we've already declared str as a node,
+         this is fine - otherwise, reject *)
+      (if (from_graph_lit && t == Node && StringMap.mem str env.env_flocals) then
+         (if (StringMap.find str env.env_flocals = Node) then ()
+          else raise(Failure("cannot reinitialize existing variable")); ())
+      else
+        raise(Failure("cannot reinitialize existing variable")); ());
     if t == Void then raise(Failure("cannot declare " ^ str ^ " as type void"))
     else
     let flocals = StringMap.add str t env.env_flocals in

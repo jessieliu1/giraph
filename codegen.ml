@@ -82,7 +82,7 @@ let translate (globals, functions) =
   let get_data_t = L.function_type i32_t [| i32_ptr_t |] in
   let get_data_func = L.declare_function "get_data" get_data_t the_module in
 
-  (* Declare functions that will be called to iterate through graphs *)
+  (* Declare functions that will be called for for_node *)
   let num_vertices_t = L.function_type i32_t [| void_ptr_t |] in
   let num_vertices_func = L.declare_function "num_vertices" num_vertices_t the_module in
 
@@ -101,6 +101,9 @@ let translate (globals, functions) =
 
   let remove_vertex_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t |] in
   let remove_vertex_func = L.declare_function "remove_vertex" remove_vertex_t the_module in
+  
+  let has_vertex_t = L.function_type i32_t [| void_ptr_t ; i32_ptr_t |] in
+  let has_vertex_func = L.declare_function "has_vertex" has_vertex_t the_module in
 
   let add_edge_method_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t |] in
   let add_edge_method_func = L.declare_function "add_edge_method" add_edge_method_t the_module in
@@ -110,6 +113,9 @@ let translate (globals, functions) =
 
   let remove_edge_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t |] in
   let remove_edge_func = L.declare_function "remove_edge" remove_edge_t the_module in
+
+  let has_edge_t = L.function_type i32_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t |] in
+  let has_edge_func = L.declare_function "has_edge" has_edge_t the_module in
 
   let graph_neighbors_t = L.function_type void_ptr_t [| void_ptr_t ; i32_ptr_t |] in
   let graph_neighbors_func = L.declare_function "graph_neighbors" graph_neighbors_t the_module in
@@ -353,6 +359,11 @@ let translate (globals, functions) =
         let graph_ptr = expr vars builder graph_expr
         and data_ptr = expr vars builder node_expr in
         L.build_call remove_vertex_func [| graph_ptr ; data_ptr |] "" builder
+      | S.SMethod (graph_expr, "has_node", [node_expr], _) ->
+        let graph_ptr = expr vars builder graph_expr
+        and data_ptr = expr vars builder node_expr in
+        let ret = L.build_call has_vertex_func [| graph_ptr ; data_ptr |] "" builder in
+        L.build_icmp L.Icmp.Eq ret (L.const_int i32_t 1) "has_node" builder
       | S.SMethod (graph_expr, "add_edge", [from_node_expr ; to_node_expr], _) ->
         let graph_ptr = expr vars builder graph_expr
         and from_data_ptr = expr vars builder from_node_expr
@@ -387,6 +398,12 @@ let translate (globals, functions) =
            ignore(L.build_call remove_edge_func [| graph_ptr ; to_data_ptr ; from_data_ptr |] "" builder)
          | _ -> ());
         L.build_call remove_edge_func [| graph_ptr ; from_data_ptr ; to_data_ptr |] "" builder
+      | S.SMethod (graph_expr, "has_edge", [from_node_expr ; to_node_expr], _) ->
+        let graph_ptr = expr vars builder graph_expr
+        and from_data_ptr = expr vars builder from_node_expr
+        and to_data_ptr = expr vars builder to_node_expr in
+        let ret = L.build_call has_edge_func [| graph_ptr ; from_data_ptr ; to_data_ptr |] "" builder in
+        L.build_icmp L.Icmp.Eq ret (L.const_int i32_t 1) "has_edge" builder
       | S.SMethod (graph_expr, "neighbors", [hub_node], _) ->
         let graph_ptr = expr vars builder graph_expr
         and hub_data_ptr = expr vars builder hub_node in
