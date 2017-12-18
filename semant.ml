@@ -238,9 +238,9 @@ and check_graphmtd g name args e_lst ret_typ env =
                          string_of_typ t1 ^ ", " ^ string_of_typ t2 ^ ", " ^ string_of_typ t3));
       (* all 3-argument graph methods can only be called on we(di)graphs *)
       if (t == Graph || t == Digraph) then
-        if (name = "add_edge") then
+        (if (name = "add_edge") then
           raise(Failure(name ^ " may not be called on unweighted graphs with a weight argument"));
-      raise(Failure(name ^ " may not be called on unweighted graphs"));
+         raise(Failure(name ^ " may not be called on unweighted graphs")););
       (SMethod(id, name, [ex; ex2; ex3], ret_typ))
 
 
@@ -284,21 +284,20 @@ and check_graph str_lst ed_lst n_lst is_d is_w env =
   (* match first elt to other elts *)
   match str_lst with
     [] -> SGraph_Lit([], [], [], Graph, Int), env
-  | _ -> (match n_lst with
-        [] ->  SGraph_Lit(str_lst, ed_lst_checked, [], graph_type, Int), env
-      | _ ->
-        let (s,_) = convert_expr (snd (List.hd n_lst)) env in
-        let t = get_sexpr_type s in
-        List.iter (fun n -> let (sn,_) = convert_expr (snd n) env in
-                    let tn = get_sexpr_type sn in
-                    if tn != t then raise (Failure("node type mismatch of " ^ string_of_typ t ^ " and " ^ string_of_typ tn))) n_lst;
+  | _ ->
+    let newenv = List.fold_left (fun x y -> let (_, z) = check_vdecl Node y Noexpr x in z) env str_lst in
+    (match n_lst with
+       [] -> SGraph_Lit(str_lst, ed_lst_checked, [], graph_type, Int), newenv
+     | _ ->
+       let (s,_) = convert_expr (snd (List.hd n_lst)) newenv in
+       let t = get_sexpr_type s in
+       List.iter (fun n -> let (sn,_) = convert_expr (snd n) newenv in
+                   let tn = get_sexpr_type sn in
+                   if tn != t then raise (Failure("node type mismatch of " ^ string_of_typ t ^ " and " ^ string_of_typ tn))) n_lst;
 
-        (*(check_vdecl t str e env)*)
-        let newenv = List.fold_left (fun x y -> let (_, z) = check_vdecl Node y Noexpr x in z) env str_lst
-        in
-        let nodes = List.map (fun (x,y) -> let (s,_) = convert_expr y newenv in (x,s)) n_lst
-        in
-        (SGraph_Lit(str_lst, ed_lst_checked, nodes, graph_type, t), newenv))
+       let nodes = List.map (fun (x,y) -> let (s,_) = convert_expr y newenv in (x,s)) n_lst
+       in
+       (SGraph_Lit(str_lst, ed_lst_checked, nodes, graph_type, t), newenv))
 
 (* if elt is already defined don't declare, just add to node list*)
 (* if elt is not defined declare and assign expr to it *)

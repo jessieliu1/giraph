@@ -105,6 +105,9 @@ let translate (globals, functions) =
   let add_edge_method_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t |] in
   let add_edge_method_func = L.declare_function "add_edge_method" add_edge_method_t the_module in
 
+  let add_wedge_method_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t ; i32_t |] in
+  let add_wedge_method_func = L.declare_function "add_wedge_method" add_wedge_method_t the_module in
+
   let remove_edge_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t |] in
   let remove_edge_func = L.declare_function "remove_edge" remove_edge_t the_module in
 
@@ -352,7 +355,18 @@ let translate (globals, functions) =
            ignore(L.build_call add_edge_method_func [| graph_ptr ; to_data_ptr ; from_data_ptr |] "" builder)
          | _ -> ());
         L.build_call add_edge_method_func [| graph_ptr ; from_data_ptr ; to_data_ptr |] "" builder
-(* TODO: add add_edge for wegraphs and wedigraphs, taking a weight parameter! *)
+      | S.SMethod (graph_expr, "add_edge", [from_node_expr ; to_node_expr ; weight_expr], _) ->
+        let graph_ptr = expr vars builder graph_expr
+        and from_data_ptr = expr vars builder from_node_expr
+        and to_data_ptr = expr vars builder to_node_expr
+        and weight = expr vars builder weight_expr in
+        (* if is an undirected graph, add reverse edge as well *)
+        let graph_type = get_sexpr_type graph_expr in
+        (match graph_type with
+           A.Wegraph ->
+           ignore(L.build_call add_wedge_method_func [| graph_ptr ; to_data_ptr ; from_data_ptr ; weight |] "" builder)
+         | _ -> ());
+        L.build_call add_wedge_method_func [| graph_ptr ; from_data_ptr ; to_data_ptr ; weight |] "" builder
       | S.SMethod (graph_expr, "remove_edge", [from_node_expr ; to_node_expr], _) ->
         let graph_ptr = expr vars builder graph_expr
         and from_data_ptr = expr vars builder from_node_expr
