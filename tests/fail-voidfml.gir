@@ -1,0 +1,9 @@
+int f(){
+  void c; !~ void local~!
+  return 0;
+}
+
+int main(){
+    a = f();
+   return 0;
+}
