@@ -1,0 +1,9 @@
+!~ should only print A and B, as C and D are not 
+accessible from dfs root A ~!
+int main() {
+	graph g = [A:1 -- B:2 ; C:3 -- D:4];
+	bfs(b : g ; A) {
+		print(b.data());
+	}
+	return 0;
+}
