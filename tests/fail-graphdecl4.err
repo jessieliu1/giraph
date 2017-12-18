@@ -1,0 +1,1 @@
+Fatal error: exception Failure("graph literal cannot initialize the same node more than once")

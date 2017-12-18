@@ -1,0 +1,4 @@
+int main() {
+	wedigraph g = [A:5 -{5}-> B:6 <-{4}- A];
+	return 0;
+}

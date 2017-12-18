@@ -1,0 +1,4 @@
+int main() {
+	graph g = [A:5 -- B:6 -- A:3];
+	return 0;
+}

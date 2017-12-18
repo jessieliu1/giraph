@@ -294,6 +294,14 @@ and check_graph str_lst ed_lst n_lst is_d is_w env =
   let weight_types = List.map (fun (_,_,w_sexpr) -> get_sexpr_type w_sexpr) ed_lst_checked in
   List.iter (fun t -> if t != Int then
                 raise (Failure("edge weights must be of type int"))) weight_types;
+  (* make sure no nodes are initialized more than once *)
+  ignore(List.fold_left (fun m (n, _)  -> if StringMap.mem n m then
+                            raise(Failure("graph literal cannot initialize the same node more than once"))
+                          else StringMap.add n true m) StringMap.empty n_lst);
+  (* make sure no edge appears more than once (may happen with we(di)graphs) *)
+  ignore(List.fold_left (fun m (f,t,_)  -> if StringMap.mem (f ^ "+" ^ t) m then
+                            raise(Failure("graph literal cannot feature the same edge with different weights"))
+                          else StringMap.add (f ^ "+" ^ t) true m) StringMap.empty ed_lst);
   (* TODO: remove all this when generics are implemented *)
   (* first elt must be int *)
   (* match first elt to other elts *)
