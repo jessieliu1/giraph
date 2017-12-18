@@ -3,7 +3,8 @@ type binop = Add | Sub | Mult | Div | Mod | Eq | Neq |
 
 type unop = Neg | Not
 
-type typ = Int | Float | Bool | Void | String | Node | Edge | Graph | Digraph | Wegraph | Wedigraph
+type typ = Int | Float | Bool | Void | String | Graph | Digraph | Wegraph | Wedigraph |
+           Node | Edge | Wedge | Diwedge
 
 type bind = typ * string
 
@@ -82,6 +83,8 @@ let string_of_typ = function
   | Wegraph -> "wegraph"
   | Wedigraph -> "wedigraph"
   | Edge -> "edge"
+  | Wedge -> "wedge"
+  | Diwedge -> "diwedge"
   | Void -> "void"
 
 

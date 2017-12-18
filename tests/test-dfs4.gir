@@ -1,0 +1,10 @@
+!~ a is not in g, should print nothing ~!
+int main() {
+	node a;
+	a.set_data(2);
+	graph g = [];
+	dfs(n : g ; a) {
+		print(n.data());
+	}
+	return 0;
+}

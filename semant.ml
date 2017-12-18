@@ -206,8 +206,7 @@ and check_graphmtd g name args e_lst ret_typ env =
         let (ex,_) = convert_expr e1 env in
         let t1 = get_sexpr_type ex in
         if ( t1 != Node )
-        then raise(Failure("graph method " ^ name ^ "may not be called 
-                on type " ^ string_of_typ t1));
+        then raise(Failure("graph method " ^ name ^ " may not be called on type " ^ string_of_typ t1));
         (SMethod(id, name, [ex], ret_typ)))
 
     | 2 -> 
@@ -216,12 +215,12 @@ and check_graphmtd g name args e_lst ret_typ env =
       let (ex2,_) = convert_expr e2 env in
       let t1 = get_sexpr_type ex and t2 = get_sexpr_type ex2 in 
       if ( t1 != Node || t2 != Node )
-      then raise(Failure("graph method " ^ name ^ "may not be called 
-                on types " ^ string_of_typ t1 ^ ", " ^ string_of_typ t2));
+      then raise(Failure("graph method " ^ name ^ " may not be called on types "
+                         ^ string_of_typ t1 ^ ", " ^ string_of_typ t2));
       (* make sure this method can be called on this type *)
-      if (name == "get_edge_weight" && (t == Graph || t == Digraph))
+      if (name = "get_edge_weight" && (t == Graph || t == Digraph))
       then raise(Failure(name ^ " may not be called on unweighted graphs"));
-      if (name == "add_edge" && (t == Wegraph || t == Wedigraph))
+      if (name = "add_edge" && (t == Wegraph || t == Wedigraph))
       then raise(Failure(name ^ " may not be called on weighted graphs without a weight argument"));
       (SMethod(id, name, [ex; ex2], ret_typ))
     | 3 ->
@@ -238,8 +237,10 @@ and check_graphmtd g name args e_lst ret_typ env =
       then raise(Failure("graph method " ^ name ^ "may not be called on types " ^
                          string_of_typ t1 ^ ", " ^ string_of_typ t2 ^ ", " ^ string_of_typ t3));
       (* all 3-argument graph methods can only be called on we(di)graphs *)
-      if (t == Graph || t == Digraph)
-      then raise(Failure(name ^ " may not be called on unweighted graphs"));
+      if (t == Graph || t == Digraph) then
+        if (name = "add_edge") then
+          raise(Failure(name ^ " may not be called on unweighted graphs with a weight argument"));
+      raise(Failure(name ^ " may not be called on unweighted graphs"));
       (SMethod(id, name, [ex; ex2; ex3], ret_typ))
 
 
@@ -249,15 +250,20 @@ and check_edgemtd e n e_lst env =
   let len = List.length e_lst in
   let e_lst_checked = List.map (fun e -> let (s, env) = convert_expr e env in s) e_lst in
   if (len != 0) then raise(Failure(n ^ " takes 0 arguments but " ^ string_of_int len ^ " arguments given")) else
-      let se, _ = convert_expr e env in
-      let t = get_sexpr_type se in
-      match t with
-        Edge -> 
-            match n with
-            "from" -> SMethod(se, n, e_lst_checked, Node)
-            | "to" -> SMethod(se, n, e_lst_checked, Node)
-            | "weight" -> SMethod(se, n, e_lst_checked, Int)
-        | _ -> raise(Failure("Edge method " ^ n ^ " called on type " ^ string_of_typ t)) 
+    let se, _ = convert_expr e env in
+    let t = get_sexpr_type se in
+    match t with
+      Diwedge | Wedge ->
+      (match n with
+         "from" -> SMethod(se, n, e_lst_checked, Node)
+       | "to" -> SMethod(se, n, e_lst_checked, Node)
+       | "weight" -> SMethod(se, n, e_lst_checked, Int))
+    | Edge -> 
+      (match n with
+         "from" -> SMethod(se, n, e_lst_checked, Node)
+       | "to" -> SMethod(se, n, e_lst_checked, Node)
+       | "weight" -> raise(Failure("weight() cannot be called on edges of unweighted graphs"));)
+    | _ -> raise(Failure("Edge method " ^ n ^ " called on type " ^ string_of_typ t));
 
 
 (* TODO *)
@@ -499,9 +505,14 @@ and check_for_node str e s env =
     in
     SFor_Node(str, se, for_body),nenv
 
-and check_for_edge str e s env = 
-    let flocals = StringMap.add str Edge env.env_flocals in
-    let new_env = 
+and check_for_edge str e s env =
+  let graph_type = get_sexpr_type (fst (convert_expr e env)) in
+  let edge_type = match graph_type with Wedigraph -> Diwedge
+                                      | Wegraph -> Wedge
+                                      | _ -> Edge
+  in
+  let flocals = StringMap.add str edge_type env.env_flocals in
+  let new_env = 
     {
       env_name = env.env_name;
       env_return_type = env.env_return_type;

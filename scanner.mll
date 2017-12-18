@@ -40,7 +40,6 @@ rule token = parse
   | "int" { INT }
   | "string" { STRING }
   | "graph" { GRAPH }
-  | "edge" { EDGE }
   | "node" { NODE }
   | "wegraph" { WEGRAPH }
   | "digraph" { DIGRAPH }

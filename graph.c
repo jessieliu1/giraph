@@ -42,6 +42,12 @@ struct queue_list_node {
 	struct queue_list_node *next;
 };
 
+/* node for stack */
+struct stack_list_node {
+	struct vertex_list_node *v;
+	struct stack_list_node *next;
+};
+
 /* node for map */
 struct map_node {
 	struct map_node *next;
@@ -517,7 +523,6 @@ void graph_set_undirected_edge_weight(void *g_in, void *from_data_ptr, void *to_
 		}
 		curr_adj = curr_adj->next;
 	}
-	return;
 }
 
 void graph_set_edge_weight(void *g_in, void *from_data_ptr, void *to_data_ptr, int new_weight) {
@@ -536,7 +541,6 @@ void graph_set_edge_weight(void *g_in, void *from_data_ptr, void *to_data_ptr, i
 		}
 		curr_adj = curr_adj->next;
 	}
-	return;
 }
 
 //////////////////// END GRAPH METHODS //////////////////
@@ -683,11 +687,11 @@ void *get_next_edge(void *e_in) {
 ////////////////////// END FOR EDGE /////////////////////
 
 
-////////////////////////// BFS //////////////////////////
+////////////////////// BFS and DFS //////////////////////
 
 /* allocate an array of vertex pointers of size (num_vertices + 1), and 
 store num_vertices in a dummy vertex at the first index */
-void *get_bfs_visited_array(void *g_in) {
+void *get_visited_array(void *g_in) {
 	int *size = malloc(sizeof(int));
 	*size = num_vertices(g_in);
 	struct vertex_list_node **visited = 
@@ -696,6 +700,7 @@ void *get_bfs_visited_array(void *g_in) {
 	/* store num nodes in the graph in the first entry in the array */
 	struct vertex_list_node *dummy_size_node = 
 		(struct vertex_list_node *) malloc(sizeof(struct vertex_list_node));
+	memset(visited, 0, sizeof(struct vertex_list_node));
 	dummy_size_node->data = size;
 	visited[0] = dummy_size_node;
 	return visited;
@@ -726,10 +731,12 @@ void add_visited(struct vertex_list_node **visited, struct vertex_list_node *v) 
 	}
 }
 
+//////////////////// BFS ////////////////////
+
 /* create a bfs_queue, and push the first vertex pointer onto it */
 void *get_bfs_queue(void *first_v, void *visited) {
-	struct vertex_list_node *v = (struct vertex_list_node *) first_v;
 	struct queue_list_node *q = malloc(sizeof(struct queue_list_node));
+	memset(q, 0, sizeof(struct queue_list_node));
 	q->v = (struct vertex_list_node *) first_v;
 	q->next = NULL;
 	add_visited(visited, q->v);
@@ -749,6 +756,7 @@ void push_queue(struct vertex_list_node *vertex, struct queue_list_node *queue) 
 		queue = queue->next;
 	}
 	struct queue_list_node *new_q = (struct queue_list_node *) malloc(sizeof(struct queue_list_node));
+	memset(new_q, 0, sizeof(struct queue_list_node));
 	new_q->next = NULL;
 	new_q->v = vertex;
 	queue->next = new_q;
@@ -769,12 +777,31 @@ void *pop_queue(struct queue_list_node *queue) {
 	return out;
 }
 
+void cleanup_bfs(void *visited_in, void *queue_in) {
+	struct vertex_list_node **visited = (struct vertex_list_node **) visited_in;
+	struct queue_list_node *queue = (struct queue_list_node *) queue_in;
+	free(visited[0]->data);
+	free(visited[0]);
+	free(visited_in);
+	/* if empty */
+	if (!queue->v) {
+		free(queue);
+	}
+	/*else add to end */
+	while (queue->next) {
+		void *temp = queue;
+		queue = queue->next;
+		free(temp);
+	}
+}
+
 /* get the next graph vertex in bfs order, updating visited array and bfs queue */
 void *get_next_bfs_vertex(void *visited_in, void *queue) {
 	struct vertex_list_node **visited = (struct vertex_list_node **) visited_in;
 	struct vertex_list_node *v = pop_queue(queue);
 	/* if queue empty we are done */
 	if (!v) {
+		cleanup_bfs(visited_in, queue);
 		return NULL;
 	}
 	struct adj_list_node *adjacency = v->adjacencies;
@@ -796,29 +823,87 @@ int bfs_done(void *curr_v) {
 	return 0;
 }
 
-void cleanup_bfs(void *visited_in, void *queue_in) {
+//////////////////// DFS ////////////////////
+
+/* create a stack_list_node with given vertex, connect to top of stack */
+void push_stack(struct vertex_list_node *vertex, struct stack_list_node *s) {
+	struct stack_list_node *new_s = (struct stack_list_node *) malloc(sizeof(struct stack_list_node));
+	memset(new_s, 0, sizeof(struct stack_list_node));
+	new_s->v = vertex;
+	new_s->next = s->next;
+	s->next = new_s;
+}
+
+/* pop a vertex pointer from stack */
+void *pop_stack(struct stack_list_node *s) {
+	if (s->next) {
+		struct stack_list_node *t = s->next;
+		s->next = t->next;
+		struct vertex_list_node *out = t->v;
+		free(t);
+		return out;
+	}
+	return NULL;
+}
+
+/* create a dfs_stack, and push the first vertex pointer onto it */
+void *get_dfs_stack(void *first_v, void *visited) {
+	struct vertex_list_node *vertex = (struct vertex_list_node *) first_v;
+	struct stack_list_node *s_static_top = malloc(sizeof(struct stack_list_node));
+	memset(s_static_top, 0, sizeof(struct stack_list_node));
+	s_static_top->v = NULL;
+	push_stack((struct vertex_list_node *) vertex, s_static_top);
+	return s_static_top;
+}
+
+void cleanup_dfs(void *visited_in, void *stack_in) {
 	struct vertex_list_node **visited = (struct vertex_list_node **) visited_in;
-	struct queue_list_node *queue = (struct queue_list_node *) queue_in;
+	struct stack_list_node *stack = (struct stack_list_node *) stack_in;
 	free(visited[0]->data);
 	free(visited[0]);
 	free(visited_in);
-	/* if empty */
-	if (!queue->v) {
-		free(queue);
-	}
-	/*else add to end */
-	while (queue->next) {
-		void *temp = queue;
-		queue = queue->next;
+	while (stack->next) {
+		void *temp = stack;
+		stack = stack->next;
 		free(temp);
 	}
 }
-//////////////////////// END BFS ////////////////////////
+
+/* get the next graph vertex in bfs order, updating visited array and bfs queue */
+void *get_next_dfs_vertex(void *visited_in, void *stack) {
+	struct vertex_list_node **visited = (struct vertex_list_node **) visited_in;
+	struct vertex_list_node *v = pop_stack(stack);
+	while (v && unvisited(v, visited) == 0) {
+		v = pop_stack(stack);
+	}
+	/* if stack empty we are done */
+	if (!v) {
+		cleanup_dfs(visited_in, stack);
+		return NULL;
+	}
+	add_visited(visited, v);
+	struct adj_list_node *adjacency = v->adjacencies;
+	while (adjacency) {
+		push_stack(adjacency->vertex, (struct stack_list_node *) stack);
+		adjacency = adjacency->next;
+	}
+	return v;
+}
+
+/* test if the vertex is null to determine if bfs has finished */
+int dfs_done(void *curr_v) {
+	if (curr_v == NULL) {
+		return 1;
+	}
+	return 0;
+}
+
+////////////////////// END BFS and DFS //////////////////////
 
 
 //////////////////////// TESTING ////////////////////////
-/*
-void print_graph(void *graph_ptr) {
+
+/*void print_graph(void *graph_ptr) {
 	struct graph *g = (struct graph *) graph_ptr;
 	struct vertex_list_node *vertex = g->head;
 	while (vertex) {
@@ -890,13 +975,14 @@ void add_bidirectional_edge(void *a, void *b) {
 
 int main() {
 	struct graph *g = (struct graph *) new_graph();
+	struct graph *g2 = (struct graph *) new_graph();
 
 	int *new_data = malloc(sizeof(int));
 	add_vertex(g, new_data);
 	struct vertex_list_node *head = (struct vertex_list_node *) get_head_vertex(g);
 	*(int *) head->data = 0;
 
-	int vertices = 5;
+	int vertices = 6;
 	int save_vertex_num = 2;
 	struct vertex_list_node *save;
 	struct vertex_list_node *savedarray[vertices];
@@ -916,19 +1002,20 @@ int main() {
 	add_bidirectional_edge(savedarray[0], savedarray[1]);
 	add_bidirectional_edge(savedarray[1], savedarray[2]);
 	add_bidirectional_edge(savedarray[2], savedarray[3]);
-	add_bidirectional_edge(savedarray[2], savedarray[4]);
 	add_bidirectional_edge(savedarray[3], savedarray[4]);
-	add_bidirectional_edge(savedarray[4], savedarray[0]);
-	add_bidirectional_edge(savedarray[0], savedarray[2]);
+	add_bidirectional_edge(savedarray[0], savedarray[5]);
+	add_bidirectional_edge(savedarray[1], savedarray[5]);
 
 	//printf("num vertices: %d\n", num_vertices(g));
 
 	//printf("before entering bfs land *save->data: %d \n", *(int *) save->data);
 
-	struct vertex_list_node **visited = get_bfs_visited_array(g);
-	void *queue = get_bfs_queue(save, visited);
-	while (get_next_bfs_vertex(visited, queue)) {
-
+	struct vertex_list_node **visited = get_bfs_visited_array(g2);
+	void *queue = get_dfs_stack(savedarray[0], visited);
+	struct vertex_list_node *curr = get_next_dfs_vertex(visited, queue);
+	while (curr) {
+		printf("asdfsdf %d\n", *curr->data);
+		curr = get_next_dfs_vertex(visited, queue);
 	}
 
 	struct graph *g_nei = (struct graph *) graph_neighbors(g, savedarray[0]->data);
@@ -952,7 +1039,6 @@ int main() {
 
 	//printf("\n%d\n", num_edges(edge_list));
 
-	cleanup_bfs(visited, queue);
 }*/
 
 ////////////////////// END TESTING //////////////////////
