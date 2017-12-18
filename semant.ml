@@ -447,6 +447,17 @@ and check_for e1 e2 e3 s env =
     in
 
     let (for_body, nenv) = convert_stmt s new_env in
+
+    (* check if you have a return in a for *)
+    match for_body with
+      SBlock(slst) ->
+          let rets = List.filter (fun x -> match x with 
+                                      SReturn(expr)-> true
+                                      | _ -> false ) slst 
+          in
+          if List.length rets != 0 then raise(Failure("cannot return in for loop"));
+
+
     let nnenv = 
     {
       env_name = env.env_name;
