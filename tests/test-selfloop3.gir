@@ -3,9 +3,15 @@ int main() {
 	bfs(n : g ; A) {
 		print(n.data());
 	}
+	dfs(n : g ; A) {
+		print(n.data());
+	}
 
 	digraph g2 = [A <-> A -> B <- C];
 	bfs(n : g2 ; A) {
+		print(n.data());
+	}
+	dfs(n : g2 ; A) {
 		print(n.data());
 	}
 
