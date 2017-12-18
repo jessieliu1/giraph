@@ -150,7 +150,7 @@ and check_print e_lst env =
                 | _         -> 
                     raise(Failure("type " ^ string_of_typ t ^ " is unsupported for this function"))
         in
-        SCall(strcall, [s], t), nenv
+        SCall(strcall, [s], Int), nenv
 
 
 and check_assign str e env = 
