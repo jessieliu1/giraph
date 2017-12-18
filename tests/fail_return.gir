@@ -1,0 +1,12 @@
+int foo(int a){
+   if (a < 5){
+   return a;
+   }
+   int b = a + 5;
+}
+
+
+int main(){
+   int gg = foo();
+return 0;
+}

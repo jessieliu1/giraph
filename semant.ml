@@ -612,9 +612,15 @@ and convert_fdecl fname fformals env =
     in 
 
     (* Semantically check all statements of the body *)
-    let (sstmts, nenv) = convert_stmt (Block fdecl.f_body) env
+    let (sstmts, nenv ) = convert_stmt (Block fdecl.f_body) env
     in 
-
+    let check_ret = match sstmts with 
+        SBlock(lst) -> match lst with
+        [] -> raise(Failure("missing return in " ^ fdecl.f_name));
+        | _ -> match (List.nth lst ((List.length lst)-1)) with
+                SReturn(sexpr) -> ()
+                | _ -> raise(Failure("missing return in " ^ fdecl.f_name))
+     in
     let sfdecl = { 
         sf_typ = env.env_return_type;
         sf_name = fdecl.f_name;
