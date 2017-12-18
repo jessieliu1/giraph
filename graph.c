@@ -2,7 +2,12 @@
 #include <string.h>
 #include <stdlib.h>
 
-///////////// MAP /////////////
+/* Terminology-wise, we've painted ourselves into a corner here. 
+   Elsewhere in in this project, "node" refers to a single node in a graph.
+   That is NOT true in this file. In this file, "vertex" refers to a node in
+   a graph, and "node" refers to a single node of a linked list. */
+
+////////////////////////// MAP //////////////////////////
 /* A single node of the adjacency list for a single vertex. */
 struct map_node {
 	struct map_node *next;
@@ -114,14 +119,7 @@ int contains_key(void *map_in, int *key) {
 	}
 	return 0;
 }
-///////////////////////////////
-
-
-
-/* Terminology-wise, we've painted ourselves into a corner here. 
-   Elsewhere in in this project, "node" refers to a single node in a graph.
-   That is NOT true in this file. In this file, "vertex" refers to a node in
-   a graph, and "node" refers to a single node of a linked list. */
+//////////////////////// END MAP ////////////////////////
 
 /* A single node of the adjacency list for a single vertex. */
 struct adj_list_node {
@@ -354,6 +352,40 @@ void add_edge_method(void *g_in, int *from_data_ptr, int *to_data_ptr) {
 	add_wedge_method(g_in, from_data_ptr, to_data_ptr, 0);
 }
 
+/* return a graph pointer to a graph containing every neighboring vertex */
+void *graph_neighbors(void *g_in, void *data_ptr) {
+	struct graph *g = (struct graph *) g_in;
+	struct vertex_list_node *v = find_vertex(g_in, data_ptr);
+
+	struct graph *g_out = (struct graph *) malloc(sizeof(struct graph));
+	/* if there are no adjs, return graph * with NULL head */
+	g_out->head = NULL;
+
+	struct adj_list_node *curr_adj = (struct adj_list_node *) v->adjacencies;
+
+	if (curr_adj) {
+		/* add first vertex in new graph with data in first adjacency */
+		g_out->head = (struct vertex_list_node *) malloc(sizeof(struct vertex_list_node));
+		struct vertex_list_node *curr_g_out = g_out->head;
+		curr_g_out->next = NULL;
+		curr_g_out->adjacencies = NULL;
+		curr_g_out->data = curr_adj->vertex->data;
+		curr_adj = curr_adj->next;
+
+		while (curr_adj) {
+			/* add all vertices in new graph with data in subsequent adjacencies */
+			curr_g_out->next = (struct vertex_list_node *) malloc(sizeof(struct vertex_list_node));
+			curr_g_out->next->data = curr_adj->vertex->data;
+			curr_g_out->next->next = NULL;
+			curr_g_out->next->adjacencies = NULL;
+			curr_adj = curr_adj->next;
+			curr_g_out = curr_g_out->next;
+		}
+	}
+
+	return g_out;
+}
+
 /* Given a graph and two data pointers, removes the directed edge between the
    vertices corresponding to each data pointer. If either of such vertices
    does not exist, or if the edge does not exist, does nothing.
@@ -445,7 +477,6 @@ void print_graph(void *graph_ptr) {
 	}
 	printf("\n");
 }
-
 
 void print_data(void *graph_ptr) {
 	struct graph *g = (struct graph *) graph_ptr;
@@ -777,6 +808,9 @@ void add_bidirectional_edge(void *a, void *b) {
 	while (get_next_bfs_vertex(visited, queue)) {
 
 	}
+
+	struct graph *g_nei = (struct graph *) graph_neighbors(g, savedarray[0]->data);
+	print_graph(g_nei);
 
 	void *edge_list = construct_undirected_edge_list(g);
 	print_edges(edge_list);

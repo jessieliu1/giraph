@@ -1,0 +1,10 @@
+int main() {
+	graph g = [A:5];
+	graph g2 = g.neighbors(A);
+
+	for_node(n : g2) {
+		print(n.data());
+	}
+
+	return 0;
+}

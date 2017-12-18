@@ -89,6 +89,9 @@ let translate (globals, functions) =
   let remove_edge_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t |] in
   let remove_edge_func = L.declare_function "remove_edge" remove_edge_t the_module in
 
+  let graph_neighbors_t = L.function_type void_ptr_t [| void_ptr_t ; i32_ptr_t |] in
+  let graph_neighbors_func = L.declare_function "graph_neighbors" graph_neighbors_t the_module in
+  
   (* Declare functions that will be called for bfs on graphs*)
   let find_vertex_t = L.function_type void_ptr_t [| void_ptr_t ; i32_ptr_t |] in
   let find_vertex_func = L.declare_function "find_vertex" find_vertex_t the_module in
@@ -322,6 +325,10 @@ let translate (globals, functions) =
         (* since this is an undirected graph, remove edges both ways *)
         ignore(L.build_call remove_edge_func [| graph_ptr ; from_data_ptr ; to_data_ptr |] "" builder);
         L.build_call remove_edge_func [| graph_ptr ; to_data_ptr ; from_data_ptr |] "" builder
+      | A.Method (graph_expr, "neighbors", [hub_node]) ->
+        let graph_ptr = expr vars builder graph_expr
+        and hub_data_ptr = expr vars builder hub_node in
+        L.build_call graph_neighbors_func [| graph_ptr ; hub_data_ptr |] "" builder
     in
 
     (* Invoke "f builder" if the current block doesn't already
