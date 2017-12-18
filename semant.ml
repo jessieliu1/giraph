@@ -255,13 +255,13 @@ and check_edgemtd e n e_lst env =
     match t with
       Diwedge | Wedge ->
       (match n with
-         "from" -> SMethod(se, n, e_lst_checked, Node), env
-       | "to" -> SMethod(se, n, e_lst_checked, Node), env
-       | "weight" -> SMethod(se, n, e_lst_checked, Int), env)
+         "from" -> SMethod(se, n, e_lst_checked, Node)
+       | "to" -> SMethod(se, n, e_lst_checked, Node)
+       | "weight" -> SMethod(se, n, e_lst_checked, Int))
     | Edge -> 
       (match n with
-         "from" -> SMethod(se, n, e_lst_checked, Node), env
-       | "to" -> SMethod(se, n, e_lst_checked, Node), env
+         "from" -> SMethod(se, n, e_lst_checked, Node)
+       | "to" -> SMethod(se, n, e_lst_checked, Node)
        | "weight" -> raise(Failure("weight() cannot be called on edges of unweighted graphs"));)
     | _ -> raise(Failure("Edge method " ^ n ^ " called on type " ^ string_of_typ t));
 
