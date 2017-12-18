@@ -1,0 +1,14 @@
+int main() {
+	graph g = [A:3 -- B:4 -- C:5 -- D:8];
+	wedigraph wd = [A -{7}-> C -{3}-> A];
+
+	for_node(n : g) {
+		if (wd.has_node(n)) {
+			prints("yup");
+		} else {
+			prints("nope");
+		}
+	}
+
+	return 0;
+}

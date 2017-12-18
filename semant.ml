@@ -24,13 +24,16 @@ let rec convert_expr e env = match e with
   | Method (e, "from", e_lst)     -> (check_edgemtd e "from" e_lst env, env)
   | Method (e, "to", e_lst)     -> (check_edgemtd e "to" e_lst env, env)
   | Method (e, "weight", e_lst)   -> (check_edgemtd e "weight" e_lst env, env)
+  | Method (e, "set_weight", e_lst)   -> (check_edgemtd e "set_weight" e_lst env, env)
   | Method(e, "data", e_lst)     -> (check_data e e_lst env)
   | Method (e, "set_data", e_lst) -> (check_sdata e e_lst env)
   | Method (e, "add_node", e_lst) -> (check_graphmtd e "add_node" 1 e_lst Void env, env)
+  | Method (e, "remove_node", e_lst) -> (check_graphmtd e "remove_node" 1 e_lst Void env, env)
+  | Method (e, "has_node", e_lst) -> (check_graphmtd e "has_node" 1 e_lst Bool env, env)
   | Method (e, "add_edge", [f;t]) -> (check_graphmtd e "add_edge" 2 [f;t] Void env, env)
   | Method (e, "add_edge", [f;t;w]) -> (check_graphmtd e "add_edge" 3 [f;t;w] Void env, env)
-  | Method (e, "remove_node", e_lst) -> (check_graphmtd e "remove_node" 1 e_lst Void env, env)
   | Method (e, "remove_edge", e_lst) -> (check_graphmtd e "remove_edge" 2 e_lst Void env, env)
+  | Method (e, "has_edge", e_lst) -> (check_graphmtd e "has_edge" 2 e_lst Bool env, env)
   | Method (e, "neighbors", e_lst) -> (check_graphmtd e "neighbors" 1 e_lst Graph env, env)
   | Method (e, "get_edge_weight", e_lst) -> (check_graphmtd e "get_edge_weight" 2 e_lst Int env, env)
   | Method (e, "set_edge_weight", e_lst) -> (check_graphmtd e "set_edge_weight" 3 e_lst Int env, env)
@@ -147,7 +150,7 @@ and check_print e_lst env =
                 | _         -> 
                     raise(Failure("type " ^ string_of_typ t ^ " is unsupported for this function"))
         in
-        SCall(strcall, [s], t), nenv
+        SCall(strcall, [s], Int), nenv
 
 
 and check_assign str e env = 
@@ -162,8 +165,16 @@ and check_assign str e env =
                 Not_found -> StringMap.find str env.env_globals) in
         (* if types match *)
         if lvaluet == rvaluet then SAssign(str, r, lvaluet), env
-        (* TODO: check if rvalue is an edgeless graph and lvaluet is a graph subtype (this should pass) *)
-        else report_bad_assign lvaluet rvaluet
+        else
+          (* The parser always says an edgeless graph literal is of type Graph,
+             but it is a valid rvalue for Digraph, Wegraph, and Wedigraph too -
+             if this is why lvaluet == rvaluet, this is fine*)
+          (let l_is_graph_subtyp = match lvaluet with Digraph | Wegraph | Wedigraph -> true
+                                                    | _ -> false in
+           let r_is_edgeless_graph = match e with Graph_Lit (_, [], _, _, _) -> true
+                                                | _ -> false in
+           if (l_is_graph_subtyp && r_is_edgeless_graph) then SAssign(str, r, lvaluet), env
+           else report_bad_assign lvaluet rvaluet)
     else report_undeclared_id_assign str
 
 and check_data e e_lst env =
@@ -238,9 +249,9 @@ and check_graphmtd g name args e_lst ret_typ env =
                          string_of_typ t1 ^ ", " ^ string_of_typ t2 ^ ", " ^ string_of_typ t3));
       (* all 3-argument graph methods can only be called on we(di)graphs *)
       if (t == Graph || t == Digraph) then
-        if (name = "add_edge") then
+        (if (name = "add_edge") then
           raise(Failure(name ^ " may not be called on unweighted graphs with a weight argument"));
-      raise(Failure(name ^ " may not be called on unweighted graphs"));
+         raise(Failure(name ^ " may not be called on unweighted graphs")););
       (SMethod(id, name, [ex; ex2; ex3], ret_typ))
 
 
@@ -249,7 +260,9 @@ and check_graphmtd g name args e_lst ret_typ env =
 and check_edgemtd e n e_lst env = 
   let len = List.length e_lst in
   let e_lst_checked = List.map (fun e -> let (s, env) = convert_expr e env in s) e_lst in
-  if (len != 0) then raise(Failure(n ^ " takes 0 arguments but " ^ string_of_int len ^ " arguments given")) else
+  let correct_len = match n with "set_weight" -> 1 | _ -> 0 in
+  if (len != correct_len) then
+    raise(Failure(n ^ " takes " ^ string_of_int correct_len ^ " arguments but " ^ string_of_int len ^ " arguments given")) else
     let se, _ = convert_expr e env in
     let t = get_sexpr_type se in
     match t with
@@ -257,12 +270,14 @@ and check_edgemtd e n e_lst env =
       (match n with
          "from" -> SMethod(se, n, e_lst_checked, Node)
        | "to" -> SMethod(se, n, e_lst_checked, Node)
-       | "weight" -> SMethod(se, n, e_lst_checked, Int))
+       | "weight" -> SMethod(se, n, e_lst_checked, Int)
+       | "set_weight" -> SMethod(se, n, e_lst_checked, Void))
     | Edge -> 
       (match n with
          "from" -> SMethod(se, n, e_lst_checked, Node)
        | "to" -> SMethod(se, n, e_lst_checked, Node)
-       | "weight" -> raise(Failure("weight() cannot be called on edges of unweighted graphs"));)
+       | "weight" -> raise(Failure("weight() cannot be called on edges of unweighted graphs"));
+       | "set_weight" -> raise(Failure("set_weight() cannot be called on edges of unweighted graphs"));)
     | _ -> raise(Failure("Edge method " ^ n ^ " called on type " ^ string_of_typ t));
 
 
@@ -279,26 +294,33 @@ and check_graph str_lst ed_lst n_lst is_d is_w env =
   let weight_types = List.map (fun (_,_,w_sexpr) -> get_sexpr_type w_sexpr) ed_lst_checked in
   List.iter (fun t -> if t != Int then
                 raise (Failure("edge weights must be of type int"))) weight_types;
+  (* make sure no nodes are initialized more than once *)
+  ignore(List.fold_left (fun m (n, _)  -> if StringMap.mem n m then
+                            raise(Failure("graph literal cannot initialize the same node more than once"))
+                          else StringMap.add n true m) StringMap.empty n_lst);
+  (* make sure no edge appears more than once (may happen with we(di)graphs) *)
+  ignore(List.fold_left (fun m (f,t,_)  -> if StringMap.mem (f ^ "+" ^ t) m then
+                            raise(Failure("graph literal cannot feature the same edge with different weights"))
+                          else StringMap.add (f ^ "+" ^ t) true m) StringMap.empty ed_lst);
   (* TODO: remove all this when generics are implemented *)
   (* first elt must be int *)
   (* match first elt to other elts *)
   match str_lst with
     [] -> SGraph_Lit([], [], [], Graph, Int), env
-  | _ -> (match n_lst with
-        [] ->  SGraph_Lit(str_lst, ed_lst_checked, [], graph_type, Int), env
-      | _ ->
-        let (s,_) = convert_expr (snd (List.hd n_lst)) env in
-        let t = get_sexpr_type s in
-        List.iter (fun n -> let (sn,_) = convert_expr (snd n) env in
-                    let tn = get_sexpr_type sn in
-                    if tn != t then raise (Failure("node type mismatch of " ^ string_of_typ t ^ " and " ^ string_of_typ tn))) n_lst;
+  | _ ->
+    let newenv = List.fold_left (fun x y -> let (_, z) = check_vdecl Node y Noexpr true x in z) env str_lst in
+    (match n_lst with
+       [] -> SGraph_Lit(str_lst, ed_lst_checked, [], graph_type, Int), newenv
+     | _ ->
+       let (s,_) = convert_expr (snd (List.hd n_lst)) newenv in
+       let t = get_sexpr_type s in
+       List.iter (fun n -> let (sn,_) = convert_expr (snd n) newenv in
+                   let tn = get_sexpr_type sn in
+                   if tn != t then raise (Failure("node type mismatch of " ^ string_of_typ t ^ " and " ^ string_of_typ tn))) n_lst;
 
-        (*(check_vdecl t str e env)*)
-        let newenv = List.fold_left (fun x y -> let (_, z) = check_vdecl Node y Noexpr x in z) env str_lst
-        in
-        let nodes = List.map (fun (x,y) -> let (s,_) = convert_expr y newenv in (x,s)) n_lst
-        in
-        (SGraph_Lit(str_lst, ed_lst_checked, nodes, graph_type, t), newenv))
+       let nodes = List.map (fun (x,y) -> let (s,_) = convert_expr y newenv in (x,s)) n_lst
+       in
+       (SGraph_Lit(str_lst, ed_lst_checked, nodes, graph_type, t), newenv))
 
 (* if elt is already defined don't declare, just add to node list*)
 (* if elt is not defined declare and assign expr to it *)
@@ -366,7 +388,7 @@ and convert_stmt stmt env = match stmt with
     | Break                 -> (check_break env, env)  
     | Continue              -> (check_continue env, env) 
     | Expr(e)               -> (check_expr_stmt e env) 
-    | Vdecl(t, str, e)      -> (check_vdecl t str e env)
+    | Vdecl(t, str, e)      -> (check_vdecl t str e false env)
     | Return(e)             -> (check_return e env)
 
 
@@ -808,9 +830,16 @@ and convert_fdecl fname fformals env =
   in new_env
     
 
-and check_vdecl t str e env = 
+and check_vdecl t str e from_graph_lit env =
     if (StringMap.mem str env.env_flocals || StringMap.mem str env.env_fformals || StringMap.mem str env.env_globals)
-    then raise(Failure("cannot reinitialize existing variable")); 
+    then
+      (* if this vdecl is from a graph literal and we've already declared str as a node,
+         this is fine - otherwise, reject *)
+      (if (from_graph_lit && t == Node && StringMap.mem str env.env_flocals) then
+         (if (StringMap.find str env.env_flocals = Node) then ()
+          else raise(Failure("cannot reinitialize existing variable")); ())
+      else
+        raise(Failure("cannot reinitialize existing variable")); ());
     if t == Void then raise(Failure("cannot declare " ^ str ^ " as type void"))
     else
     let flocals = StringMap.add str t env.env_flocals in

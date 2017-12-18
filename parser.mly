@@ -129,19 +129,19 @@ graph_expr_opt:
 
 single_node_exprs_list:
   single_node_expr SEMI single_node_expr { merge_graph_exprs $1 $3 }
-| single_node_exprs_list SEMI single_node_expr { merge_graph_exprs $1 $3 }
+| single_node_expr SEMI single_node_exprs_list { merge_graph_exprs $1 $3 }
 
 ugraph_exprs_list:
   ugraph_expr { $1 }
 | ugraph_exprs_list SEMI ugraph_expr { merge_graph_exprs $1 $3 }
 | ugraph_exprs_list SEMI single_node_expr { merge_graph_exprs $1 $3 }
-| single_node_expr SEMI ugraph_exprs_list { merge_graph_exprs $3 $1 }
+| single_node_expr SEMI ugraph_exprs_list { merge_graph_exprs $1 $3 }
 
 digraph_exprs_list:
   digraph_expr { $1 }
 | digraph_exprs_list SEMI digraph_expr { merge_graph_exprs $1 $3 }
 | digraph_exprs_list SEMI single_node_expr { merge_graph_exprs $1 $3 }
-| single_node_expr SEMI digraph_exprs_list { merge_graph_exprs $3 $1 }
+| single_node_expr SEMI digraph_exprs_list { merge_graph_exprs $1 $3 }
 
 ugraph_expr:
   single_node_expr EDGE ID { update_graph $1 $3 (Int_Lit(0)) }
@@ -168,7 +168,7 @@ wegraph_exprs_list:
   wegraph_expr { $1 }
 | wegraph_exprs_list SEMI wegraph_expr { merge_graph_exprs $1 $3 }
 | wegraph_exprs_list SEMI single_node_expr { merge_graph_exprs $1 $3 }
-| single_node_expr SEMI wegraph_exprs_list { merge_graph_exprs $3 $1 }
+| single_node_expr SEMI wegraph_exprs_list { merge_graph_exprs $1 $3 }
 
 wegraph_expr:
   single_node_expr MINUS LBRACE expr RBRACE MINUS ID %prec EDGE { update_graph $1 $7 $4 }
@@ -180,7 +180,7 @@ wedigraph_exprs_list:
   wedigraph_expr { $1 }
 | wedigraph_exprs_list SEMI wedigraph_expr { merge_graph_exprs $1 $3 }
 | wedigraph_exprs_list SEMI single_node_expr { merge_graph_exprs $1 $3 }
-| single_node_expr SEMI wedigraph_exprs_list { merge_graph_exprs $3 $1 }
+| single_node_expr SEMI wedigraph_exprs_list { merge_graph_exprs $1 $3 }
 
 wedigraph_expr:
   single_node_expr MINUS LBRACE expr RBRACE RARROW ID %prec EDGE { update_digraph $1 $7 $4 0 }

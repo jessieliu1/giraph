@@ -1,0 +1,31 @@
+int main() {
+	graph g = [A:3 -- B:4 -- C:5];
+	digraph d = [A <-> C -> D:5];
+	wegraph w = [A -{6}- C -{3}- B];
+	wedigraph wd = [A <-{7}- C];
+
+	if (g.has_edge(A, C)) {
+		prints("yup");
+	} else {
+		prints("nope");
+	}
+
+	if (d.has_edge(A, C)) {
+		prints("yup");
+	} else {
+		prints("nope");
+	}
+
+	if (!w.has_edge(A, C)) {
+		prints("nope");
+	} else {
+		prints("yup");
+	}
+
+	if (!wd.has_edge(A, C)) {
+		prints("nope");
+	} else {
+		prints("yup");
+	}
+	return 0;
+}

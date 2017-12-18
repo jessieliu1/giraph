@@ -1,0 +1,23 @@
+int main() {
+	wegraph g = [A -{5}- B -{6}- C];
+	for_edge (e : g) {
+		e.set_weight(e.weight() + 1);
+	}
+	for_edge (e : g) {
+		print(e.weight());
+	}
+	print(g.get_edge_weight(C, B));
+	print(g.get_edge_weight(B, C));
+
+	wedigraph g2 = [A -{5}-> B <-{6}- C <-{8}- B];
+	for_edge (e : g2) {
+		e.set_weight(e.weight() + 1);
+	}
+	for_edge (e : g2) {
+		print(e.weight());
+	}
+	print(g2.get_edge_weight(C, B));
+	print(g2.get_edge_weight(B, C));
+
+	return 0;
+}

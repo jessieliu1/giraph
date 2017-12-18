@@ -1,0 +1,16 @@
+int main() {
+	wedigraph g = [A -{5}-> B -{7}-> C];
+	g.add_edge(C, A, 9);
+
+	for_edge(e : g) {
+		int w = e.weight();
+		g.set_edge_weight(e.from(), e.to(), w+5);
+	}
+
+	for_edge(e : g) {
+		print(e.weight());
+		print(g.get_edge_weight(e.from(), e.to()));
+		print(g.get_edge_weight(e.to(), e.from())); !~ should be 0 - not present ~!
+	}
+	return 0;
+}

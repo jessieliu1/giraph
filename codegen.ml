@@ -82,7 +82,7 @@ let translate (globals, functions) =
   let get_data_t = L.function_type i32_t [| i32_ptr_t |] in
   let get_data_func = L.declare_function "get_data" get_data_t the_module in
 
-  (* Declare functions that will be called to iterate through graphs *)
+  (* Declare functions that will be called for for_node *)
   let num_vertices_t = L.function_type i32_t [| void_ptr_t |] in
   let num_vertices_func = L.declare_function "num_vertices" num_vertices_t the_module in
 
@@ -101,15 +101,33 @@ let translate (globals, functions) =
 
   let remove_vertex_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t |] in
   let remove_vertex_func = L.declare_function "remove_vertex" remove_vertex_t the_module in
+  
+  let has_vertex_t = L.function_type i32_t [| void_ptr_t ; i32_ptr_t |] in
+  let has_vertex_func = L.declare_function "has_vertex" has_vertex_t the_module in
 
   let add_edge_method_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t |] in
   let add_edge_method_func = L.declare_function "add_edge_method" add_edge_method_t the_module in
 
+  let add_wedge_method_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t ; i32_t |] in
+  let add_wedge_method_func = L.declare_function "add_wedge_method" add_wedge_method_t the_module in
+
   let remove_edge_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t |] in
   let remove_edge_func = L.declare_function "remove_edge" remove_edge_t the_module in
 
+  let has_edge_t = L.function_type i32_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t |] in
+  let has_edge_func = L.declare_function "has_edge" has_edge_t the_module in
+
   let graph_neighbors_t = L.function_type void_ptr_t [| void_ptr_t ; i32_ptr_t |] in
   let graph_neighbors_func = L.declare_function "graph_neighbors" graph_neighbors_t the_module in
+
+  let get_edge_weight_t = L.function_type i32_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t |] in
+  let get_edge_weight_func = L.declare_function "graph_get_edge_weight" get_edge_weight_t the_module in
+
+  let set_edge_weight_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t ; i32_t |] in
+  let set_edge_weight_func = L.declare_function "graph_set_edge_weight" set_edge_weight_t the_module in
+
+  let set_undirected_edge_weight_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t ; i32_t |] in
+  let set_undirected_edge_weight_func = L.declare_function "graph_set_undirected_edge_weight" set_undirected_edge_weight_t the_module in
   
   (* Declare functions that will be called for bfs and dfs on graphs*)
   let find_vertex_t = L.function_type void_ptr_t [| void_ptr_t ; i32_ptr_t |] in
@@ -148,6 +166,9 @@ let translate (globals, functions) =
 
   let edge_set_weight_t = L.function_type void_t [| void_ptr_t ; i32_t |] in
   let edge_set_weight_func = L.declare_function "edge_set_weight" edge_set_weight_t the_module in
+
+  let undirected_edge_set_weight_t = L.function_type void_t [| void_ptr_t ; i32_t |] in
+  let undirected_edge_set_weight_func = L.declare_function "undirected_edge_set_weight" undirected_edge_set_weight_t the_module in
 
   let construct_edge_list_t = L.function_type void_ptr_t [| void_ptr_t |] in
   let construct_edge_list_func = L.declare_function "construct_edge_list" construct_edge_list_t the_module in
@@ -330,7 +351,10 @@ let translate (globals, functions) =
         L.build_call edge_weight_func [| data_ptr |] "tmp_edge_weight" builder
       | S.SMethod (edge_expr, "set_weight", [data], _) ->
         let data_ptr = expr vars builder edge_expr in
-        L.build_call edge_set_weight_func [| data_ptr ; (expr vars builder data) |] "" builder
+        let edge_type = get_sexpr_type edge_expr in
+        let which_func = match edge_type with Diwedge -> edge_set_weight_func
+                                            | _ -> undirected_edge_set_weight_func in
+        L.build_call which_func [| data_ptr ; (expr vars builder data) |] "" builder
 
       (* graph methods *)
       | S.SMethod (graph_expr, "add_node", [node_expr], _) ->
@@ -341,6 +365,11 @@ let translate (globals, functions) =
         let graph_ptr = expr vars builder graph_expr
         and data_ptr = expr vars builder node_expr in
         L.build_call remove_vertex_func [| graph_ptr ; data_ptr |] "" builder
+      | S.SMethod (graph_expr, "has_node", [node_expr], _) ->
+        let graph_ptr = expr vars builder graph_expr
+        and data_ptr = expr vars builder node_expr in
+        let ret = L.build_call has_vertex_func [| graph_ptr ; data_ptr |] "" builder in
+        L.build_icmp L.Icmp.Eq ret (L.const_int i32_t 1) "has_node" builder
       | S.SMethod (graph_expr, "add_edge", [from_node_expr ; to_node_expr], _) ->
         let graph_ptr = expr vars builder graph_expr
         and from_data_ptr = expr vars builder from_node_expr
@@ -352,7 +381,18 @@ let translate (globals, functions) =
            ignore(L.build_call add_edge_method_func [| graph_ptr ; to_data_ptr ; from_data_ptr |] "" builder)
          | _ -> ());
         L.build_call add_edge_method_func [| graph_ptr ; from_data_ptr ; to_data_ptr |] "" builder
-(* TODO: add add_edge for wegraphs and wedigraphs, taking a weight parameter! *)
+      | S.SMethod (graph_expr, "add_edge", [from_node_expr ; to_node_expr ; weight_expr], _) ->
+        let graph_ptr = expr vars builder graph_expr
+        and from_data_ptr = expr vars builder from_node_expr
+        and to_data_ptr = expr vars builder to_node_expr
+        and weight = expr vars builder weight_expr in
+        (* if is an undirected graph, add reverse edge as well *)
+        let graph_type = get_sexpr_type graph_expr in
+        (match graph_type with
+           A.Wegraph ->
+           ignore(L.build_call add_wedge_method_func [| graph_ptr ; to_data_ptr ; from_data_ptr ; weight |] "" builder)
+         | _ -> ());
+        L.build_call add_wedge_method_func [| graph_ptr ; from_data_ptr ; to_data_ptr ; weight |] "" builder
       | S.SMethod (graph_expr, "remove_edge", [from_node_expr ; to_node_expr], _) ->
         let graph_ptr = expr vars builder graph_expr
         and from_data_ptr = expr vars builder from_node_expr
@@ -364,10 +404,33 @@ let translate (globals, functions) =
            ignore(L.build_call remove_edge_func [| graph_ptr ; to_data_ptr ; from_data_ptr |] "" builder)
          | _ -> ());
         L.build_call remove_edge_func [| graph_ptr ; from_data_ptr ; to_data_ptr |] "" builder
+      | S.SMethod (graph_expr, "has_edge", [from_node_expr ; to_node_expr], _) ->
+        let graph_ptr = expr vars builder graph_expr
+        and from_data_ptr = expr vars builder from_node_expr
+        and to_data_ptr = expr vars builder to_node_expr in
+        let ret = L.build_call has_edge_func [| graph_ptr ; from_data_ptr ; to_data_ptr |] "" builder in
+        L.build_icmp L.Icmp.Eq ret (L.const_int i32_t 1) "has_edge" builder
       | S.SMethod (graph_expr, "neighbors", [hub_node], _) ->
         let graph_ptr = expr vars builder graph_expr
         and hub_data_ptr = expr vars builder hub_node in
         L.build_call graph_neighbors_func [| graph_ptr ; hub_data_ptr |] "" builder
+      | S.SMethod (graph_expr, "get_edge_weight", [from_node_expr ; to_node_expr], _) ->
+        let graph_ptr = expr vars builder graph_expr
+        and from_data_ptr = expr vars builder from_node_expr
+        and to_data_ptr = expr vars builder to_node_expr in
+        L.build_call get_edge_weight_func [| graph_ptr ; from_data_ptr ; to_data_ptr |] "" builder
+      | S.SMethod (graph_expr, "set_edge_weight", [from_node_expr ; to_node_expr ; weight_expr], _) ->
+        let graph_ptr = expr vars builder graph_expr
+        and from_data_ptr = expr vars builder from_node_expr
+        and to_data_ptr = expr vars builder to_node_expr
+        and weight = expr vars builder weight_expr in
+        let graph_type = get_sexpr_type graph_expr in
+        let which_func = (match graph_type with
+              A.Wegraph -> set_undirected_edge_weight_func
+            | _ -> set_edge_weight_func) in
+        L.build_call which_func [| graph_ptr ; from_data_ptr ; to_data_ptr ; weight |] "" builder
+
+
     in
 
     (* Invoke "f builder" if the current block doesn't already

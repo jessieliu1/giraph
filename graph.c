@@ -388,7 +388,7 @@ void remove_vertex(void *g_in, int *data_ptr) {
 
 /* Given a graph and two data pointers, adds a directed, weighted edge between the
    vertices corresponding to each data pointer. If either of such vertices
-   does not exist, they are created.
+   does not exist, they are created. If the edge already exists, does nothing.
    Corresponds to add_edge method in giraph. */
 void add_wedge_method(void *g_in, int *from_data_ptr, int *to_data_ptr, int w) {
 	struct graph *g = (struct graph *) g_in;
@@ -400,6 +400,15 @@ void add_wedge_method(void *g_in, int *from_data_ptr, int *to_data_ptr, int w) {
 	if (to == NULL) {
 		to = add_vertex(g_in, to_data_ptr);
 	}
+	/* Check if from->to edge already exists - if so, return. */
+	struct adj_list_node *curr_adj = ((struct vertex_list_node *) from)->adjacencies;
+	while (curr_adj) {
+		if (curr_adj->vertex == to) {
+			return;
+		}
+		curr_adj = curr_adj->next;
+	}
+
 	add_wedge(from, to, w);
 }
 
@@ -447,14 +456,46 @@ void remove_edge(void *g_in, int *from_data_ptr, int *to_data_ptr) {
 	}
 }
 
+/* Checks if a graph contains a vertex. Returns 1 if so, 0 otherwise.
+   Corresponds to graph.has_node() method in giraph. */
+int has_vertex(void *g_in, int *data_ptr) {
+	return (find_vertex(g_in, data_ptr) != NULL);
+}
+
+/* Checks if a graph contains an edge between two vertices. 
+   Returns 1 if so, 0 otherwise.
+   Corresponds to graph.has_edge() method in giraph. */
+int has_edge(void *g_in, int *from_data_ptr, int *to_data_ptr) {
+	struct graph *g = (struct graph *) g_in;
+	struct vertex_list_node *from = (struct vertex_list_node *) find_vertex(g_in, from_data_ptr);
+	struct vertex_list_node *to = (struct vertex_list_node *) find_vertex(g_in, to_data_ptr);
+
+	/* If either of the vertices is not in the graph, neither is the edge. */
+	if (from == NULL || to == NULL) {
+		return 0;
+	}
+
+	struct adj_list_node *curr_adj = ((struct vertex_list_node *) from)->adjacencies;
+	while (curr_adj) {
+		if (curr_adj->vertex == to) {
+			return 1;
+		}
+		curr_adj = curr_adj->next;
+	}
+	return 0;
+}
+
 /* return a graph pointer to a graph containing every neighboring vertex */
 void *graph_neighbors(void *g_in, void *data_ptr) {
 	struct graph *g = (struct graph *) g_in;
 	struct vertex_list_node *v = find_vertex(g_in, data_ptr);
 
 	struct graph *g_out = (struct graph *) malloc(sizeof(struct graph));
-	/* if there are no adjs, return graph * with NULL head */
+	/* if there are no adjs, or if data_ptr is not in g, return graph * with NULL head */
 	g_out->head = NULL;
+	if (v == NULL) {
+		return (void *)g_out;
+	}
 
 	struct adj_list_node *curr_adj = (struct adj_list_node *) v->adjacencies;
 
@@ -478,7 +519,7 @@ void *graph_neighbors(void *g_in, void *data_ptr) {
 		}
 	}
 
-	return g_out;
+	return (void *)g_out;
 }
 
 int graph_get_edge_weight(void *g_in, void *from_data_ptr, void *to_data_ptr) {
