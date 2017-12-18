@@ -1,1 +1,1 @@
-Fatal error: exception Failure("concurrent modification of graph in for_node ")
+Fatal error: exception Failure("concurrent modification of graph in for_node")
