@@ -176,7 +176,34 @@ int edge_weight(void *e) {
 	return ((struct edge_list_node *) e)->weight;
 }
 
-void edge_set_weight(void *e, int new_weight) {
+void undirected_edge_set_weight(void *e_in, int new_weight) {
+	struct edge_list_node *e = (struct edge_list_node *) e_in;
+	struct adj_list_node *from_adj = e->from->adjacencies;
+	struct adj_list_node *to_adj = e->to->adjacencies;
+	while (from_adj) {
+		if (from_adj->vertex == e->to) {
+			from_adj->weight = new_weight;
+		}
+		from_adj = from_adj->next;
+	}
+	while (to_adj) {
+		if (to_adj->vertex == e->from) {
+			to_adj->weight = new_weight;
+		}
+		to_adj = to_adj->next;
+	}
+	((struct edge_list_node *) e)->weight = new_weight;
+}
+
+void edge_set_weight(void *e_in, int new_weight) {
+	struct edge_list_node *e = (struct edge_list_node *) e_in;
+	struct adj_list_node *from_adj = e->from->adjacencies;
+	while (from_adj) {
+		if (from_adj->vertex == e->to) {
+			from_adj->weight = new_weight;
+		}
+		from_adj = from_adj->next;
+	}
 	((struct edge_list_node *) e)->weight = new_weight;
 }
 
@@ -726,8 +753,8 @@ void cleanup_bfs(void *visited_in, void *queue_in) {
 
 
 //////////////////////// TESTING ////////////////////////
-/*
-void print_graph(void *graph_ptr) {
+
+/*void print_graph(void *graph_ptr) {
 	struct graph *g = (struct graph *) graph_ptr;
 	struct vertex_list_node *vertex = g->head;
 	while (vertex) {
@@ -753,7 +780,7 @@ void print_data(void *graph_ptr) {
 		printf("adjacencies:");
 		struct adj_list_node *adjacency = vertex->adjacencies;
 		while (adjacency) {
-			printf(" %d", *(int *) adjacency->vertex->data);
+			printf("(%d, weight: %d) ", *(int *) adjacency->vertex->data, adjacency->weight);
 			adjacency = adjacency->next;
 		}
 		printf("\n\n");
@@ -830,14 +857,9 @@ int main() {
 	add_bidirectional_edge(savedarray[4], savedarray[0]);
 	add_bidirectional_edge(savedarray[0], savedarray[2]);
 
-	printf("num vertices: %d\n", num_vertices(g));
+	//printf("num vertices: %d\n", num_vertices(g));
 
-	printf("vertex with data: %d ... next vertex in list has data: %d\n\n", *get_data_from_vertex(save),
-		*get_data_from_vertex(get_next_vertex(save)));
-
-	print_data((void *) g);
-
-	printf("before entering bfs land *save->data: %d \n", *(int *) save->data);
+	//printf("before entering bfs land *save->data: %d \n", *(int *) save->data);
 
 	struct vertex_list_node **visited = get_bfs_visited_array(g);
 	void *queue = get_bfs_queue(save, visited);
@@ -846,11 +868,16 @@ int main() {
 	}
 
 	struct graph *g_nei = (struct graph *) graph_neighbors(g, savedarray[0]->data);
-	print_graph(g_nei);
 
 	void *edge_list = construct_undirected_edge_list(g);
-	print_edges(edge_list);
-	printf("\n%d\n", num_edges(edge_list));
+	struct edge_list_node *edge = (struct edge_list_node *) edge_list;
+	undirected_edge_set_weight(edge->next, 50);
+	fprintf(stderr, "%d \n\n", edge_weight(edge->next));
+	//print_edges(edge_list);
+
+	print_data((void *) g);
+
+	//printf("\n%d\n", num_edges(edge_list));
 
 	cleanup_bfs(visited, queue);
 }
