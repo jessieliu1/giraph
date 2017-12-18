@@ -700,6 +700,7 @@ void *get_visited_array(void *g_in) {
 	/* store num nodes in the graph in the first entry in the array */
 	struct vertex_list_node *dummy_size_node = 
 		(struct vertex_list_node *) malloc(sizeof(struct vertex_list_node));
+	memset(visited, 0, sizeof(struct vertex_list_node));
 	dummy_size_node->data = size;
 	visited[0] = dummy_size_node;
 	return visited;
@@ -734,8 +735,8 @@ void add_visited(struct vertex_list_node **visited, struct vertex_list_node *v) 
 
 /* create a bfs_queue, and push the first vertex pointer onto it */
 void *get_bfs_queue(void *first_v, void *visited) {
-	struct vertex_list_node *v = (struct vertex_list_node *) first_v;
 	struct queue_list_node *q = malloc(sizeof(struct queue_list_node));
+	memset(q, 0, sizeof(struct queue_list_node));
 	q->v = (struct vertex_list_node *) first_v;
 	q->next = NULL;
 	add_visited(visited, q->v);
@@ -755,6 +756,7 @@ void push_queue(struct vertex_list_node *vertex, struct queue_list_node *queue) 
 		queue = queue->next;
 	}
 	struct queue_list_node *new_q = (struct queue_list_node *) malloc(sizeof(struct queue_list_node));
+	memset(new_q, 0, sizeof(struct queue_list_node));
 	new_q->next = NULL;
 	new_q->v = vertex;
 	queue->next = new_q;
