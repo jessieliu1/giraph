@@ -28,6 +28,8 @@ let translate (globals, functions) =
     | A.Wegraph -> void_ptr_t
     | A.Wedigraph -> void_ptr_t
     | A.Edge -> void_ptr_t
+    | A.Wedge -> void_ptr_t
+    | A.Diwedge -> void_ptr_t
     | A.Void -> void_t
     (* TODO: add wedge, handle generics *)
   in

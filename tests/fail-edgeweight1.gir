@@ -1,0 +1,7 @@
+int main() {
+	digraph g = [A:5 -> B:3];
+	for_edge(e : g) {
+		print(e.weight());
+	}
+	return 0;
+}
