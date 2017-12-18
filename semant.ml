@@ -165,8 +165,16 @@ and check_assign str e env =
                 Not_found -> StringMap.find str env.env_globals) in
         (* if types match *)
         if lvaluet == rvaluet then SAssign(str, r, lvaluet), env
-        (* TODO: check if rvalue is an edgeless graph and lvaluet is a graph subtype (this should pass) *)
-        else report_bad_assign lvaluet rvaluet
+        else
+          (* The parser always says an edgeless graph literal is of type Graph,
+             but it is a valid rvalue for Digraph, Wegraph, and Wedigraph too -
+             if this is why lvaluet == rvaluet, this is fine*)
+          (let l_is_graph_subtyp = match lvaluet with Digraph | Wegraph | Wedigraph -> true
+                                                    | _ -> false in
+           let r_is_edgeless_graph = match e with Graph_Lit (_, [], _, _, _) -> true
+                                                | _ -> false in
+           if (l_is_graph_subtyp && r_is_edgeless_graph) then SAssign(str, r, lvaluet), env
+           else report_bad_assign lvaluet rvaluet)
     else report_undeclared_id_assign str
 
 and check_data e e_lst env =

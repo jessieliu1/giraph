@@ -1,0 +1,7 @@
+int main() {
+	graph g = [A:5 ; B:6 ; C:7];
+	digraph d = [A ; B ; C];
+	wegraph w = [A ; B ; C];
+	wedigraph wd = [A ; B ; C];
+	return 0;
+}
