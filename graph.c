@@ -388,7 +388,7 @@ void remove_vertex(void *g_in, int *data_ptr) {
 
 /* Given a graph and two data pointers, adds a directed, weighted edge between the
    vertices corresponding to each data pointer. If either of such vertices
-   does not exist, they are created.
+   does not exist, they are created. If the edge already exists, does nothing.
    Corresponds to add_edge method in giraph. */
 void add_wedge_method(void *g_in, int *from_data_ptr, int *to_data_ptr, int w) {
 	struct graph *g = (struct graph *) g_in;
@@ -400,6 +400,15 @@ void add_wedge_method(void *g_in, int *from_data_ptr, int *to_data_ptr, int w) {
 	if (to == NULL) {
 		to = add_vertex(g_in, to_data_ptr);
 	}
+	/* Check if from->to edge already exists - if so, return. */
+	struct adj_list_node *curr_adj = ((struct vertex_list_node *) from)->adjacencies;
+	while (curr_adj) {
+		if (curr_adj->vertex == to) {
+			return;
+		}
+		curr_adj = curr_adj->next;
+	}
+
 	add_wedge(from, to, w);
 }
 
