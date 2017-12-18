@@ -21,9 +21,9 @@ let rec convert_expr e env = match e with
   | Binop(e1, op, e2)             -> (check_binop e1 op e2 env, env) 
   | Unop(op, e)                   -> (check_unop op e env, env)
   | Assign(str, e)                -> (check_assign str e env)
-  | Method (e, "from", e_lst)     -> (check_edgemtd e "from" e_lst env)
-  | Method (e, "to", e_lst)     -> (check_edgemtd e "to" e_lst env)
-  | Method (e, "weight", e_lst)   -> (check_edgemtd e "weight" e_lst env)
+  | Method (e, "from", e_lst)     -> (check_edgemtd e "from" e_lst env, env)
+  | Method (e, "to", e_lst)     -> (check_edgemtd e "to" e_lst env, env)
+  | Method (e, "weight", e_lst)   -> (check_edgemtd e "weight" e_lst env, env)
   | Method(e, "data", e_lst)     -> (check_data e e_lst env, env)
   | Method (e, "set_data", e_lst) -> (check_sdata e e_lst env, env)
   | Method (e, "add_node", e_lst) -> (check_graphmtd e "add_node" 1 e_lst Void env, env)
@@ -185,7 +185,7 @@ and check_sdata e e_lst env =
       SMethod(id,"set_data", [s], Void)
 
 and check_graphmtd g name args e_lst ret_typ env =
-  let (id,_) = convert_expr g env in
+  let id,env = convert_expr g env in
   let t = get_sexpr_type id in
   let tcheck = match t with Graph -> true
                           | Digraph -> true
@@ -223,14 +223,14 @@ and check_edgemtd e n e_lst env =
   let len = List.length e_lst in
   let e_lst_checked = List.map (fun e -> let (s, env) = convert_expr e env in s) e_lst in
   if (len != 0) then raise(Failure(n ^ " takes 0 arguments but " ^ string_of_int len ^ " arguments given")) else
-      let se, nenv = convert_expr e env in
+      let se, _ = convert_expr e env in
       let t = get_sexpr_type se in
       match t with
         Edge -> 
             match n with
-            "from" -> SMethod(se, n, e_lst_checked, Node), nenv
-            | "to" -> SMethod(se, n, e_lst_checked, Node), nenv
-            | "weight" -> SMethod(se, n, e_lst_checked, Int), nenv
+            "from" -> SMethod(se, n, e_lst_checked, Node)
+            | "to" -> SMethod(se, n, e_lst_checked, Node)
+            | "weight" -> SMethod(se, n, e_lst_checked, Int)
         | _ -> raise(Failure("Edge method " ^ n ^ " called on type " ^ string_of_typ t)) 
 
 
@@ -325,22 +325,22 @@ and check_call str e_lst env =
 and convert_stmt stmt env = match stmt with 
     Block(s_lst)            -> (check_block s_lst env)
     | If(e, s1, s2)         -> (check_if e s1 s2 env)
-    | For(e1, e2, e3, s)    -> (check_for e1 e2 e3 s env, env) 
-    | While(e, s)           -> (check_while e s env, env)
-    | For_Node(str, e, s)   -> (check_for_node str e s env, env)
-    | For_Edge(str, e, s)   -> (check_for_edge str e s env, env)
-    | Bfs(str, e1, e2, s)   -> (check_bfs str e1 e2 s env, env)
-    | Dfs(str, e1, e2, s)   -> (check_dfs str e1 e2 s env, env) 
+    | For(e1, e2, e3, s)    -> (check_for e1 e2 e3 s env) 
+    | While(e, s)           -> (check_while e s env)
+    | For_Node(str, e, s)   -> (check_for_node str e s env)
+    | For_Edge(str, e, s)   -> (check_for_edge str e s env)
+    | Bfs(str, e1, e2, s)   -> (check_bfs str e1 e2 s env)
+    | Dfs(str, e1, e2, s)   -> (check_dfs str e1 e2 s env) 
     | Break                 -> (check_break env, env)  
     | Continue              -> (check_continue env, env) 
     | Expr(e)               -> (check_expr_stmt e env) 
     | Vdecl(t, str, e)      -> (check_vdecl t str e env)
-    | Return(e)             -> (check_return e env, env)
+    | Return(e)             -> (check_return e env)
 
 
 and check_block s_lst env = 
     match s_lst with 
-    []    -> SBlock([SExpr(SNoexpr, Void)]), env 
+    []    -> SBlock([SExpr(SNoexpr, Void)]), env
     | _   -> (*check every statement, and put those checked statements in a list*)
               let rec add_sstmt acc stmt_lst env = match stmt_lst with
                 [] -> acc, env
@@ -393,30 +393,53 @@ and check_for e1 e2 e3 s env =
     in
 
     let (for_body, nenv) = convert_stmt s new_env in
-
-    if (get_sexpr_type se2) = Bool then
-        SFor(se1, se2, se3, for_body)
-    else raise(Failure("Expected boolean expression"))
-
-
-and check_while e s env =
-    let (se, _) = convert_expr e env in
-    let new_env = 
+    let nnenv = 
     {
       env_name = env.env_name;
       env_return_type = env.env_return_type;
       env_fmap = env.env_fmap;
-      env_sfmap = env.env_sfmap;
+      env_sfmap = nenv.env_sfmap;
       env_globals = env.env_globals;
       env_flocals = env.env_flocals;
       env_fformals = env.env_fformals;
+      env_in_loop = env.env_in_loop;
+    }
+    in
+    if (get_sexpr_type se2) = Bool then
+        SFor(se1, se2, se3, for_body), nnenv
+    else raise(Failure("Expected boolean expression"))
+
+
+and check_while e s env =
+    let (se, nenv) = convert_expr e env in
+    let new_env = 
+    {
+      env_name = nenv.env_name;
+      env_return_type = nenv.env_return_type;
+      env_fmap = nenv.env_fmap;
+      env_sfmap = nenv.env_sfmap;
+      env_globals = nenv.env_globals;
+      env_flocals = nenv.env_flocals;
+      env_fformals = nenv.env_fformals;
       env_in_loop = true;
     }
     in
-
-    let (while_body, _) = convert_stmt s new_env in
+    let (while_body, nenv) = convert_stmt s new_env in
+    
+    let nnenv = 
+    {
+      env_name = env.env_name;
+      env_return_type = env.env_return_type;
+      env_fmap = env.env_fmap;
+      env_sfmap = nenv.env_sfmap;
+      env_globals = env.env_globals;
+      env_flocals = env.env_flocals;
+      env_fformals = env.env_fformals;
+      env_in_loop = env.env_in_loop;
+    }
+    in
     if (get_sexpr_type se) = Bool then
-        SWhile(se, while_body)
+        SWhile(se, while_body), nnenv
     else raise(Failure("Expected boolean expression"))
 
 (* for_node (neighbor : residual.get_neighbors(n)) *)
@@ -435,8 +458,20 @@ and check_for_node str e s env =
     }
     in
     let (se, senv) = convert_expr e new_env in 
-    let (for_body, _) = convert_stmt s senv in
-    SFor_Node(str, se, for_body)
+    let (for_body, senv) = convert_stmt s senv in
+    let nenv = 
+    {
+      env_name = env.env_name;
+      env_return_type = env.env_return_type;
+      env_fmap = env.env_fmap;
+      env_sfmap = senv.env_sfmap;
+      env_globals = env.env_globals;
+      env_flocals = env.env_flocals;
+      env_fformals = env.env_fformals;
+      env_in_loop = env.env_in_loop;
+    }
+    in
+    SFor_Node(str, se, for_body),nenv
 
 and check_for_edge str e s env = 
     let flocals = StringMap.add str Edge env.env_flocals in
@@ -453,8 +488,20 @@ and check_for_edge str e s env =
     }
     in
     let (se, senv) = convert_expr e new_env in
-    let (for_body, _) = convert_stmt s senv in
-    SFor_Edge(str, se, for_body)
+    let (for_body, senv) = convert_stmt s senv in
+    let nenv = 
+    {
+      env_name = env.env_name;
+      env_return_type = env.env_return_type;
+      env_fmap = env.env_fmap;
+      env_sfmap = senv.env_sfmap;
+      env_globals = env.env_globals;
+      env_flocals = env.env_flocals;
+      env_fformals = env.env_fformals;
+      env_in_loop = env.env_in_loop;
+    }
+    in
+    SFor_Edge(str, se, for_body),nenv
 
 
 and check_bfs str e1 e2 s env = 
@@ -473,8 +520,20 @@ and check_bfs str e1 e2 s env =
     in
     let (se1, senv1) = convert_expr e1 new_env in 
     let (se2, senv2) = convert_expr e2 senv1 in
-    let (bfs_body, _) = convert_stmt s senv2 in 
-    SBfs(str, se1, se2, bfs_body)
+    let (bfs_body, senv2) = convert_stmt s senv2 in 
+    let nenv = 
+    {
+      env_name = env.env_name;
+      env_return_type = env.env_return_type;
+      env_fmap = env.env_fmap;
+      env_sfmap = senv2.env_sfmap;
+      env_globals = env.env_globals;
+      env_flocals = env.env_flocals;
+      env_fformals = env.env_fformals;
+      env_in_loop = env.env_in_loop;
+    }
+    in
+    SBfs(str, se1, se2, bfs_body), nenv
 
 
 and check_dfs str e1 e2 s env = 
@@ -493,8 +552,20 @@ and check_dfs str e1 e2 s env =
     in
     let (se1, senv1) = convert_expr e1 new_env in 
     let (se2, senv2) = convert_expr e2 senv1 in
-    let (dfs_body, _) = convert_stmt s senv2 in 
-    SDfs(str, se1, se2, dfs_body)
+    let (dfs_body, senv2) = convert_stmt s senv2 in 
+    let nenv = 
+    {
+      env_name = env.env_name;
+      env_return_type = env.env_return_type;
+      env_fmap = env.env_fmap;
+      env_sfmap = senv2.env_sfmap;
+      env_globals = env.env_globals;
+      env_flocals = env.env_flocals;
+      env_fformals = env.env_fformals;
+      env_in_loop = env.env_in_loop;
+    }
+    in
+    SDfs(str, se1, se2, dfs_body), nenv
 
 
 and check_break env = 
@@ -595,10 +666,23 @@ and check_vdecl t str e env =
 
 
 and check_return e env =
-    let se, env = convert_expr e env in 
+    let se, new_env = convert_expr e env in 
     let typ = get_sexpr_type se in
     if typ = env.env_return_type 
-    then SReturn(se)
+    then
+    let nenv = 
+    {
+      env_name = env.env_name;
+      env_return_type = env.env_return_type;
+      env_fmap = env.env_fmap;
+      env_sfmap = new_env.env_sfmap;
+      env_globals = env.env_globals;
+      env_flocals = env.env_flocals;
+      env_fformals = env.env_fformals;
+      env_in_loop = env.env_in_loop;
+    }
+    in
+    SReturn(se), nenv
     else raise(Failure("expected return type " ^ string_of_typ env.env_return_type 
       ^ " but got return type " ^ string_of_typ typ))
 
