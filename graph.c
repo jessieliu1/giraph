@@ -475,6 +475,70 @@ void *graph_neighbors(void *g_in, void *data_ptr) {
 	return g_out;
 }
 
+int graph_get_edge_weight(void *g_in, void *from_data_ptr, void *to_data_ptr) {
+	struct vertex_list_node *from = (struct vertex_list_node *) find_vertex(g_in, from_data_ptr);
+	if (from == NULL) {
+		return 0;
+	}
+	struct vertex_list_node *to = (struct vertex_list_node *) find_vertex(g_in, to_data_ptr);
+	if (to == NULL) {
+		return 0;
+	}
+	struct adj_list_node *curr_adj = from->adjacencies;
+	while (curr_adj) {
+		if (curr_adj->vertex == to) {
+			return curr_adj->weight;
+		}
+		curr_adj = curr_adj->next;
+	}
+	return 0;
+}
+
+void graph_set_undirected_edge_weight(void *g_in, void *from_data_ptr, void *to_data_ptr, int new_weight) {
+	struct vertex_list_node *from = (struct vertex_list_node *) find_vertex(g_in, from_data_ptr);
+	if (from == NULL) {
+		return;
+	}
+	struct vertex_list_node *to = (struct vertex_list_node *) find_vertex(g_in, to_data_ptr);
+	if (to == NULL) {
+		return;
+	}
+	struct adj_list_node *curr_adj = from->adjacencies;
+	while (curr_adj) {
+		if (curr_adj->vertex == to) {
+			curr_adj->weight = new_weight;
+		}
+		curr_adj = curr_adj->next;
+	}
+	curr_adj = to->adjacencies;
+	while (curr_adj) {
+		if (curr_adj->vertex == from) {
+			curr_adj->weight = new_weight;
+		}
+		curr_adj = curr_adj->next;
+	}
+	return;
+}
+
+void graph_set_edge_weight(void *g_in, void *from_data_ptr, void *to_data_ptr, int new_weight) {
+	struct vertex_list_node *from = (struct vertex_list_node *) find_vertex(g_in, from_data_ptr);
+	if (from == NULL) {
+		return;
+	}
+	struct vertex_list_node *to = (struct vertex_list_node *) find_vertex(g_in, to_data_ptr);
+	if (to == NULL) {
+		return;
+	}
+	struct adj_list_node *curr_adj = from->adjacencies;
+	while (curr_adj) {
+		if (curr_adj->vertex == to) {
+			curr_adj->weight = new_weight;
+		}
+		curr_adj = curr_adj->next;
+	}
+	return;
+}
+
 //////////////////// END GRAPH METHODS //////////////////
 
 
@@ -753,8 +817,8 @@ void cleanup_bfs(void *visited_in, void *queue_in) {
 
 
 //////////////////////// TESTING ////////////////////////
-
-/*void print_graph(void *graph_ptr) {
+/*
+void print_graph(void *graph_ptr) {
 	struct graph *g = (struct graph *) graph_ptr;
 	struct vertex_list_node *vertex = g->head;
 	while (vertex) {
@@ -869,10 +933,19 @@ int main() {
 
 	struct graph *g_nei = (struct graph *) graph_neighbors(g, savedarray[0]->data);
 
-	void *edge_list = construct_undirected_edge_list(g);
-	struct edge_list_node *edge = (struct edge_list_node *) edge_list;
-	undirected_edge_set_weight(edge->next, 50);
-	fprintf(stderr, "%d \n\n", edge_weight(edge->next));
+	graph_set_undirected_edge_weight(g, savedarray[3]->data, savedarray[4]->data, 50);
+
+	graph_set_edge_weight(g, savedarray[4]->data, savedarray[0]->data, 80);
+
+	graph_set_edge_weight(g, savedarray[1]->data, savedarray[2]->data, 70);
+
+	graph_set_undirected_edge_weight(g, savedarray[0]->data, savedarray[3]->data, 70);
+
+	fprintf(stderr, "%d \n", graph_get_edge_weight(g, savedarray[0]->data, savedarray[1]->data));
+
+	fprintf(stderr, "%d \n", graph_get_edge_weight(g, savedarray[3]->data, savedarray[4]->data));
+
+
 	//print_edges(edge_list);
 
 	print_data((void *) g);
@@ -880,6 +953,6 @@ int main() {
 	//printf("\n%d\n", num_edges(edge_list));
 
 	cleanup_bfs(visited, queue);
-}
-*/
+}*/
+
 ////////////////////// END TESTING //////////////////////
