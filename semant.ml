@@ -513,8 +513,8 @@ and check_for_node str e s env =
                 | _ -> (* non empty statement lst, check em*)
                 let chkcall x = match x with 
                 SExpr(SMethod(g,fname,_,_),_) -> (match g,fname with
-                        SId(s,_),"add_node" -> if s = gname then raise(Failure("concurrent modification of graph in for_node "))
-                        | SId(s,_),"remove_node" -> if s = gname then raise(Failure("concurrent modification of graph in for_node "))
+                        SId(s,_),"add_node" -> if s = gname then report_concurrent_mod "for_node"
+                        | SId(s,_),"remove_node" -> if s = gname then report_concurrent_mod "for_node"
                         | _ -> ();)
                 | _ -> ();
                 in
@@ -555,7 +555,39 @@ and check_for_edge str e s env =
     }
     in
     let (se, senv) = convert_expr e new_env in
+    let t = get_sexpr_type se in ignore(
+        match t with
+          Graph -> ()
+        | Wedigraph -> ()
+        | Digraph -> ()
+        | Wegraph -> ()
+        | _ -> raise(Failure("type " ^ string_of_typ t ^ " may not be iterated with 
+                for_node")));
+    let gname = match se with (* cannot call the following methods on a NAMED graph*)
+         (* unnamed graph is safe since it cannot modify the graph itself *)    
+          SId(str, Graph) -> str
+        | SId(str, Digraph) -> str
+        | SId(str, Wedigraph) -> str
+        | SId(str, Wegraph) -> str
+        | _ -> "" (*not sure if empty string is problematic *)
+    in 
     let (for_body, senv) = convert_stmt s senv in
+    let chk = match for_body with
+       SBlock(lst) -> match lst with
+                [] -> ();
+                | _ -> (* non empty statement lst, check em*)
+                let chkcall x = match x with 
+                SExpr(SMethod(g,fname,_,_),_) -> (match g,fname with
+                        SId(s,_),"add_edge" -> if s = gname then report_concurrent_mod "for_edge"
+                        | SId(s,_),"remove_edge" -> if s = gname then report_concurrent_mod "for_edge"
+                        | SId(s,_),"add_node" -> if s = gname then report_concurrent_mod "for_edge"
+                        | SId(s,_),"remove_node" -> if s = gname then report_concurrent_mod "for_edge"
+                        | _ -> ();)
+                | _ -> ();
+                in
+                List.iter chkcall lst
+       | _ -> ()
+    in
     let nenv = 
     {
       env_name = env.env_name;
@@ -587,7 +619,38 @@ and check_bfs str e1 e2 s env =
     in
     let (se1, senv1) = convert_expr e1 new_env in 
     let (se2, senv2) = convert_expr e2 senv1 in
+    let t = get_sexpr_type se1 in ignore(
+        match t with
+          Graph -> ()
+        | Wedigraph -> ()
+        | Digraph -> ()
+        | Wegraph -> ()
+        | _ -> raise(Failure("type " ^ string_of_typ t ^ " may not be iterated with 
+                for_node")));
+    let gname = match se1 with (* cannot call the following methods on a NAMED graph*)
+          SId(str, Graph) -> str
+        | SId(str, Digraph) -> str
+        | SId(str, Wedigraph) -> str
+        | SId(str, Wegraph) -> str
+        | _ -> "" (*not sure if empty string is problematic *)
+    in 
     let (bfs_body, senv2) = convert_stmt s senv2 in 
+    let chk = match bfs_body with
+       SBlock(lst) -> match lst with
+                [] -> ();
+                | _ -> (* non empty statement lst, check em*)
+                let chkcall x = match x with 
+                SExpr(SMethod(g,fname,_,_),_) -> (match g,fname with
+                        SId(s,_),"add_edge" -> if s = gname then report_concurrent_mod "bfs"
+                        | SId(s,_),"remove_edge" -> if s = gname then report_concurrent_mod "bfs"
+                        | SId(s,_),"add_node" -> if s = gname then report_concurrent_mod "bfs"
+                        | SId(s,_),"remove_node" -> if s = gname then report_concurrent_mod "bfs"
+                        | _ -> ();)
+                | _ -> ();
+                in
+                List.iter chkcall lst
+       | _ -> ()
+    in
     let nenv = 
     {
       env_name = env.env_name;
@@ -619,7 +682,37 @@ and check_dfs str e1 e2 s env =
     in
     let (se1, senv1) = convert_expr e1 new_env in 
     let (se2, senv2) = convert_expr e2 senv1 in
+    let t = get_sexpr_type se1 in ignore(
+        match t with
+          Graph -> ()
+        | Wedigraph -> ()
+        | Digraph -> ()
+        | Wegraph -> ()
+        | _ -> raise(Failure("type " ^ string_of_typ t ^ " may not be iterated with 
+                for_node")));
+    let gname = match se1 with (* cannot call the following methods on a NAMED graph*)
+          SId(str, Graph) -> str
+        | SId(str, Digraph) -> str
+        | SId(str, Wedigraph) -> str
+        | SId(str, Wegraph) -> str
+        | _ -> "" (*not sure if empty string is problematic *)
+    in 
     let (dfs_body, senv2) = convert_stmt s senv2 in 
+    let chk = match dfs_body with
+       SBlock(lst) -> match lst with
+                [] -> ();
+                | _ -> (* non empty statement lst, check em*)
+                let chkcall x = match x with 
+                SExpr(SMethod(g,fname,_,_),_) -> (match g,fname with
+                        SId(s,_),"add_edge" -> if s = gname then report_concurrent_mod "dfs"
+                        | SId(s,_),"remove_edge" -> if s = gname then report_concurrent_mod "dfs"
+                        | SId(s,_),"add_node" -> if s = gname then report_concurrent_mod "dfs"
+                        | SId(s,_),"remove_node" -> if s = gname then report_concurrent_mod "dfs"
+                        | _ -> ();)
+                | _ -> ();
+                in
+                List.iter chkcall lst
+    in
     let nenv = 
     {
       env_name = env.env_name;

@@ -1,0 +1,18 @@
+int main() {
+        !~should be allowed to modify another graph within dfs ~!
+        graph h=[];
+        !~ add edges to all reachable nodes ~!
+	graph g = [A:1 -- B:2 -- C:3 -- D:4 -- E:5 -- F:6  -- G:7];
+	dfs(n : g ; A) {
+                node m;
+                m.set_data(n.data()+20);
+                h.add_node(m);
+                h.add_edge(m,A);
+	}
+        for_node(n : h){
+
+             print(n.data());
+        }
+	return 0;
+
+}

@@ -43,3 +43,5 @@ and report_typ_args ot nt =
 
 and report_meth_not_found s2 =
     raise (Failure ("method " ^ s2 ^ " not found"))
+and report_concurrent_mod s = 
+    raise(Failure("concurrent modification of graph in " ^ s))
