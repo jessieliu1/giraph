@@ -27,9 +27,13 @@ let rec convert_expr e env = match e with
   | Method(e, "data", e_lst)     -> (check_data e e_lst env, env)
   | Method (e, "set_data", e_lst) -> (check_sdata e e_lst env, env)
   | Method (e, "add_node", e_lst) -> (check_graphmtd e "add_node" 1 e_lst Void env, env)
-  | Method (e, "add_edge", e_lst) -> (check_graphmtd e "add_edge" 2 e_lst Void env, env)
+  | Method (e, "add_edge", [f;t]) -> (check_graphmtd e "add_edge" 2 [f;t] Void env, env)
+  | Method (e, "add_edge", [f;t;w]) -> (check_graphmtd e "add_edge" 3 [f;t;w] Void env, env)
   | Method (e, "remove_node", e_lst) -> (check_graphmtd e "remove_node" 1 e_lst Void env, env)
   | Method (e, "remove_edge", e_lst) -> (check_graphmtd e "remove_edge" 2 e_lst Void env, env)
+  | Method (e, "neighbors", e_lst) -> (check_graphmtd e "neighbors" 1 e_lst Graph env, env)
+  | Method (e, "get_edge_weight", e_lst) -> (check_graphmtd e "get_edge_weight" 2 e_lst Int env, env)
+  | Method (e, "set_edge_weight", e_lst) -> (check_graphmtd e "set_edge_weight" 3 e_lst Int env, env)
   | Method (e, s2, e_lst)        -> (report_meth_not_found s2)
   | Call("print", e_lst)          -> (check_print e_lst env, env)
   | Call("printb", e_lst)         -> (check_print e_lst env, env)
@@ -215,7 +219,30 @@ and check_graphmtd g name args e_lst ret_typ env =
       if ( t1 != Node || t2 != Node )
       then raise(Failure("graph method " ^ name ^ "may not be called 
                 on types " ^ string_of_typ t1 ^ ", " ^ string_of_typ t2));
+      (* make sure this method can be called on this type *)
+      if (name == "get_edge_weight" && (t == Graph || t == Digraph))
+      then raise(Failure(name ^ " may not be called on unweighted graphs"));
+      if (name == "add_edge" && (t == Wegraph || t == Wedigraph))
+      then raise(Failure(name ^ " may not be called on weighted graphs without a weight argument"));
       (SMethod(id, name, [ex; ex2], ret_typ))
+    | 3 ->
+      let e1 = (List.hd e_lst)
+      and e2 = (List.nth e_lst 1)
+      and e3 = (List.nth e_lst 2) in
+      let (ex,_) = convert_expr e1 env in
+      let (ex2,_) = convert_expr e2 env in
+      let (ex3,_) = convert_expr e3 env in
+      let t1 = get_sexpr_type ex
+      and t2 = get_sexpr_type ex2
+      and t3 = get_sexpr_type ex3 in
+      if ( t1 != Node || t2 != Node || t3 != Int)
+      then raise(Failure("graph method " ^ name ^ "may not be called on types " ^
+                         string_of_typ t1 ^ ", " ^ string_of_typ t2 ^ ", " ^ string_of_typ t3));
+      (* all 3-argument graph methods can only be called on we(di)graphs *)
+      if (t == Graph || t == Digraph)
+      then raise(Failure(name ^ " may not be called on unweighted graphs"));
+      (SMethod(id, name, [ex; ex2; ex3], ret_typ))
+
 
   in sexpr
 

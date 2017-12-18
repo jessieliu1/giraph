@@ -407,9 +407,9 @@ let translate (globals, functions) =
         L.builder_at_end context merge_bb
       | S.SBreak -> builder (*not implemented *)
       | S.SContinue -> builder (*not implemented *)
-      (* | S.SFor (e1, e2, e3, body) -> (* TODO: FIX THIS!!! *)
-        stmt vars builder( S.SBlock [A.Expr e1 ; A.While (e2, A.Block [body ; A.Expr e3]) ] )
-      *)
+      | S.SFor (e1, e2, e3, body) ->
+        stmt vars builder( S.SBlock [S.SExpr (e1, get_sexpr_type e1) ;
+                                     S.SWhile (e2, S.SBlock [body ; S.SExpr (e3, get_sexpr_type e3)]) ] );
       | S.SFor_Node (n, g, body) ->
         let graph_ptr = (expr vars builder g) in
 
