@@ -346,7 +346,7 @@ and check_block s_lst env =
                       let new_acc = sstmt::acc in add_sstmt new_acc st_lst new_env
               in
               let sblock = add_sstmt [] s_lst env in
-            SBlock(sblock)
+            SBlock(List.rev sblock)
 
 
 and check_if cond is es env =

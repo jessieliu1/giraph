@@ -1,5 +1,6 @@
 module L = Llvm
 module A = Ast
+module S = Sast
 
 module StringMap = Map.Make(String)
 
@@ -27,8 +28,24 @@ let translate (globals, functions) =
     | A.Wegraph -> void_ptr_t
     | A.Wedigraph -> void_ptr_t
     | A.Edge -> void_ptr_t
-    | A.Void -> void_t in
-  (* TODO: actually add all types *)
+    | A.Void -> void_t
+    (* TODO: add wedge, handle generics *)
+  in
+
+  let get_sexpr_type sexpr = match sexpr with
+      S.SId(_, typ)                 -> typ
+    | S.SBinop(_, _, _, typ)        -> typ
+    | S.SUnop(_, _, typ)            -> typ
+    | S.SAssign(_, _, typ)          -> typ
+    | S.SCall(_, _, typ)            -> typ
+    | S.SMethod(_,_,_, typ)         -> typ
+    | S.SBool_Lit(_)                -> Bool
+    | S.SInt_Lit(_)                 -> Int
+    | S.SFloat_Lit(_)               -> Float
+    | S.SString_Lit(_)              -> String
+    | S.SGraph_Lit(_,_,_,subtype,_) -> subtype
+    | S.SNoexpr                     -> Void
+  in
 
   (* Declare each global variable; remember its value in a map *)
   let global_vars =
@@ -129,16 +146,16 @@ let translate (globals, functions) =
 
   let function_decls =
     let function_decl m fdecl =
-      let name = fdecl.A.f_name
+      let name = fdecl.S.sf_name
       and formal_types =
-        Array.of_list (List.map (fun (t,_) -> ltype_of_typ t) fdecl.A.f_formals)
-      in let ftype = L.function_type (ltype_of_typ fdecl.A.f_typ) formal_types in
+        Array.of_list (List.map (fun (t,_) -> ltype_of_typ t) fdecl.S.sf_formals)
+      in let ftype = L.function_type (ltype_of_typ fdecl.S.sf_typ) formal_types in
       StringMap.add name (L.define_function name ftype the_module, fdecl) m in
     List.fold_left function_decl StringMap.empty functions in
 
   (* Fill in the body of the given function *)
   let build_function_body fdecl =
-    let (the_function, _) = StringMap.find fdecl.A.f_name function_decls in
+    let (the_function, _) = StringMap.find fdecl.S.sf_name function_decls in
     let builder = L.builder_at_end context (L.entry_block the_function) in
 
     let int_format_str = L.build_global_stringptr "%d\n" "fmt" builder and
@@ -152,7 +169,7 @@ let translate (globals, functions) =
         ignore (L.build_store p local builder);
         StringMap.add n local m
       in
-      List.fold_left2 add_formal global_vars fdecl.A.f_formals
+      List.fold_left2 add_formal global_vars fdecl.S.sf_formals
         (Array.to_list (L.params the_function))
     in
 
@@ -167,8 +184,8 @@ let translate (globals, functions) =
          whenever we encounter a graph literal, we have to construct all the new nodes
          it uses as local variables. The following function handles this. *)
       let add_nodes_from_graph_lits m expr = match expr with
-          A.Assign(id, e) -> (match e with
-              A.Graph_Lit(nodes, edges, _, _, _) ->
+          S.SAssign(id, e, _) -> (match e with
+              S.SGraph_Lit(nodes, edges, _, _, _) -> (* TODO: use the last field w/ generics*)
               let add_node m node =
                 if (StringMap.mem node m) then
                   m
@@ -186,7 +203,7 @@ let translate (globals, functions) =
 
       (* find all local variables declared in block; ignore other statements *)
       let add_local m stmt = match stmt with
-          A.Vdecl(t, n, e) ->
+          S.SVdecl(t, n, e) ->
           (* if e contains a graph literal, adds new nodes to m; else m unchanged *)
           let m = add_nodes_from_graph_lits m e in
           let local_var = L.build_alloca (ltype_of_typ t) n builder in
@@ -194,14 +211,14 @@ let translate (globals, functions) =
              we need to call new_data() from C to get a unique data pointer and store it in
              the allocated register *)
           (match t with
-             A.Node -> if e == A.Noexpr then
+             A.Node -> if e == S.SNoexpr then
                let new_data_ptr = L.build_call new_data_func [||] "tmp_data" builder in
                ignore(L.build_store new_data_ptr local_var builder);
              else ()
            | _ -> ());
           (* add new variable to m *)
           StringMap.add n local_var m
-        | A.Expr(e) -> add_nodes_from_graph_lits m e
+        | S.SExpr(e, t) -> add_nodes_from_graph_lits m e
         | _ -> m
       in
       List.fold_left add_local m sl (* return value of add_local_vars *)
@@ -213,13 +230,13 @@ let translate (globals, functions) =
 
     (* Construct code for an expression; return its value *)
     let rec expr vars builder = function
-        A.Int_Lit i -> L.const_int i32_t i
-      | A.Bool_Lit b -> L.const_int i1_t (if b then 1 else 0)
-      | A.Noexpr -> L.const_int i32_t 0
-      | A.Id s -> L.build_load (lookup vars s) s builder
-      | A.String_Lit s -> L.build_global_stringptr s "str" builder
-      | A.Float_Lit f -> L.const_float float_t f
-      | A.Binop (e1, op, e2) ->
+        S.SInt_Lit i -> L.const_int i32_t i
+      | S.SBool_Lit b -> L.const_int i1_t (if b then 1 else 0)
+      | S.SNoexpr -> L.const_int i32_t 0
+      | S.SId (s,_) -> L.build_load (lookup vars s) s builder
+      | S.SString_Lit s -> L.build_global_stringptr s "str" builder
+      | S.SFloat_Lit f -> L.const_float float_t f
+      | S.SBinop (e1, op, e2, _) -> (* TODO: check if this works already on floats *)
         let e1' = expr vars builder e1
         and e2' = expr vars builder e2 in
         (match op with
@@ -236,14 +253,14 @@ let translate (globals, functions) =
          | A.Leq     -> L.build_icmp L.Icmp.Sle
          | A.Greater -> L.build_icmp L.Icmp.Sgt
          | A.Geq     -> L.build_icmp L.Icmp.Sge) e1' e2' "tmp" builder
-      | A.Unop(op, e) ->
+      | S.SUnop(op, e, _) ->
         let e' = expr vars builder e in
         (match op with
            A.Neg     -> L.build_neg
          | A.Not     -> L.build_not) e' "tmp" builder
-      | A.Assign(id, e) -> let e' = expr vars builder e in
+      | S.SAssign(id, e, _) -> let e' = expr vars builder e in
         ignore (L.build_store e' (lookup vars id) builder); e'
-      | A.Graph_Lit (nodes, edges, nodes_init, _, is_weighted) ->
+      | S.SGraph_Lit (nodes, edges, nodes_init, graph_subtyp, _) -> (* TODO: use the last field for generics *)
         (* create new graph struct, return pointer *)
         let g = L.build_call new_graph_func [||] "tmp" builder in
         (* map node names to vertex_list_node pointers created by calling add_vertex *)
@@ -255,73 +272,82 @@ let translate (globals, functions) =
           L.build_call add_edge_func [| (StringMap.find n1 nodes_map) ; (StringMap.find n2 nodes_map) |] "" builder
         and add_wedge n1 n2 w =
           L.build_call add_wedge_func [| (StringMap.find n1 nodes_map) ; (StringMap.find n2 nodes_map) ; (expr vars builder w) |] "" builder
-        in ignore(if is_weighted then
-                    List.map (fun (n1, n2, w) -> add_wedge n1 n2 w) edges
-                  else
-                    List.map (fun (n1, n2, _) -> add_edge n1 n2) edges);
+        in ignore(match graph_subtyp with
+              A.Wegraph | A.Wedigraph -> List.map (fun (n1, n2, w) -> add_wedge n1 n2 w) edges
+            | _ (* unweighted graphs *) -> List.map (fun (n1, n2, _) -> add_edge n1 n2) edges);
         (* initialize nodes with data *)
         let set_data (node, data) = L.build_call set_data_func [| (get_data_ptr node) ; (expr vars builder data) |] "" builder in
         ignore(List.map set_data nodes_init);
         (* return pointer to graph struct *)
         g
-      | A.Call ("print", [e]) | A.Call ("printb", [e]) ->
+      | S.SCall ("print", [e], _) | S.SCall ("printb", [e], _) ->
         L.build_call printf_func [| int_format_str ; (expr vars builder e) |]
           "printf" builder
-      | A.Call ("prints", [e]) ->
+      | S.SCall ("prints", [e], _) ->
         L.build_call printf_func [| string_format_str ; (expr vars builder e) |]
           "prints" builder
-      | A.Call (f, act) ->
+      | S.SCall (f, act, _) ->
         let (fdef, fdecl) = StringMap.find f function_decls in
         let actuals = List.rev (List.map (expr vars builder) (List.rev act)) in
-        let result = (match fdecl.A.f_typ with A.Void -> ""
+        let result = (match fdecl.S.sf_typ with A.Void -> ""
                                              | _ -> f ^ "_result") in
         L.build_call fdef (Array.of_list actuals) result builder
 
       (* node methods *)
-      | A.Method (node_expr, "data", []) ->
+      | S.SMethod (node_expr, "data", [], _) ->
         let data_ptr = expr vars builder node_expr in
         L.build_call get_data_func [| data_ptr |] "tmp_data" builder
-      | A.Method (node_expr, "set_data", [data]) ->
+      | S.SMethod (node_expr, "set_data", [data], _) ->
         let data_ptr = expr vars builder node_expr in
         L.build_call set_data_func [| data_ptr ; (expr vars builder data) |] "" builder
 
       (* edge methods *)
-      | A.Method (edge_expr, "from", []) ->
+      | S.SMethod (edge_expr, "from", [], _) ->
         let data_ptr = expr vars builder edge_expr in
         L.build_call edge_from_func [| data_ptr |] "tmp_edge_from" builder
-      | A.Method (edge_expr, "to", []) ->
+      | S.SMethod (edge_expr, "to", [], _) ->
         let data_ptr = expr vars builder edge_expr in
         L.build_call edge_to_func [| data_ptr |] "tmp_edge_to" builder
-      | A.Method (edge_expr, "weight", []) ->
+      | S.SMethod (edge_expr, "weight", [], _) -> (* TODO: add sem. check so these can only be done on wedges *)
         let data_ptr = expr vars builder edge_expr in
         L.build_call edge_weight_func [| data_ptr |] "tmp_edge_weight" builder
-      | A.Method (edge_expr, "set_weight", [data]) ->
+      | S.SMethod (edge_expr, "set_weight", [data], _) ->
         let data_ptr = expr vars builder edge_expr in
         L.build_call edge_set_weight_func [| data_ptr ; (expr vars builder data) |] "" builder
 
       (* graph methods *)
-      | A.Method (graph_expr, "add_node", [node_expr]) ->
+      | S.SMethod (graph_expr, "add_node", [node_expr], _) ->
         let graph_ptr = expr vars builder graph_expr
         and data_ptr = expr vars builder node_expr in
         L.build_call add_vertex_if_not_func [| graph_ptr ; data_ptr |] "" builder
-      | A.Method (graph_expr, "remove_node", [node_expr]) ->
+      | S.SMethod (graph_expr, "remove_node", [node_expr], _) ->
         let graph_ptr = expr vars builder graph_expr
         and data_ptr = expr vars builder node_expr in
         L.build_call remove_vertex_func [| graph_ptr ; data_ptr |] "" builder
-      | A.Method (graph_expr, "add_edge", [from_node_expr ; to_node_expr]) ->
+      | S.SMethod (graph_expr, "add_edge", [from_node_expr ; to_node_expr], _) ->
         let graph_ptr = expr vars builder graph_expr
         and from_data_ptr = expr vars builder from_node_expr
         and to_data_ptr = expr vars builder to_node_expr in
-        (* since this is an undirected graph, add edges both ways *)
-        ignore(L.build_call add_edge_method_func [| graph_ptr ; from_data_ptr ; to_data_ptr |] "" builder);
-        L.build_call add_edge_method_func [| graph_ptr ; to_data_ptr ; from_data_ptr |] "" builder
-      | A.Method (graph_expr, "remove_edge", [from_node_expr ; to_node_expr]) ->
+        (* if is an undirected graph, add reverse edge as well *)
+        let graph_type = get_sexpr_type graph_expr in
+        (match graph_type with
+           A.Graph ->
+           ignore(L.build_call add_edge_method_func [| graph_ptr ; to_data_ptr ; from_data_ptr |] "" builder)
+         | _ -> ());
+        L.build_call add_edge_method_func [| graph_ptr ; from_data_ptr ; to_data_ptr |] "" builder
+(* TODO: add add_edge for wegraphs and wedigraphs, taking a weight parameter! *)
+      | S.SMethod (graph_expr, "remove_edge", [from_node_expr ; to_node_expr], _) ->
         let graph_ptr = expr vars builder graph_expr
         and from_data_ptr = expr vars builder from_node_expr
         and to_data_ptr = expr vars builder to_node_expr in
-        (* since this is an undirected graph, remove edges both ways *)
-        ignore(L.build_call remove_edge_func [| graph_ptr ; from_data_ptr ; to_data_ptr |] "" builder);
-        L.build_call remove_edge_func [| graph_ptr ; to_data_ptr ; from_data_ptr |] "" builder
+        (* if this is an undirected graph, remove reverse edge as well *)
+        let graph_type = get_sexpr_type graph_expr in
+        (match graph_type with
+           A.Graph | A.Wegraph ->
+           ignore(L.build_call remove_edge_func [| graph_ptr ; to_data_ptr ; from_data_ptr |] "" builder)
+         | _ -> ());
+        L.build_call remove_edge_func [| graph_ptr ; from_data_ptr ; to_data_ptr |] "" builder
+
     in
 
     (* Invoke "f builder" if the current block doesn't already
@@ -334,14 +360,14 @@ let translate (globals, functions) =
     (* Build the code for the given statement; return the builder for
        the statement's successor *)
     let rec stmt vars builder = function
-        A.Block sl -> let vars = add_local_vars vars builder sl in
+        S.SBlock sl -> let vars = add_local_vars vars builder sl in
         List.fold_left (stmt vars) builder sl
-      | A.Expr e -> ignore (expr vars builder e); builder
-      | A.Vdecl(t, n, e) -> ignore (expr vars builder e); builder
-      | A.Return e -> ignore (match fdecl.A.f_typ with
+      | S.SExpr (e, _) -> ignore (expr vars builder e); builder
+      | S.SVdecl(t, n, e) -> ignore (expr vars builder e); builder
+      | S.SReturn e -> ignore (match fdecl.S.sf_typ with
             A.Void -> L.build_ret_void builder
           | _ -> L.build_ret (expr vars builder e) builder); builder
-      | A.If (predicate, then_stmt, else_stmt) ->
+      | S.SIf (predicate, then_stmt, else_stmt) ->
         let bool_val = expr vars builder predicate in
         let merge_bb = L.append_block context "merge" the_function in
 
@@ -356,7 +382,7 @@ let translate (globals, functions) =
         ignore (L.build_cond_br bool_val then_bb else_bb builder);
         L.builder_at_end context merge_bb
 
-      | A.While (predicate, body) ->
+      | S.SWhile (predicate, body) ->
         let pred_bb = L.append_block context "while" the_function in
         ignore (L.build_br pred_bb builder);
 
@@ -370,11 +396,12 @@ let translate (globals, functions) =
         let merge_bb = L.append_block context "merge" the_function in
         ignore (L.build_cond_br bool_val body_bb merge_bb pred_builder);
         L.builder_at_end context merge_bb
-      | A.Break -> builder (*not implemented *)
-      | A.Continue -> builder (*not implemented *)
-      | A.For (e1, e2, e3, body) ->
-        stmt vars builder( A.Block [A.Expr e1 ; A.While (e2, A.Block [body ; A.Expr e3]) ] )
-      | A.For_Node (n, g, body) ->
+      | S.SBreak -> builder (*not implemented *)
+      | S.SContinue -> builder (*not implemented *)
+      (* | S.SFor (e1, e2, e3, body) -> (* TODO: FIX THIS!!! *)
+        stmt vars builder( S.SBlock [A.Expr e1 ; A.While (e2, A.Block [body ; A.Expr e3]) ] )
+      *)
+      | S.SFor_Node (n, g, body) ->
         let graph_ptr = (expr vars builder g) in
 
         (* allocate counter variable - counts number of nodes seen so far *)
@@ -422,7 +449,8 @@ let translate (globals, functions) =
         ignore (L.build_cond_br done_bool_val body_bb merge_bb pred_builder);
         L.builder_at_end context merge_bb
 
-      | A.For_Edge (e, g, body) -> 
+      | S.SFor_Edge (e, g, body) -> (* TODO: match on g's type to figure out
+                                       whether to call construct_edge_list_func or another *)
         let graph_ptr = (expr vars builder g) in
 
         (* allocate counter variable - counts number of edges seen so far *)
@@ -472,7 +500,7 @@ let translate (globals, functions) =
         ignore (L.build_cond_br done_bool_val body_bb merge_bb pred_builder);
         L.builder_at_end context merge_bb
 
-      | A.Bfs (n, g, r, body) -> 
+      | S.SBfs (n, g, r, body) -> 
         let graph_ptr = (expr vars builder g) in
         let root_ptr = (expr vars builder r) in
 
@@ -520,14 +548,14 @@ let translate (globals, functions) =
         let merge_bb = L.append_block context "merge" the_function in
         ignore (L.build_cond_br done_bool_val body_bb merge_bb pred_builder);
         L.builder_at_end context merge_bb
-      | A.Dfs (e1, e2, e3, s) -> builder (*not implemented*)
+      | S.SDfs (e1, e2, e3, s) -> builder (*not implemented*)
     in
 
     (* Build the code for each statement in the function *)
-    let builder = stmt globals_and_formals builder (A.Block fdecl.A.f_body) in
+    let builder = stmt globals_and_formals builder (S.SBlock fdecl.S.sf_body) in
 
     (* Add a return if the last block falls off the end *)
-    add_terminal builder (match fdecl.A.f_typ with
+    add_terminal builder (match fdecl.S.sf_typ with
           A.Void -> L.build_ret_void
         | t -> L.build_ret (L.const_int (ltype_of_typ t) 0))
   in

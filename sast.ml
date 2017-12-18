@@ -83,7 +83,7 @@ let rec string_of_sexpr = function
 let rec string_of_sstmt = function
     SBlock(stmts) ->
       "{\n" ^ String.concat "" (List.map string_of_sstmt stmts) ^ "}\n"
-  | SExpr(expr, t) -> string_of_sexpr expr ^ " : " ^ string_of_typ t ^ ";\n";
+  | SExpr(expr, t) -> string_of_sexpr expr ^ ";\n";
   | SVdecl(t, id, SNoexpr) -> string_of_typ t ^ " " ^ id ^ ";\n"
   | SVdecl(t, id, a_expr) -> string_of_typ t ^ " " ^ string_of_sexpr a_expr ^ ";\n"
   | SReturn(expr) -> "return " ^ string_of_sexpr expr ^ ";\n";
