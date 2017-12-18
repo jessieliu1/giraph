@@ -24,8 +24,8 @@ let rec convert_expr e env = match e with
   | Method (e, "from", e_lst)     -> (check_edgemtd e "from" e_lst env, env)
   | Method (e, "to", e_lst)     -> (check_edgemtd e "to" e_lst env, env)
   | Method (e, "weight", e_lst)   -> (check_edgemtd e "weight" e_lst env, env)
-  | Method(e, "data", e_lst)     -> (check_data e e_lst env, env)
-  | Method (e, "set_data", e_lst) -> (check_sdata e e_lst env, env)
+  | Method(e, "data", e_lst)     -> (check_data e e_lst env)
+  | Method (e, "set_data", e_lst) -> (check_sdata e e_lst env)
   | Method (e, "add_node", e_lst) -> (check_graphmtd e "add_node" 1 e_lst Void env, env)
   | Method (e, "add_edge", [f;t]) -> (check_graphmtd e "add_edge" 2 [f;t] Void env, env)
   | Method (e, "add_edge", [f;t;w]) -> (check_graphmtd e "add_edge" 3 [f;t;w] Void env, env)
@@ -35,11 +35,10 @@ let rec convert_expr e env = match e with
   | Method (e, "get_edge_weight", e_lst) -> (check_graphmtd e "get_edge_weight" 2 e_lst Int env, env)
   | Method (e, "set_edge_weight", e_lst) -> (check_graphmtd e "set_edge_weight" 3 e_lst Int env, env)
   | Method (e, s2, e_lst)        -> (report_meth_not_found s2)
-  | Call("print", e_lst)          -> (check_print e_lst env, env)
-  | Call("printb", e_lst)         -> (check_print e_lst env, env)
-  | Call("prints", e_lst)         -> (check_print e_lst env, env)
+  | Call("print", e_lst)          -> (check_print e_lst env)
+  | Call("printb", e_lst)         -> (check_print e_lst env)
+  | Call("prints", e_lst)         -> (check_print e_lst env)
   | Call(str, e_lst)              -> (check_call str e_lst env)
-  | Bool_Lit(b)                   -> (SBool_Lit(b), env)
   | Int_Lit(i)                    -> (SInt_Lit(i), env)
   | Float_Lit(f)                  -> (SFloat_Lit(f), env)
   | String_Lit(str)               -> (SString_Lit(str), env)
@@ -138,7 +137,7 @@ and check_unop op e env =
 and check_print e_lst env = 
     if ((List.length e_lst) != 1) then raise(Failure("wrong number of arguments"))
     else
-        let (s, _) = convert_expr (List.hd e_lst) env in 
+        let (s, nenv) = convert_expr (List.hd e_lst) env in 
         let t = get_sexpr_type s in
         let strcall = 
             match t with 
@@ -148,7 +147,7 @@ and check_print e_lst env =
                 | _         -> 
                     raise(Failure("type " ^ string_of_typ t ^ " is unsupported for this function"))
         in
-        SCall(strcall, [s], t)
+        SCall(strcall, [s], t), nenv
 
 
 and check_assign str e env = 
@@ -171,22 +170,22 @@ and check_data e e_lst env =
   let len = List.length e_lst in
   if (len != 0) then (raise(Failure("data takes 0 arguments but " ^ string_of_int len ^ " arguments given")))
   else
-    let (s,_) = convert_expr e env in
+    let (s,env) = convert_expr e env in
     let t = get_sexpr_type s in
     if (t != Node) then (raise(Failure("data() called on type " ^ string_of_typ t ^ " when node was expected")))
     else 
-    SMethod(s,"data", [], Int) (*TODO get actual type, not Int, once graph data types are in*)
+    SMethod(s,"data", [], Int), env (*TODO get actual type, not Int, once graph data types are in*)
 
 and check_sdata e e_lst env =
   let len = List.length e_lst in
   if (len != 1) then raise(Failure("set_data() takes 1 arguments but " ^ string_of_int len ^ " arguments given"))
   else
-    let (id,_) = convert_expr e env in
+    let (id,env) = convert_expr e env in
     let t = get_sexpr_type id in
     if (t != Node) then raise(Failure("set_data() called on type " ^ string_of_typ t ^ " when node was expected"))
     else
-      let (s, _) = convert_expr (List.hd e_lst) env in
-      SMethod(id,"set_data", [s], Void)
+      let (s, env) = convert_expr (List.hd e_lst) env in
+      SMethod(id,"set_data", [s], Void), env
 
 and check_graphmtd g name args e_lst ret_typ env =
   let id,env = convert_expr g env in
@@ -312,8 +311,9 @@ and check_call str e_lst env =
 
 
     if not (StringMap.mem str env.env_sfmap) then
-        let fdecl = StringMap.find str env.env_fmap in
-        let env = 
+        let fdecl = StringMap.find str env.env_fmap
+        in
+        let nenv = 
         {
             env_name = env.env_name;
             env_return_type = env.env_return_type;
@@ -326,13 +326,12 @@ and check_call str e_lst env =
         }
         in
 
-        
-        let sfdecl = StringMap.find str env.env_sfmap in
-          try 
+        let sfdecl = StringMap.find str nenv.env_sfmap
+        in try
               (* confirm types match *)
               List.iter2 (fun t1 (t2, _) -> if t1 != t2 then report_typ_args t2 t1 else ()) arg_types sfdecl.sf_formals;
               let sexpr_lst, env = convert_expr_list e_lst env in 
-                  SCall(str, sexpr_lst, sfdecl.sf_typ), env
+                  SCall(str, sexpr_lst, sfdecl.sf_typ), nenv
           with 
           (* wrong number of arguments *)
               Invalid_argument _ -> raise (Failure ("expected " ^ string_of_int (List.length sfdecl.sf_formals) ^ "arguments when " 
@@ -530,7 +529,7 @@ and check_for_edge str e s env =
     in
     SFor_Edge(str, se, for_body),nenv
 
-
+(* TODO *)
 and check_bfs str e1 e2 s env = 
     let flocals = StringMap.add str Node env.env_flocals in
     let new_env = 
@@ -644,7 +643,14 @@ and convert_fdecl fname fformals env =
     let check_ret = match sstmts with 
         SBlock(lst) -> match lst with
         [] -> raise(Failure("missing return in " ^ fdecl.f_name));
-        | _ -> match (List.nth lst ((List.length lst)-1)) with
+        | _ -> 
+                let rets = List.filter (fun x -> match x with 
+                        SReturn(expr)-> true
+                        | _ -> false ) lst in
+                if List.length rets > 1 then 
+                raise(Failure("misplaced return in " ^ fdecl.f_name))
+                else
+                match (List.nth lst ((List.length lst)-1)) with
                 SReturn(sexpr) -> ()
                 | _ -> raise(Failure("missing return in " ^ fdecl.f_name))
      in
