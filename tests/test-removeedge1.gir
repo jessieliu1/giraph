@@ -1,0 +1,14 @@
+int main() {
+	node A;
+	graph g = [A:1 -- B:2 ; C:3 -- D:4 ; E:5 -- A -- F:7];
+	g.remove_edge(A, B);
+	g.remove_edge(C, D);
+	g.remove_edge(E, A);
+	g.remove_edge(A, F);
+	g.remove_edge(E, F); !~ does nothing ~!
+
+	for_edge(e : g) {
+		prints("hey");
+	}
+	return 0;
+}
