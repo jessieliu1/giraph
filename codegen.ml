@@ -113,6 +113,15 @@ let translate (globals, functions) =
 
   let graph_neighbors_t = L.function_type void_ptr_t [| void_ptr_t ; i32_ptr_t |] in
   let graph_neighbors_func = L.declare_function "graph_neighbors" graph_neighbors_t the_module in
+
+  let get_edge_weight_t = L.function_type i32_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t |] in
+  let get_edge_weight_func = L.declare_function "graph_get_edge_weight" get_edge_weight_t the_module in
+
+  let set_edge_weight_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t ; i32_t |] in
+  let set_edge_weight_func = L.declare_function "graph_set_edge_weight" set_edge_weight_t the_module in
+
+  let set_undirected_edge_weight_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t ; i32_t |] in
+  let set_undirected_edge_weight_func = L.declare_function "graph_set_undirected_edge_weight" set_undirected_edge_weight_t the_module in
   
   (* Declare functions that will be called for bfs and dfs on graphs*)
   let find_vertex_t = L.function_type void_ptr_t [| void_ptr_t ; i32_ptr_t |] in
@@ -382,6 +391,23 @@ let translate (globals, functions) =
         let graph_ptr = expr vars builder graph_expr
         and hub_data_ptr = expr vars builder hub_node in
         L.build_call graph_neighbors_func [| graph_ptr ; hub_data_ptr |] "" builder
+      | S.SMethod (graph_expr, "get_edge_weight", [from_node_expr ; to_node_expr], _) ->
+        let graph_ptr = expr vars builder graph_expr
+        and from_data_ptr = expr vars builder from_node_expr
+        and to_data_ptr = expr vars builder to_node_expr in
+        L.build_call get_edge_weight_func [| graph_ptr ; from_data_ptr ; to_data_ptr |] "" builder
+      | S.SMethod (graph_expr, "set_edge_weight", [from_node_expr ; to_node_expr ; weight_expr], _) ->
+        let graph_ptr = expr vars builder graph_expr
+        and from_data_ptr = expr vars builder from_node_expr
+        and to_data_ptr = expr vars builder to_node_expr
+        and weight = expr vars builder weight_expr in
+        let graph_type = get_sexpr_type graph_expr in
+        let which_func = (match graph_type with
+              A.Wegraph -> set_undirected_edge_weight_func
+            | _ -> set_edge_weight_func) in
+        L.build_call which_func [| graph_ptr ; from_data_ptr ; to_data_ptr ; weight |] "" builder
+
+
     in
 
     (* Invoke "f builder" if the current block doesn't already
