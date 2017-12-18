@@ -20,6 +20,8 @@ let update_graph graph n weight =  match graph with
       (* only add this edge if it's not already there *)
       if (List.mem new_edge edges || List.mem new_edge_rev edges) then
         edges
+      else if (new_edge_rev = new_edge) then (* check for self-loop *)
+        new_edge :: edges
       else
         new_edge_rev :: new_edge :: edges (* add in both directions for undir. graph *)
     in (nodes, edges, nodes_init)
@@ -36,6 +38,8 @@ let update_graph_e graph n expr weight =  match graph with
       (* only add this edge if it's not already there *)
       if (List.mem new_edge edges || List.mem new_edge_rev edges) then
         edges
+      else if (new_edge_rev = new_edge) then (* check for self-loop *)
+        new_edge :: edges
       else
         new_edge_rev :: new_edge :: edges (* add in both directions for undir. graph *)
     and nodes_init = (n, expr) :: nodes_init (* add node name/data pair to nodes_init *)
@@ -95,7 +99,7 @@ let update_digraph_b graph n weight = match graph with
         edges
       else if (List.mem new_edge edges) then
         new_edge_rev :: edges
-      else if (List.mem new_edge_rev edges) then
+      else if (List.mem new_edge_rev edges || new_edge_rev = new_edge) then
         new_edge :: edges
       else
         new_edge :: new_edge_rev :: edges
@@ -115,7 +119,7 @@ let update_digraph_be graph n expr weight = match graph with
         edges
       else if (List.mem new_edge edges) then
         new_edge_rev :: edges
-      else if (List.mem new_edge_rev edges) then
+      else if (List.mem new_edge_rev edges || new_edge_rev = new_edge) then
         new_edge :: edges
       else
         new_edge :: new_edge_rev :: edges

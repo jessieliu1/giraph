@@ -1,0 +1,22 @@
+int main() {
+	wegraph g = [A:3 -{5}- A];
+	for_node(n : g) {
+		print(n.data());
+	}
+	for_edge(e : g) {
+		print(e.from().data());
+		print(e.to().data());
+		print(e.weight());
+	}
+
+	wedigraph g2 = [B:4 -{6}-> B];
+	for_node(n : g2) {
+		print(n.data());
+	}
+	for_edge(e : g2) {
+		print(e.from().data());
+		print(e.to().data());
+		print(e.weight());
+	}
+	return 0;
+}

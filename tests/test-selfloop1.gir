@@ -1,0 +1,21 @@
+int main() {
+	graph g = [A:3 -- A];
+	for_node(n : g) {
+		print(n.data());
+	}
+	for_edge(e : g) {
+		print(e.from().data());
+		print(e.to().data());
+	}
+
+	digraph g2 = [B:4 -> B];
+	for_node(n : g2) {
+		print(n.data());
+	}
+	for_edge(e : g2) {
+		print(e.from().data());
+		print(e.to().data());
+	}
+
+	return 0;
+}
