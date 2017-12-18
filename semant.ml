@@ -512,10 +512,11 @@ and check_for_node str e s env =
                 [] -> ();
                 | _ -> (* non empty statement lst, check em*)
                 let chkcall x = match x with 
-                SExpr(SMethod(g,fname,_,_),_) -> match g,fname with
+                SExpr(SMethod(g,fname,_,_),_) -> (match g,fname with
                         SId(s,_),"add_node" -> if s = gname then raise(Failure("concurrent modification of graph in for_node "))
                         | SId(s,_),"remove_node" -> if s = gname then raise(Failure("concurrent modification of graph in for_node "))
-                        | _ -> ()
+                        | _ -> ();)
+                | _ -> ();
                 in
                 List.iter chkcall lst
        | _ -> ()
