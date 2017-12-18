@@ -1,0 +1,1 @@
+Fatal error: exception Failure("add_edge may not be called on unweighted graphs with a weight argument")

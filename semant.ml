@@ -207,8 +207,7 @@ and check_graphmtd g name args e_lst ret_typ env =
         let (ex,_) = convert_expr e1 env in
         let t1 = get_sexpr_type ex in
         if ( t1 != Node )
-        then raise(Failure("graph method " ^ name ^ "may not be called 
-                on type " ^ string_of_typ t1));
+        then raise(Failure("graph method " ^ name ^ " may not be called on type " ^ string_of_typ t1));
         (SMethod(id, name, [ex], ret_typ)))
 
     | 2 -> 
@@ -217,12 +216,12 @@ and check_graphmtd g name args e_lst ret_typ env =
       let (ex2,_) = convert_expr e2 env in
       let t1 = get_sexpr_type ex and t2 = get_sexpr_type ex2 in 
       if ( t1 != Node || t2 != Node )
-      then raise(Failure("graph method " ^ name ^ "may not be called 
-                on types " ^ string_of_typ t1 ^ ", " ^ string_of_typ t2));
+      then raise(Failure("graph method " ^ name ^ " may not be called on types "
+                         ^ string_of_typ t1 ^ ", " ^ string_of_typ t2));
       (* make sure this method can be called on this type *)
-      if (name == "get_edge_weight" && (t == Graph || t == Digraph))
+      if (name = "get_edge_weight" && (t == Graph || t == Digraph))
       then raise(Failure(name ^ " may not be called on unweighted graphs"));
-      if (name == "add_edge" && (t == Wegraph || t == Wedigraph))
+      if (name = "add_edge" && (t == Wegraph || t == Wedigraph))
       then raise(Failure(name ^ " may not be called on weighted graphs without a weight argument"));
       (SMethod(id, name, [ex; ex2], ret_typ))
     | 3 ->
@@ -239,8 +238,10 @@ and check_graphmtd g name args e_lst ret_typ env =
       then raise(Failure("graph method " ^ name ^ "may not be called on types " ^
                          string_of_typ t1 ^ ", " ^ string_of_typ t2 ^ ", " ^ string_of_typ t3));
       (* all 3-argument graph methods can only be called on we(di)graphs *)
-      if (t == Graph || t == Digraph)
-      then raise(Failure(name ^ " may not be called on unweighted graphs"));
+      if (t == Graph || t == Digraph) then
+        if (name = "add_edge") then
+          raise(Failure(name ^ " may not be called on unweighted graphs with a weight argument"));
+      raise(Failure(name ^ " may not be called on unweighted graphs"));
       (SMethod(id, name, [ex; ex2; ex3], ret_typ))
 
 

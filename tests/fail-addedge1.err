@@ -1,1 +1,1 @@
-Fatal error: exception Failure("variable b is of type str when node was expected")
+Fatal error: exception Failure("graph method add_edge may not be called on types node, str")

@@ -1,0 +1,1 @@
+Fatal error: exception Failure("set_edge_weight may not be called on unweighted graphs")
