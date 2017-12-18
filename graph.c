@@ -672,11 +672,11 @@ void *construct_undirected_edge_list(void *g_in) {
 	void *map = make_map();
 	while (v) {
 		struct adj_list_node *adjacency = v->adjacencies;
-		put(map, (void *) v, (void *) v->adjacencies);
 		while (adjacency) {
 			struct adj_list_node *to_adj_list = get(map, (int *) adjacency->vertex);
 			int opposite_edge_exists = 0;
 			while (to_adj_list) {
+				/*  if this v is not in an already edge-ified adj list */
 				if (to_adj_list->vertex == v) {
 					opposite_edge_exists = 1;
 				}
@@ -699,6 +699,7 @@ void *construct_undirected_edge_list(void *g_in) {
 			}
 			adjacency = adjacency->next;
 		}
+		put(map, (void *) v, (void *) v->adjacencies);
 		v = v->next;
 	}
 	free_map(map);
