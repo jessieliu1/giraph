@@ -34,7 +34,7 @@ let rec convert_expr e env = match e with
   | Call("print", e_lst)          -> (check_print e_lst env, env)
   | Call("printb", e_lst)         -> (check_print e_lst env, env)
   | Call("prints", e_lst)         -> (check_print e_lst env, env)
-  | Call(str, e_lst)              -> (check_call str e_lst env, env)
+  | Call(str, e_lst)              -> (check_call str e_lst env)
   | Bool_Lit(b)                   -> (SBool_Lit(b), env)
   | Int_Lit(i)                    -> (SInt_Lit(i), env)
   | Float_Lit(f)                  -> (SFloat_Lit(f), env)
@@ -61,7 +61,7 @@ and get_sexpr_type sexpr = match sexpr with
   | SBool_Lit(_)                -> Bool
   | SInt_Lit(_)                 -> Int
   | SFloat_Lit(_)               -> Float
- | SString_Lit(_)              -> String
+  | SString_Lit(_)              -> String
   | SGraph_Lit(_,_,_,subtype,_) -> subtype
   | SNoexpr                     -> Void
 
@@ -283,6 +283,7 @@ and check_call str e_lst env =
     (* get the types of the args*)
     let arg_types = get_sexpr_lst_type (checked_args) in
 
+
     if not (StringMap.mem str env.env_sfmap) then
         let fdecl = StringMap.find str env.env_fmap in
         let env = 
@@ -295,13 +296,16 @@ and check_call str e_lst env =
             env_flocals = env.env_flocals;
             env_fformals = env.env_fformals;
             env_in_loop = env.env_in_loop;
-        } in
+        }
+        in
+
+        
         let sfdecl = StringMap.find str env.env_sfmap in
           try 
               (* confirm types match *)
               List.iter2 (fun t1 (t2, _) -> if t1 != t2 then report_typ_args t2 t1 else ()) arg_types sfdecl.sf_formals;
-              let sexpr_lst, _ = convert_expr_list e_lst env in 
-                  SCall(str, sexpr_lst, sfdecl.sf_typ)
+              let sexpr_lst, env = convert_expr_list e_lst env in 
+                  SCall(str, sexpr_lst, sfdecl.sf_typ), env
           with 
           (* wrong number of arguments *)
               Invalid_argument _ -> raise (Failure ("expected " ^ string_of_int (List.length sfdecl.sf_formals) ^ "arguments when " 
@@ -311,16 +315,16 @@ and check_call str e_lst env =
           try 
               (* confirm types match *)
               List.iter2 (fun t1 (t2, _) -> if t1 != t2 then report_typ_args t2 t1 else ()) arg_types sfdecl.sf_formals;
-              let sexpr_lst, _ = convert_expr_list e_lst env in 
-                  SCall(str, sexpr_lst, sfdecl.sf_typ)
+              let sexpr_lst, env = convert_expr_list e_lst env in 
+                  SCall(str, sexpr_lst, sfdecl.sf_typ), env
           with 
           (* wrong number of arguments *)
               Invalid_argument _ -> raise (Failure ("expected " ^ string_of_int (List.length sfdecl.sf_formals) ^ "arguments when " 
               ^ string_of_int (List.length e_lst) ^ " arguments were provided"))
 
 and convert_stmt stmt env = match stmt with 
-    Block(s_lst)            -> (check_block s_lst env, env) 
-    | If(e, s1, s2)         -> (check_if e s1 s2 env, env)
+    Block(s_lst)            -> (check_block s_lst env)
+    | If(e, s1, s2)         -> (check_if e s1 s2 env)
     | For(e1, e2, e3, s)    -> (check_for e1 e2 e3 s env, env) 
     | While(e, s)           -> (check_while e s env, env)
     | For_Node(str, e, s)   -> (check_for_node str e s env, env)
@@ -336,27 +340,37 @@ and convert_stmt stmt env = match stmt with
 
 and check_block s_lst env = 
     match s_lst with 
-    []      -> SBlock([SExpr(SNoexpr, Void)]) 
-    | _ -> (*check every statement, and put those checked statements in a list*)
+    []    -> SBlock([SExpr(SNoexpr, Void)]), env 
+    | _   -> (*check every statement, and put those checked statements in a list*)
               let rec add_sstmt acc stmt_lst env = match stmt_lst with
-                [] -> acc
+                [] -> acc, env
                 | Return _ :: _ :: _  -> raise (Failure("nothing may follow a return"))
                 | st :: st_lst -> 
                       let sstmt, new_env = convert_stmt st env in 
                       let new_acc = sstmt::acc in add_sstmt new_acc st_lst new_env
               in
-              let sblock = add_sstmt [] s_lst env in
-            SBlock(List.rev sblock)
-
+              let sblock, nenv = add_sstmt [] s_lst env in
+              let new_env = {
+                env_name = env.env_name;
+                env_return_type = env.env_return_type;
+                env_fmap = env.env_fmap;
+                env_sfmap = nenv.env_sfmap;
+                env_globals = env.env_globals;
+                env_flocals = env.env_flocals;
+                env_fformals = env.env_fformals;
+                env_in_loop = env.env_in_loop;
+            }
+            in 
+            (SBlock(List.rev sblock), new_env)
 
 and check_if cond is es env =
     (* semantically check the condition *)
     let scond,env = convert_expr cond env in 
         (match get_sexpr_type scond with 
             Bool ->
-                let (sis, _) = convert_stmt is env in
-                let (ses, _) = convert_stmt es env in
-                SIf(scond, sis, ses)
+                let (sis, env) = convert_stmt is env in
+                let (ses, env) = convert_stmt es env in
+                SIf(scond, sis, ses), env
             | _ -> raise(Failure("Expected boolean expression")))    
 
 
@@ -367,7 +381,7 @@ and check_for e1 e2 e3 s env =
     let new_env = 
 
     {
-      env_name = env.env_name;
+      env_name = env3.env_name;
       env_return_type = env3.env_return_type;
       env_fmap = env3.env_fmap;
       env_sfmap = env3.env_sfmap;
@@ -378,7 +392,7 @@ and check_for e1 e2 e3 s env =
     }
     in
 
-    let (for_body, _) = convert_stmt s new_env in
+    let (for_body, nenv) = convert_stmt s new_env in
 
     if (get_sexpr_type se2) = Bool then
         SFor(se1, se2, se3, for_body)
@@ -527,7 +541,7 @@ and convert_fdecl fname fformals env =
     in 
 
     (* Semantically check all statements of the body *)
-    let (sstmts, env) = convert_stmt (Block fdecl.f_body) env
+    let (sstmts, nenv) = convert_stmt (Block fdecl.f_body) env
     in 
 
     let sfdecl = { 
@@ -541,7 +555,7 @@ and convert_fdecl fname fformals env =
         env_name = fname;
         env_return_type = fdecl.f_typ;
         env_fmap = env.env_fmap;
-        env_sfmap = StringMap.add fname sfdecl env.env_sfmap;
+        env_sfmap = StringMap.add fname sfdecl nenv.env_sfmap;
         env_globals = env.env_globals;
         env_flocals = env.env_flocals;
         env_fformals = formals;
@@ -577,7 +591,7 @@ and check_vdecl t str e env =
       (if t != typ then (raise(Failure("expression type mismatch " ^ string_of_typ t ^ " and " ^ string_of_typ typ)))
       else (SVdecl(t, str, se), nenv))
     else 
-      (SVdecl(t, str, se), nenv)
+       (SVdecl(t, str, se), nenv)
 
 
 and check_return e env =
@@ -625,7 +639,6 @@ let convert_ast globals fdecls fmap =
 
     (* this is the environment with all the sfdecls, stemming from main *)
     let sfdecl_env = convert_fdecl "main" [] env in 
-
     let sfdecls = List.rev(List.fold_left (fun lst (_, sfdecl) -> sfdecl :: lst)
                   [] (StringMap.bindings sfdecl_env.env_sfmap)) 
     in (globals, sfdecls)
