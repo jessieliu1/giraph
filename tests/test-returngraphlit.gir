@@ -1,0 +1,10 @@
+graph foo() {
+	return [A:3 -- B:5 -- C:8];
+}
+
+int main() {
+	for_node(n : foo()) {
+		print(n.data());
+	}
+	return 0;
+}

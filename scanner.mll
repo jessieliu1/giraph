@@ -60,9 +60,9 @@ rule token = parse
      | "*=" { TIMESEQ }
      | "/=" { DIVEQ } *)
   | '%' { MOD }
-  (* | "&&" { AND }
-     | "||" { OR }
-     | '&' { INTERSECTION }
+  | "&&" { AND }
+  | "||" { OR }
+  (* | '&' { INTERSECTION }
      | '|' { UNION } *)
   | '!' { NOT }
   | "==" { EQ }

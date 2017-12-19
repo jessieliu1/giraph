@@ -1,0 +1,6 @@
+int main() {
+	for_node(n : [A:3 -- B:5 -- C:8]) {
+		print(n.data());
+	}
+	return 0;
+}

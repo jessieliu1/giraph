@@ -1,0 +1,6 @@
+int main() {
+	bfs(n : [A:3 -- B:5 -- C:8] ; A) {
+		print(n.data());
+	}
+	return 0;
+}

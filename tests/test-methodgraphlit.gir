@@ -1,0 +1,13 @@
+int main() {
+	!~ these are a little questionable tbh - but there's definitely
+	an argument for allowing them (applicative order! the graph lit gets
+	evaluated first, so it declares the nodes, which are then visible
+	to the method calls - i guess lol) ~!
+
+	printb([A:3].has_node(A));
+	print([A -{4}- B:4].get_edge_weight(A,B));
+	for_node(n : [A -- B -- C:5].neighbors(B)) {
+		print(n.data());
+	}
+	return 0;
+}
