@@ -1,0 +1,17 @@
+int doo() {
+    return 5;
+}
+
+int foo()
+{
+    return doo();
+}
+
+int main() {
+    wegraph g = [A:5 -{2}- B:3 -{3}- C:1];
+    for_edge(e : g) {
+        e.set_weight(foo());
+        print(e.weight());
+    }
+    return 0;
+}
