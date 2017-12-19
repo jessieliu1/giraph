@@ -139,8 +139,9 @@ and check_binop e1 op e2 env =
         | Eq | Neq ->
             (match t1, t2 with
                 Int, Int        -> SBinop(s1, op, s2, Bool)
-                | Bool, Bool    -> SBinop(s1, op, s2, Bool)
-                | _             -> report_bad_binop t1 op t2
+              | Bool, Bool    -> SBinop(s1, op, s2, Bool)
+              | Node, Node    -> SBinop(s1, op, s2, Bool)
+              | _             -> report_bad_binop t1 op t2
                  (* TODO: add string compare? *)
             )
         | Less | Leq | Greater | Geq
@@ -169,6 +170,10 @@ and check_print e_lst env =
                 Int         -> "print"
                 | String    -> "prints"
                 | Bool      -> "printb"
+                | Graph
+                | Digraph
+                | Wegraph
+                | Wedigraph -> "printg"
                 | _         -> 
                     raise(Failure("type " ^ string_of_typ t ^ " is unsupported for this function"))
         in
@@ -1085,13 +1090,21 @@ let convert_ast globals fdecls fmap =
 
 let build_fmap fdecls = 
     (* built in *)
-    let built_in_decls =  StringMap.add "print"
+  let built_in_decls = StringMap.add "printg"
+      { f_typ = Void; f_name = "printg"; f_formals = [(Graph, "x")];
+       f_body = [Return (Noexpr)] } (StringMap.add "printg_d"
+      { f_typ = Void; f_name = "printg_d"; f_formals = [(Digraph, "x")];
+       f_body = [Return (Noexpr)] } (StringMap.add "printg_w"
+      { f_typ = Void; f_name = "printg_w"; f_formals = [(Wegraph, "x")];
+       f_body = [Return (Noexpr)] } (StringMap.add "printg_wd"
+      { f_typ = Void; f_name = "printg_wd"; f_formals = [(Wedigraph, "x")];
+       f_body = [Return (Noexpr)] } (StringMap.add "print"
      { f_typ = Void; f_name = "print"; f_formals = [(Int, "x")];
        f_body = [] } (StringMap.add "printb"
      { f_typ = Void; f_name = "printb"; f_formals = [(Bool, "x")];
        f_body = [] } (StringMap.singleton "prints"
      { f_typ = Void; f_name = "prints"; f_formals = [(String, "x")];
-       f_body = [] } ))
+       f_body = [] } ))))))
     in 
 
     let check_fdecls map fdecl = 

@@ -214,10 +214,13 @@ let translate (globals, functions) =
   let map_get_int_ptr_t = L.function_type i32_ptr_t [| void_ptr_t ; i32_ptr_t |] in
   let map_get_int_ptr_func = L.declare_function "get_int_ptr" map_get_int_ptr_t the_module in
 
-
   (* TODO: implement
   let map_get_float_t = L.function_type float_t [| void_ptr_t ; i32_ptr_t |] in
   let map_get_float_func = L.declare_function "get_float" map_get_float_t the_module in *)
+
+  let print_graph_t = L.function_type void_t [| void_ptr_t |] in
+  let print_graph_func = L.declare_function "print_data" print_graph_t the_module in
+
 
 
 
@@ -387,6 +390,11 @@ let translate (globals, functions) =
       | S.SCall ("prints", [e], _) ->
         L.build_call printf_func [| string_format_str ; (expr vars builder e) |]
           "prints" builder
+      | S.SCall ("printg", [e], _)
+      | S.SCall ("printg_d", [e], _)
+      | S.SCall ("printg_w", [e], _)
+      | S.SCall ("printg_wd", [e], _) ->
+        L.build_call print_graph_func [| (expr vars builder e) |] "" builder
       | S.SCall (f, act, _) ->
         let (fdef, fdecl) = StringMap.find f function_decls in
         let actuals = List.rev (List.map (expr vars builder) (List.rev act)) in

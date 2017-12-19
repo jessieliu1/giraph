@@ -981,6 +981,24 @@ int dfs_done(void *curr_v) {
 
 //////////////////////// TESTING ////////////////////////
 
+void print_data(void *graph_ptr) {
+	struct graph *g = (struct graph *) graph_ptr;
+	struct vertex_list_node *vertex = g->head;
+	while (vertex) {
+		printf("vertex: %d\n", *(int *) vertex->data);
+		printf("adjacencies:");
+		struct adj_list_node *adjacency = vertex->adjacencies;
+		while (adjacency) {
+			printf("(%d, weight: %d) ", *(int *) adjacency->vertex->data, adjacency->weight);
+			adjacency = adjacency->next;
+		}
+		printf("\n");
+		vertex = vertex->next;
+	}
+	printf("\n");
+}
+
+
 /*void print_graph(void *graph_ptr) {
 	struct graph *g = (struct graph *) graph_ptr;
 	struct vertex_list_node *vertex = g->head;
@@ -997,23 +1015,6 @@ int dfs_done(void *curr_v) {
 		vertex = vertex->next;
 	}
 	printf("\n");
-}
-
-void print_data(void *graph_ptr) {
-	struct graph *g = (struct graph *) graph_ptr;
-	struct vertex_list_node *vertex = g->head;
-	while (vertex) {
-		printf("vertex: %d\n", *(int *) vertex->data);
-		printf("adjacencies:");
-		struct adj_list_node *adjacency = vertex->adjacencies;
-		while (adjacency) {
-			printf("(%d, weight: %d) ", *(int *) adjacency->vertex->data, adjacency->weight);
-			adjacency = adjacency->next;
-		}
-		printf("\n\n");
-		vertex = vertex->next;
-	}
-	printf("\n\n");
 }
 
 void print_queue(struct queue_list_node *queue) {
