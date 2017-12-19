@@ -221,25 +221,33 @@ let translate (globals, functions) =
          they have been already declared explicitly or in a previous graph). Thus,
          whenever we encounter a graph literal, we have to construct all the new nodes
          it uses as local variables. The following function handles this. *)
-      let add_nodes_from_graph_lits m expr = match expr with
-          S.SAssign(id, e, _) -> (match e with
-              S.SGraph_Lit(nodes, edges, _, _, _) -> (* TODO: use the last field w/ generics*)
-              let add_node m node =
-                if (StringMap.mem node m) then
-                  m
-                else
-                  let local_node_var = L.build_alloca (ltype_of_typ A.Node) node builder in
-                  let new_data_ptr = L.build_call new_data_func [||] "tmp_data" builder in
-                  ignore(L.build_store new_data_ptr local_node_var builder);
-                  StringMap.add node local_node_var m
-              in
-              List.fold_left add_node m nodes
-            | _ -> m (* ignore non-graph expressions *))
-        | _ -> m (* ignore non-assign statements -
-                    TODO: figure out if graph literals could appear anywhere else *)
+      let rec add_nodes_from_graph_lits m expr = match expr with
+          S.SGraph_Lit(nodes, edges, _, _, _) -> (* TODO: use the last field w/ generics*)
+          let add_node m node =
+            if (StringMap.mem node m) then
+              m
+            else
+              let local_node_var = L.build_alloca (ltype_of_typ A.Node) node builder in
+              let new_data_ptr = L.build_call new_data_func [||] "tmp_data" builder in
+              ignore(L.build_store new_data_ptr local_node_var builder);
+              StringMap.add node local_node_var m
+          in
+          List.fold_left add_node m nodes
+        (* for any sexpr containing sub-sexprs, recursively call on those *)
+        | S.SAssign(_, e, _) -> add_nodes_from_graph_lits m e
+        | S.SMethod(e, _, el, _) ->
+          List.fold_left (fun mp ex -> add_nodes_from_graph_lits mp ex) (add_nodes_from_graph_lits m e) el
+        | S.SCall(_, el, _) -> List.fold_left add_nodes_from_graph_lits m el
+        (* these shouldn't be able to have graph lits in them, but just for completion: *)
+        | S.SUnop(_, e, _) -> add_nodes_from_graph_lits m e
+        | S.SBinop(e1, _, e2, _) -> List.fold_left add_nodes_from_graph_lits m [e1; e2]
+        | _ -> m (* ignore expressions without subexpressions *)
       in
 
-      (* find all local variables declared in block; ignore other statements *)
+      (* find all local variables declared in block *)
+      (* TODO: does this need to be recursive?
+         see: if (true) printb([A].has_node(A) vs if (true) {printb([A].has_node(A))};
+         either make recursive, or make [A].has_node(A) not work - probably the second *)
       let add_local m stmt = match stmt with
           S.SVdecl(t, n, e) ->
           (* if e contains a graph literal, adds new nodes to m; else m unchanged *)
@@ -256,7 +264,16 @@ let translate (globals, functions) =
            | _ -> ());
           (* add new variable to m *)
           StringMap.add n local_var m
-        | S.SExpr(e, t) -> add_nodes_from_graph_lits m e
+        (* non-vdecl stmts might have graph literals, so match on those to get them *)
+        | S.SExpr(e, _)
+        | S.SIf(e, _, _)
+        | S.SWhile(e, _)
+        | S.SFor_Node(_, e, _)
+        | S.SFor_Edge(_, e, _)
+        | S.SReturn(e) -> add_nodes_from_graph_lits m e
+        | S.SBfs(_, e1, e2, _)
+        | S.SDfs(_, e1, e2, _) -> List.fold_left add_nodes_from_graph_lits m [e1; e2]
+        | S.SFor(e1, e2, e3, _) -> List.fold_left add_nodes_from_graph_lits m [e1; e2; e3]
         | _ -> m
       in
       List.fold_left add_local m sl (* return value of add_local_vars *)
