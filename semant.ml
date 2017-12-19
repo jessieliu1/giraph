@@ -388,7 +388,8 @@ and check_mapmtd m name args e_lst env =
           env_fformals = env.env_fformals;
           env_in_loop = env.env_in_loop;
         } in
-        (SMethod(id, name, [ex], value_typ)), new_env)
+        let ret_typ = (match name with "contains" -> Bool | _ -> value_typ) in
+        (SMethod(id, name, [ex], ret_typ)), new_env)
 
     | 2 -> (* put(k,v) *)
       let e1 = (List.hd e_lst) and e2 = (List.nth e_lst 1) in

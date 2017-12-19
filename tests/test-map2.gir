@@ -1,0 +1,14 @@
+int main() {
+	graph g = [A:5 -- B:3];
+	node C;
+	map<int> m;
+
+	for_node(n : g) {
+		m.put(n, n.data());
+	}
+
+	printb(m.contains(A));
+	printb(m.contains(C));
+
+	return 0;
+}

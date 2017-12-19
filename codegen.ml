@@ -187,6 +187,9 @@ let translate (globals, functions) =
   let make_map_t = L.function_type void_ptr_t [||] in
   let make_map_func = L.declare_function "make_map" make_map_t the_module in
 
+  let map_contains_t = L.function_type i32_t [| void_ptr_t ; i32_ptr_t |] in
+  let map_contains_func = L.declare_function "contains_key" map_contains_t the_module in
+
   let map_put_void_ptr_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; void_ptr_t |] in
   let map_put_void_ptr_func = L.declare_function "put" map_put_void_ptr_t the_module in
 
@@ -479,7 +482,7 @@ let translate (globals, functions) =
         and node_ptr = expr vars builder node_expr
         and value = expr vars builder value_expr in
         let map_type = get_sexpr_type map_expr in
-        let value_type = (match map_type with Map(t) -> t | _ -> A.Int) in
+        let value_type = (match map_type with Map(t) -> t | _ -> A.Graph (* never happens *)) in
         let which_func = (match value_type with
               A.Int -> map_put_int_func
             | _ -> map_put_void_ptr_func) in
@@ -488,11 +491,18 @@ let translate (globals, functions) =
         let map_ptr = expr vars builder map_expr
         and node_ptr = expr vars builder node_expr in
         let map_type = get_sexpr_type map_expr in
-        let value_type = (match map_type with Map(t) -> t | _ -> A.Int) in
+        let value_type = (match map_type with Map(t) -> t | _ -> A.Graph) in
         let which_func = (match value_type with
               A.Int -> map_get_int_func
             | _ -> map_get_void_ptr_func) in
-        L.build_call which_func [| map_ptr ; node_ptr |] "" builder
+        L.build_call which_func [| map_ptr ; node_ptr |] "tmp_get" builder
+      | S.SMethod (map_expr, "contains", [node_expr], _) ->
+        let map_ptr = expr vars builder map_expr
+        and node_ptr = expr vars builder node_expr in
+        let ret =
+          L.build_call map_contains_func [| map_ptr ; node_ptr |] "tmp_contains" builder in
+        L.build_icmp L.Icmp.Eq ret (L.const_int i32_t 1) "contains" builder
+
     in
 
     (* Invoke "f builder" if the current block doesn't already
