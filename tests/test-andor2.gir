@@ -1,0 +1,11 @@
+int main() {
+	graph g = [A];
+	node B;
+	if (g.has_node(A) || g.has_node(B)) {
+		prints("1");
+	}
+	if (g.has_node(A) && g.has_node(B)) {
+		prints("2");
+	}
+	return 0;
+}

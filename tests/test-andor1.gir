@@ -1,0 +1,15 @@
+int main() {
+	if (true && false) {
+		prints("1");
+	}
+	if (true && true) {
+		prints("2");
+	}
+	if (true || false) {
+		prints("3");
+	}
+	if (false || false) {
+		prints("4");
+	}
+	return 0;
+}

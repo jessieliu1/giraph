@@ -1,0 +1,7 @@
+int main() {
+	int i = 1;
+	if (true && i) {
+		prints("whoops");
+	}
+	return 0;
+}
