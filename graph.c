@@ -104,7 +104,7 @@ int hash(unsigned int in, int size) {
 	return 1 + ((in * 997) % (size - 1));
 }
 
-/* if putting into a key already in map, replace map */
+/* if putting into a key already in map, replace value */
 void put(void *map_in, int *key, void *value) {
 	struct map_node **map = (struct map_node **) map_in;
 	int size = *((int *) map[0]->value);
@@ -165,6 +165,21 @@ int contains_key(void *map_in, int *key) {
 	}
 	return 0;
 }
+
+/* The following functions implement put() for the built-in types in giraph. */
+
+void put_int(void *map_in, int *key, int value) {
+	put(map_in, key, (void *) value);
+}
+
+/* The following functions implement get() for the built-in types in giraph. */
+
+int get_int(void *map_in, int *key) {
+	return (int) get(map_in, key);
+}
+
+
+
 //////////////////////// END MAP ////////////////////////
 
 

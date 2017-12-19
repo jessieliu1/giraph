@@ -1,0 +1,6 @@
+int main() {
+	int i;
+	map<int> m;
+	int v = m.get(i);
+	return 0;
+}

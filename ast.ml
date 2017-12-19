@@ -4,7 +4,7 @@ type binop = Add | Sub | Mult | Div | Mod | Eq | Neq |
 type unop = Neg | Not
 
 type typ = Int | Float | Bool | Void | String | Graph | Digraph | Wegraph | Wedigraph |
-           Node | Edge | Wedge | Diwedge
+           Node | Edge | Wedge | Diwedge | Map of typ
 
 type bind = typ * string
 
@@ -72,7 +72,7 @@ let string_of_uop = function
   | Not -> "!"
 
 
-let string_of_typ = function
+let rec string_of_typ = function
     Int -> "int"
   | Float -> "float"
   | Bool -> "bool"
@@ -85,6 +85,7 @@ let string_of_typ = function
   | Edge -> "edge"
   | Wedge -> "wedge"
   | Diwedge -> "diwedge"
+  | Map(t) -> "map<" ^ string_of_typ t ^ ">"
   | Void -> "void"
 
 

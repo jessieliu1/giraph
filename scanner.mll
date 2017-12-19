@@ -44,6 +44,7 @@ rule token = parse
   | "wegraph" { WEGRAPH }
   | "digraph" { DIGRAPH }
   | "wedigraph" { WEDIGRAPH }
+  | "map" { MAP }
   | "break" { BREAK }
   | "continue" { CONTINUE }
   | "return" { RETURN }

@@ -30,6 +30,7 @@ let translate (globals, functions) =
     | A.Edge -> void_ptr_t
     | A.Wedge -> void_ptr_t
     | A.Diwedge -> void_ptr_t
+    | A.Map(_) -> void_ptr_t
     | A.Void -> void_t
     (* TODO: add wedge, handle generics *)
   in
@@ -182,6 +183,24 @@ let translate (globals, functions) =
   let get_next_edge_t = L.function_type void_ptr_t [| void_ptr_t |] in
   let get_next_edge_func = L.declare_function "get_next_edge" get_next_edge_t the_module in
 
+  (* Declare functions that will be called for maps *)
+  let make_map_t = L.function_type void_ptr_t [||] in
+  let make_map_func = L.declare_function "make_map" make_map_t the_module in
+
+  let map_put_void_ptr_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; void_ptr_t |] in
+  let map_put_void_ptr_func = L.declare_function "put" map_put_void_ptr_t the_module in
+
+  let map_put_int_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_t |] in
+  let map_put_int_func = L.declare_function "put_int" map_put_int_t the_module in
+
+  let map_get_void_ptr_t = L.function_type void_ptr_t [| void_ptr_t ; i32_ptr_t |] in
+  let map_get_void_ptr_func = L.declare_function "get" map_get_void_ptr_t the_module in
+
+  let map_get_int_t = L.function_type i32_t [| void_ptr_t ; i32_ptr_t |] in
+  let map_get_int_func = L.declare_function "get_int" map_get_int_t the_module in
+
+
+
   let function_decls =
     let function_decl m fdecl =
       let name = fdecl.S.sf_name
@@ -261,6 +280,13 @@ let translate (globals, functions) =
                let new_data_ptr = L.build_call new_data_func [||] "tmp_data" builder in
                ignore(L.build_store new_data_ptr local_var builder);
              else ()
+
+           (* Same thing if we declare a map: call make_map() to construct the map *)
+           | A.Map(_) -> if e == S.SNoexpr then
+               let map_ptr = L.build_call make_map_func [||] "tmp_map" builder in
+               ignore(L.build_store map_ptr local_var builder);
+             else ()
+
            | _ -> ());
           (* add new variable to m *)
           StringMap.add n local_var m
@@ -447,7 +473,26 @@ let translate (globals, functions) =
             | _ -> set_edge_weight_func) in
         L.build_call which_func [| graph_ptr ; from_data_ptr ; to_data_ptr ; weight |] "" builder
 
-
+      (* map methods*)
+      | S.SMethod (map_expr, "put", [node_expr ; value_expr], _) ->
+        let map_ptr = expr vars builder map_expr
+        and node_ptr = expr vars builder node_expr
+        and value = expr vars builder value_expr in
+        let map_type = get_sexpr_type map_expr in
+        let value_type = (match map_type with Map(t) -> t | _ -> A.Int) in
+        let which_func = (match value_type with
+              A.Int -> map_put_int_func
+            | _ -> map_put_void_ptr_func) in
+        L.build_call which_func [| map_ptr ; node_ptr ; value |] "" builder
+      | S.SMethod (map_expr, "get", [node_expr], _) ->
+        let map_ptr = expr vars builder map_expr
+        and node_ptr = expr vars builder node_expr in
+        let map_type = get_sexpr_type map_expr in
+        let value_type = (match map_type with Map(t) -> t | _ -> A.Int) in
+        let which_func = (match value_type with
+              A.Int -> map_get_int_func
+            | _ -> map_get_void_ptr_func) in
+        L.build_call which_func [| map_ptr ; node_ptr |] "" builder
     in
 
     (* Invoke "f builder" if the current block doesn't already

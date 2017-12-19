@@ -37,6 +37,9 @@ let rec convert_expr e env = match e with
   | Method (e, "neighbors", e_lst) -> (check_graphmtd e "neighbors" 1 e_lst Graph env)
   | Method (e, "get_edge_weight", e_lst) -> (check_graphmtd e "get_edge_weight" 2 e_lst Int env)
   | Method (e, "set_edge_weight", e_lst) -> (check_graphmtd e "set_edge_weight" 3 e_lst Int env)
+  | Method (e, "put", e_lst) -> (check_mapmtd e "put" 2 e_lst env)
+  | Method (e, "get", e_lst) -> (check_mapmtd e "get" 1 e_lst env)
+  | Method (e, "contains", e_lst) -> (check_mapmtd e "contains" 1 e_lst env)
   | Method (e, s2, e_lst)        -> (report_meth_not_found s2)
   | Call("print", e_lst)          -> (check_print e_lst env)
   | Call("printb", e_lst)         -> (check_print e_lst env)
@@ -302,8 +305,6 @@ and check_graphmtd g name args e_lst ret_typ env =
                 env_in_loop = env.env_in_loop;
             } in
       (SMethod(id, name, [ex; ex2; ex3], ret_typ)), new_env
-
-
   in sexpr, env
 
 and check_edgemtd e n e_lst env = 
@@ -358,6 +359,60 @@ and check_edgemtd e n e_lst env =
        | "weight" -> raise(Failure("weight() cannot be called on edges of unweighted graphs"));
        | "set_weight" -> raise(Failure("set_weight() cannot be called on edges of unweighted graphs"));)
     | _ -> raise(Failure("Edge method " ^ n ^ " called on type " ^ string_of_typ t));
+
+
+and check_mapmtd m name args e_lst env =
+  let id,env = convert_expr m env in
+  let t = get_sexpr_type id in
+  let value_typ = match t with
+    Map(v) -> v
+  | _ -> raise(Failure(name ^ " called on type " ^ string_of_typ t ^ " when map was expected")) in
+  let len = List.length e_lst in
+  if (len != args) then raise(Failure( name ^ " takes " ^ string_of_int args ^ " arguments but " ^ string_of_int len ^ " arguments given")) ;
+
+  let sexpr,env =
+    match args with
+      1 -> ( (* get(k), contains(k) *)
+        let e1 = (List.hd e_lst) in
+        let (ex,nenv) = convert_expr e1 env in
+        let t1 = get_sexpr_type ex in
+        if ( t1 != Node )
+        then raise(Failure("map method " ^ name ^ " may not be called on type " ^ string_of_typ t1));
+        let new_env = {
+          env_name = env.env_name;
+          env_return_type = env.env_return_type;
+          env_fmap = env.env_fmap;
+          env_sfmap = nenv.env_sfmap;
+          env_globals = env.env_globals;
+          env_flocals = env.env_flocals;
+          env_fformals = env.env_fformals;
+          env_in_loop = env.env_in_loop;
+        } in
+        (SMethod(id, name, [ex], value_typ)), new_env)
+
+    | 2 -> (* put(k,v) *)
+      let e1 = (List.hd e_lst) and e2 = (List.nth e_lst 1) in
+      let (ex,env1) = convert_expr e1 env in
+      let (ex2,env2) = convert_expr e2 env1 in
+      let t1 = get_sexpr_type ex and t2 = get_sexpr_type ex2 in
+      if ( t1 != Node )
+      then raise(Failure("map method " ^ name ^ " may not be called with key type "
+                         ^ string_of_typ t1));
+      if ( t2 != value_typ )
+      then raise(Failure("map method " ^ name ^ " called with value type "
+                         ^ string_of_typ t2 ^ " on map of type " ^ string_of_typ value_typ ));
+      let new_env = {
+        env_name = env.env_name;
+        env_return_type = env.env_return_type;
+        env_fmap = env.env_fmap;
+        env_sfmap = env2.env_sfmap;
+        env_globals = env.env_globals;
+        env_flocals = env.env_flocals;
+        env_fformals = env.env_fformals;
+        env_in_loop = env.env_in_loop;
+      } in
+      (SMethod(id, name, [ex; ex2], Void)), new_env
+  in sexpr, env
 
 
 (* TODO *)

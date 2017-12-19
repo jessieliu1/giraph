@@ -1,0 +1,7 @@
+int main() {
+	node n;
+	string s = "whoops";
+	map<int> m;
+	m.put(n, s);
+	return 0;
+}
