@@ -176,6 +176,11 @@ void put_int_ptr(void *map_in, int *key, int *value) {
 	put(map_in, key, (void *) value);
 }
 
+void put_char_ptr(void *map_in, int *key, char *value) {
+	put(map_in, key, (void *) value);
+}
+
+
 
 /* TODO: implement
 void put_float(void *map_in, int *key, float value) {
@@ -191,6 +196,10 @@ int get_int(void *map_in, int *key) {
 
 int *get_int_ptr(void *map_in, int *key) {
 	return (int *) get(map_in, key);
+}
+
+char *get_char_ptr(void *map_in, int *key) {
+	return (char *) get(map_in, key);
 }
 
 /* TODO: implement

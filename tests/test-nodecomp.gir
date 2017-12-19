@@ -1,0 +1,16 @@
+int main() {
+	graph g = [A--B];
+	node n = A;
+
+	if (A == n) {
+		prints("yay");
+	} else {
+		prints("no");
+	}
+	if (B != n) {
+		prints("yay");
+	} else {
+		prints("no");
+	}
+	return 0;
+}
