@@ -21,10 +21,10 @@ let rec convert_expr e env = match e with
   | Binop(e1, op, e2)             -> (check_binop e1 op e2 env, env) 
   | Unop(op, e)                   -> (check_unop op e env, env)
   | Assign(str, e)                -> (check_assign str e env)
-  | Method (e, "from", e_lst)     -> (check_edgemtd e "from" e_lst env, env)
-  | Method (e, "to", e_lst)     -> (check_edgemtd e "to" e_lst env, env)
-  | Method (e, "weight", e_lst)   -> (check_edgemtd e "weight" e_lst env, env)
-  | Method (e, "set_weight", e_lst)   -> (check_edgemtd e "set_weight" e_lst env, env)
+  | Method (e, "from", e_lst)     -> (check_edgemtd e "from" e_lst env)
+  | Method (e, "to", e_lst)     -> (check_edgemtd e "to" e_lst env)
+  | Method (e, "weight", e_lst)   -> (check_edgemtd e "weight" e_lst env)
+  | Method (e, "set_weight", e_lst)   -> (check_edgemtd e "set_weight" e_lst env)
   | Method(e, "data", e_lst)     -> (check_data e e_lst env)
   | Method (e, "set_data", e_lst) -> (check_sdata e e_lst env)
   | Method (e, "add_node", e_lst) -> (check_graphmtd e "add_node" 1 e_lst Void env, env)
@@ -259,23 +259,53 @@ and check_graphmtd g name args e_lst ret_typ env =
 
 and check_edgemtd e n e_lst env = 
   let len = List.length e_lst in
-  let e_lst_checked = List.map (fun e -> let (s, env) = convert_expr e env in s) e_lst in
+
+  let rec add_sexpr acc e_lst env = match e_lst with
+    [] -> acc, env
+    | e :: e_lst -> 
+          let se, new_env = convert_expr e env in 
+          let new_acc = se::acc in add_sexpr new_acc e_lst new_env
+  in
+  let e_lst_checked, nenv = add_sexpr [] e_lst env in
+  let new_env = {
+        env_name = env.env_name;
+        env_return_type = env.env_return_type;
+        env_fmap = env.env_fmap;
+        env_sfmap = nenv.env_sfmap;
+        env_globals = env.env_globals;
+        env_flocals = env.env_flocals;
+        env_fformals = env.env_fformals;
+        env_in_loop = env.env_in_loop;
+      }
+  in
+
   let correct_len = match n with "set_weight" -> 1 | _ -> 0 in
   if (len != correct_len) then
     raise(Failure(n ^ " takes " ^ string_of_int correct_len ^ " arguments but " ^ string_of_int len ^ " arguments given")) else
-    let se, _ = convert_expr e env in
+    let se, nenv = convert_expr e new_env in
     let t = get_sexpr_type se in
+    let new_env = {
+            env_name = env.env_name;
+            env_return_type = env.env_return_type;
+            env_fmap = env.env_fmap;
+            env_sfmap = nenv.env_sfmap;
+            env_globals = env.env_globals;
+            env_flocals = env.env_flocals;
+            env_fformals = env.env_fformals;
+            env_in_loop = env.env_in_loop;
+    }
+    in
     match t with
       Diwedge | Wedge ->
       (match n with
-         "from" -> SMethod(se, n, e_lst_checked, Node)
-       | "to" -> SMethod(se, n, e_lst_checked, Node)
-       | "weight" -> SMethod(se, n, e_lst_checked, Int)
-       | "set_weight" -> SMethod(se, n, e_lst_checked, Void))
+         "from" -> SMethod(se, n, List.rev e_lst_checked, Node), new_env
+       | "to" -> SMethod(se, n, List.rev e_lst_checked, Node), new_env
+       | "weight" -> SMethod(se, n, List.rev e_lst_checked, Int), new_env
+       | "set_weight" -> SMethod(se, n, List.rev e_lst_checked, Void), new_env)
     | Edge -> 
       (match n with
-         "from" -> SMethod(se, n, e_lst_checked, Node)
-       | "to" -> SMethod(se, n, e_lst_checked, Node)
+         "from" -> SMethod(se, n, List.rev e_lst_checked, Node), new_env
+       | "to" -> SMethod(se, n, List.rev e_lst_checked, Node), new_env
        | "weight" -> raise(Failure("weight() cannot be called on edges of unweighted graphs"));
        | "set_weight" -> raise(Failure("set_weight() cannot be called on edges of unweighted graphs"));)
     | _ -> raise(Failure("Edge method " ^ n ^ " called on type " ^ string_of_typ t));
