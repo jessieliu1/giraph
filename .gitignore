@@ -1,3 +1,12 @@
+_build/*
+
+*.o
+*.native
+
 *.s
 *.ll
 *.exe
+
+*.log
+
+*.DS_STORE

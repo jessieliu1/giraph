@@ -150,7 +150,7 @@ and check_print e_lst env =
                 | _         -> 
                     raise(Failure("type " ^ string_of_typ t ^ " is unsupported for this function"))
         in
-        SCall(strcall, [s], Int), nenv
+        SCall(strcall, [s], Void), nenv
 
 
 and check_assign str e env = 
@@ -947,11 +947,9 @@ let build_fmap fdecls =
      { f_typ = Void; f_name = "print"; f_formals = [(Int, "x")];
        f_body = [] } (StringMap.add "printb"
      { f_typ = Void; f_name = "printb"; f_formals = [(Bool, "x")];
-       f_body = [] } (StringMap.add "prints"
+       f_body = [] } (StringMap.singleton "prints"
      { f_typ = Void; f_name = "prints"; f_formals = [(String, "x")];
-       f_body = [] } (StringMap.singleton "printbig"
-     { f_typ = Void; f_name = "printbig"; f_formals = [(Int, "x")];
-       f_body = [] })))
+       f_body = [] } ))
     in 
 
     let check_fdecls map fdecl = 
