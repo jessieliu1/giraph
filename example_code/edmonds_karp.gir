@@ -1,4 +1,4 @@
-wedigraph augment(wedigraph flow, wedigraph path) {
+void augment(wedigraph flow, wedigraph path) {
 	!~ Get bottleneck capacity of path. ~!
 	int min = -1;
 	for_edge (e : path) {
@@ -12,18 +12,18 @@ wedigraph augment(wedigraph flow, wedigraph path) {
 		if (flow.has_edge(e.from(), e.to())) {
 			int current_flow = flow.get_edge_weight(e.from(), e.to());
 			!~ Add bottleneck capacity to current flow. ~!
-			flow.add_edge(e.from(), e.to(), current_flow + min);
+			flow.set_edge_weight(e.from(), e.to(), current_flow + min);
 		} else {
 			int current_flow = flow.get_edge_weight(e.to(), e.from());
 			!~ Subtract bottleneck capacity from current flow. ~!
-			flow.add_edge(e.to(), e.from(), current_flow - min);
+			flow.set_edge_weight(e.to(), e.from(), current_flow - min);
 		}
 	}
-	return flow;
+	return;
 }
 
 wedigraph make_residual_graph(wedigraph flow, wedigraph network) {
-	wedigraph residual_graph;
+	wedigraph residual_graph = [];
 	for_edge (e : flow) {
 		int forward = network.get_edge_weight(e.from(), e.to()) - e.weight();
 		int backward = e.weight();
@@ -42,38 +42,47 @@ wedigraph edmonds_karp(wedigraph network, node source, node sink) {
 	   Flow is represented with a graph exactly equivalent to network, but 
 	   with the flow on each edge as the weight instead of the capacity.
 	   First, set up initial flow of 0 on every edge. ~!
-	wedigraph flow;
+	wedigraph flow = [];
 	for_edge (e : network) {
 		flow.add_edge(e.from(), e.to(), 0);
 	}
-	wedigraph residual = make_residual_graph(flow, network);
-	while (true) {
-		map parents;
+	bool has_path = true;
+	while (has_path) {
+		wedigraph residual = make_residual_graph(flow, network);
+		map<node> parents;
 		!~ Find shortest s-t path with BFS. ~!
 		bfs (n : residual ; source) {
-			for_node (neighbor : residual.get_neighbors(n)) {
-				if (!parents.contains_key(neighbor)) {
-					parents[neighbor] = n;
+			for_node (neighbor : residual.neighbors(n)) {
+				if (!parents.contains(neighbor)) {
+					parents.put(neighbor, n);
 				}
 			}
 		}
 		!~ If we didn’t reach the sink, there is no s-t path in residual ~!
-		if (!parents.contains_key(i)) {
-			break;
+		if (!parents.contains(sink)) {
+			has_path = false;
+		} else {
+			wedigraph path = [];
+			node i = sink;
+			while (i != source) {
+				path.add_edge(parents.get(i), i, residual.get_edge_weight(parents.get(i), i));
+				i = parents.get(i);
+			}
+			augment(flow, path);
 		}
-		wedigraph path;
-		node i = sink;
-		while (i != source) {
-			path.add_edge(parents[i], i, residual.get_edge_weight(parents[i], i));
-			i = parents[i];
-		}
-		flow = augment(flow, path);
 	}
 	return flow;
 }
 
-function void main() {
-	wedigraph network = [A -{100}-> B -{100}-> D <-{100}- C <-{100}- A ; B -{1}-> C];
-	wedigraph max_flow = edmonds_karp(network, A, D);
-	render(max_flow);
+int main() {
+	wedigraph network = [s:1 -{20}-> u:2 -{10}-> t:3 <-{20}- v:4 <-{10}- s ;
+	                     u -{30}-> v];
+	prints("network");
+	printg_wd(network);
+
+	wedigraph max_flow = edmonds_karp(network, s, t);
+	prints("max flow");
+	printg_wd(max_flow);
+
+	return 0;
 }

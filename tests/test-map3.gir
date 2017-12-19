@@ -1,0 +1,23 @@
+int main() {
+	graph g = [A:1 -- B:3 -- C:5];
+	map<node> m;
+
+	for_node(n : g) {
+		m.put(n, n);
+	}
+	for_node(n : g) {
+		print(n.data());
+		print(m.get(n).data());
+	}
+
+	map<node> m2;
+	for_node(n : g) {
+		m2.put(n, A);
+	}
+	for_node(n : g) {
+		print(n.data());
+		print(m2.get(n).data());
+	}
+
+	return 0;
+}

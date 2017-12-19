@@ -1,0 +1,6 @@
+int main() {
+	int i;
+	map<int> m;
+	bool b = m.contains(i);
+	return 0;
+}

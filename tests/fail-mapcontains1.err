@@ -1,0 +1,1 @@
+Fatal error: exception Failure("map method contains may not be called on type int")

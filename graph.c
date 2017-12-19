@@ -104,7 +104,7 @@ int hash(unsigned int in, int size) {
 	return 1 + ((in * 997) % (size - 1));
 }
 
-/* if putting into a key already in map, replace map */
+/* if putting into a key already in map, replace value */
 void put(void *map_in, int *key, void *value) {
 	struct map_node **map = (struct map_node **) map_in;
 	int size = *((int *) map[0]->value);
@@ -165,6 +165,42 @@ int contains_key(void *map_in, int *key) {
 	}
 	return 0;
 }
+
+/* The following functions implement put() for the built-in types in giraph. */
+
+void put_int(void *map_in, int *key, int value) {
+	put(map_in, key, (void *) value);
+}
+
+void put_int_ptr(void *map_in, int *key, int *value) {
+	put(map_in, key, (void *) value);
+}
+
+
+/* TODO: implement
+void put_float(void *map_in, int *key, float value) {
+	put(map_in, key, (void *) value);
+}
+*/
+
+/* The following functions implement get() for the built-in types in giraph. */
+
+int get_int(void *map_in, int *key) {
+	return (int) get(map_in, key);
+}
+
+int *get_int_ptr(void *map_in, int *key) {
+	return (int *) get(map_in, key);
+}
+
+/* TODO: implement
+int get_float(void *map_in, int *key) {
+	return (float) get(map_in, key);
+}
+*/
+
+
+
 //////////////////////// END MAP ////////////////////////
 
 
@@ -945,6 +981,24 @@ int dfs_done(void *curr_v) {
 
 //////////////////////// TESTING ////////////////////////
 
+void print_data(void *graph_ptr) {
+	struct graph *g = (struct graph *) graph_ptr;
+	struct vertex_list_node *vertex = g->head;
+	while (vertex) {
+		printf("vertex: %d\n", *(int *) vertex->data);
+		printf("adjacencies:");
+		struct adj_list_node *adjacency = vertex->adjacencies;
+		while (adjacency) {
+			printf("(%d, weight: %d) ", *(int *) adjacency->vertex->data, adjacency->weight);
+			adjacency = adjacency->next;
+		}
+		printf("\n");
+		vertex = vertex->next;
+	}
+	printf("\n");
+}
+
+
 /*void print_graph(void *graph_ptr) {
 	struct graph *g = (struct graph *) graph_ptr;
 	struct vertex_list_node *vertex = g->head;
@@ -961,23 +1015,6 @@ int dfs_done(void *curr_v) {
 		vertex = vertex->next;
 	}
 	printf("\n");
-}
-
-void print_data(void *graph_ptr) {
-	struct graph *g = (struct graph *) graph_ptr;
-	struct vertex_list_node *vertex = g->head;
-	while (vertex) {
-		printf("vertex: %d\n", *(int *) vertex->data);
-		printf("adjacencies:");
-		struct adj_list_node *adjacency = vertex->adjacencies;
-		while (adjacency) {
-			printf("(%d, weight: %d) ", *(int *) adjacency->vertex->data, adjacency->weight);
-			adjacency = adjacency->next;
-		}
-		printf("\n\n");
-		vertex = vertex->next;
-	}
-	printf("\n\n");
 }
 
 void print_queue(struct queue_list_node *queue) {

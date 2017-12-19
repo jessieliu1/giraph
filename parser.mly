@@ -6,7 +6,7 @@ open Prshelper %}
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT MOD
 %token EQ NEQ LT LEQ GT GEQ AND OR
 %token RETURN IF THEN ELSE FOR WHILE FOR_NODE FOR_EDGE BFS DFS BREAK CONTINUE
-%token INT BOOL VOID FLOAT STRING NODE EDGE GRAPH WEGRAPH DIGRAPH WEDIGRAPH
+%token INT BOOL VOID FLOAT STRING NODE EDGE GRAPH WEGRAPH DIGRAPH WEDIGRAPH MAP
 %token RARROW LARROW DIARROW
 %token SINGLEQUOTE DOUBLEQUOTE
 %token <int> INT_LIT
@@ -61,6 +61,7 @@ typ:
   | DIGRAPH { Digraph }
   | WEGRAPH { Wegraph }
   | WEDIGRAPH { Wedigraph }
+  | MAP LT typ GT { Map($3) }
 
 formals_opt: /* nothing */  { [] }
         | formal_list { List.rev $1 } 
