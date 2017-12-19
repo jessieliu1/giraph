@@ -27,16 +27,16 @@ let rec convert_expr e env = match e with
   | Method (e, "set_weight", e_lst)   -> (check_edgemtd e "set_weight" e_lst env, env)
   | Method(e, "data", e_lst)     -> (check_data e e_lst env)
   | Method (e, "set_data", e_lst) -> (check_sdata e e_lst env)
-  | Method (e, "add_node", e_lst) -> (check_graphmtd e "add_node" 1 e_lst Void env, env)
-  | Method (e, "remove_node", e_lst) -> (check_graphmtd e "remove_node" 1 e_lst Void env, env)
-  | Method (e, "has_node", e_lst) -> (check_graphmtd e "has_node" 1 e_lst Bool env, env)
-  | Method (e, "add_edge", [f;t]) -> (check_graphmtd e "add_edge" 2 [f;t] Void env, env)
-  | Method (e, "add_edge", [f;t;w]) -> (check_graphmtd e "add_edge" 3 [f;t;w] Void env, env)
-  | Method (e, "remove_edge", e_lst) -> (check_graphmtd e "remove_edge" 2 e_lst Void env, env)
-  | Method (e, "has_edge", e_lst) -> (check_graphmtd e "has_edge" 2 e_lst Bool env, env)
-  | Method (e, "neighbors", e_lst) -> (check_graphmtd e "neighbors" 1 e_lst Graph env, env)
-  | Method (e, "get_edge_weight", e_lst) -> (check_graphmtd e "get_edge_weight" 2 e_lst Int env, env)
-  | Method (e, "set_edge_weight", e_lst) -> (check_graphmtd e "set_edge_weight" 3 e_lst Int env, env)
+  | Method (e, "add_node", e_lst) -> (check_graphmtd e "add_node" 1 e_lst Void env)
+  | Method (e, "remove_node", e_lst) -> (check_graphmtd e "remove_node" 1 e_lst Void env)
+  | Method (e, "has_node", e_lst) -> (check_graphmtd e "has_node" 1 e_lst Bool env)
+  | Method (e, "add_edge", [f;t]) -> (check_graphmtd e "add_edge" 2 [f;t] Void env)
+  | Method (e, "add_edge", [f;t;w]) -> (check_graphmtd e "add_edge" 3 [f;t;w] Void  env)
+  | Method (e, "remove_edge", e_lst) -> (check_graphmtd e "remove_edge" 2 e_lst Void env)
+  | Method (e, "has_edge", e_lst) -> (check_graphmtd e "has_edge" 2 e_lst Bool env)
+  | Method (e, "neighbors", e_lst) -> (check_graphmtd e "neighbors" 1 e_lst Graph env)
+  | Method (e, "get_edge_weight", e_lst) -> (check_graphmtd e "get_edge_weight" 2 e_lst Int env)
+  | Method (e, "set_edge_weight", e_lst) -> (check_graphmtd e "set_edge_weight" 3 e_lst Int env)
   | Method (e, s2, e_lst)        -> (report_meth_not_found s2)
   | Call("print", e_lst)          -> (check_print e_lst env)
   | Call("printb", e_lst)         -> (check_print e_lst env)
@@ -52,9 +52,28 @@ let rec convert_expr e env = match e with
 
 
 and convert_expr_list expr_lst env = 
-    let sexpr_env_lst = List.map (fun expr -> convert_expr expr env) expr_lst in
-    let sexpr_lst = List.map (fun (sexpr, _) -> sexpr) sexpr_env_lst in
-    sexpr_lst, env
+        match expr_lst with
+        [] -> [], env
+        | _ -> 
+              let rec add_sexpr acc ex_lst env = match ex_lst with
+                [] -> acc, env
+                | e :: e_lst -> 
+                      let sexpr, new_env = convert_expr e env in 
+                      let new_acc = sexpr::acc in add_sexpr new_acc e_lst new_env
+              in
+              let sexpr_lst, nenv = add_sexpr [] expr_lst env in
+              let new_env = {
+                env_name = env.env_name;
+                env_return_type = env.env_return_type;
+                env_fmap = env.env_fmap;
+                env_sfmap = nenv.env_sfmap;
+                env_globals = env.env_globals;
+                env_flocals = env.env_flocals;
+                env_fformals = env.env_fformals;
+                env_in_loop = env.env_in_loop;
+                }
+        in
+        List.rev sexpr_lst, new_env
 
 
 and get_sexpr_type sexpr = match sexpr with
@@ -210,20 +229,30 @@ and check_graphmtd g name args e_lst ret_typ env =
   let len = List.length e_lst in
   if (len != args) then raise(Failure( name ^ " takes " ^ string_of_int args ^ " arguments but " ^ string_of_int len ^ " arguments given")) ;
 
-  let sexpr =  
+  let sexpr,env =  
     match args with 
       1 -> (
         let e1 = (List.hd e_lst) in
-        let (ex,_) = convert_expr e1 env in
+        let (ex,nenv) = convert_expr e1 env in
         let t1 = get_sexpr_type ex in
         if ( t1 != Node )
         then raise(Failure("graph method " ^ name ^ " may not be called on type " ^ string_of_typ t1));
-        (SMethod(id, name, [ex], ret_typ)))
+              let new_env = {
+                env_name = env.env_name;
+                env_return_type = env.env_return_type;
+                env_fmap = env.env_fmap;
+                env_sfmap = nenv.env_sfmap;
+                env_globals = env.env_globals;
+                env_flocals = env.env_flocals;
+                env_fformals = env.env_fformals;
+                env_in_loop = env.env_in_loop;
+            } in
+        (SMethod(id, name, [ex], ret_typ)), new_env)
 
     | 2 -> 
       let e1 = (List.hd e_lst) and e2 = (List.nth e_lst 1) in
-      let (ex,_) = convert_expr e1 env in
-      let (ex2,_) = convert_expr e2 env in
+      let (ex,env1) = convert_expr e1 env in
+      let (ex2,env2) = convert_expr e2 env1 in
       let t1 = get_sexpr_type ex and t2 = get_sexpr_type ex2 in 
       if ( t1 != Node || t2 != Node )
       then raise(Failure("graph method " ^ name ^ " may not be called on types "
@@ -233,14 +262,24 @@ and check_graphmtd g name args e_lst ret_typ env =
       then raise(Failure(name ^ " may not be called on unweighted graphs"));
       if (name = "add_edge" && (t == Wegraph || t == Wedigraph))
       then raise(Failure(name ^ " may not be called on weighted graphs without a weight argument"));
-      (SMethod(id, name, [ex; ex2], ret_typ))
+              let new_env = {
+                env_name = env.env_name;
+                env_return_type = env.env_return_type;
+                env_fmap = env.env_fmap;
+                env_sfmap = env2.env_sfmap;
+                env_globals = env.env_globals;
+                env_flocals = env.env_flocals;
+                env_fformals = env.env_fformals;
+                env_in_loop = env.env_in_loop;
+            } in
+      (SMethod(id, name, [ex; ex2], ret_typ)), new_env
     | 3 ->
       let e1 = (List.hd e_lst)
       and e2 = (List.nth e_lst 1)
       and e3 = (List.nth e_lst 2) in
-      let (ex,_) = convert_expr e1 env in
-      let (ex2,_) = convert_expr e2 env in
-      let (ex3,_) = convert_expr e3 env in
+      let (ex,env1) = convert_expr e1 env in
+      let (ex2,env2) = convert_expr e2 env1 in
+      let (ex3,env3) = convert_expr e3 env2 in
       let t1 = get_sexpr_type ex
       and t2 = get_sexpr_type ex2
       and t3 = get_sexpr_type ex3 in
@@ -252,10 +291,20 @@ and check_graphmtd g name args e_lst ret_typ env =
         (if (name = "add_edge") then
           raise(Failure(name ^ " may not be called on unweighted graphs with a weight argument"));
          raise(Failure(name ^ " may not be called on unweighted graphs")););
-      (SMethod(id, name, [ex; ex2; ex3], ret_typ))
+              let new_env = {
+                env_name = env.env_name;
+                env_return_type = env.env_return_type;
+                env_fmap = env.env_fmap;
+                env_sfmap = env3.env_sfmap;
+                env_globals = env.env_globals;
+                env_flocals = env.env_flocals;
+                env_fformals = env.env_fformals;
+                env_in_loop = env.env_in_loop;
+            } in
+      (SMethod(id, name, [ex; ex2; ex3], ret_typ)), new_env
 
 
-  in sexpr
+  in sexpr, env
 
 and check_edgemtd e n e_lst env = 
   let len = List.length e_lst in
