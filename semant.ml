@@ -45,7 +45,7 @@ let rec convert_expr e env = match e with
   | Int_Lit(i)                    -> (SInt_Lit(i), env)
   | Float_Lit(f)                  -> (SFloat_Lit(f), env)
   | String_Lit(str)               -> (SString_Lit(str), env)
-  (* todo below *)
+  | Bool_Lit(bool)                -> (SBool_Lit(bool), env)
   | Graph_Lit(str_lst, ed_lst, n_lst, is_d, is_w) ->
     (check_graph str_lst ed_lst n_lst is_d is_w env)
   | Noexpr                        -> (SNoexpr, env)
