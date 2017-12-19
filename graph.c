@@ -172,11 +172,32 @@ void put_int(void *map_in, int *key, int value) {
 	put(map_in, key, (void *) value);
 }
 
+void put_int_ptr(void *map_in, int *key, int *value) {
+	put(map_in, key, (void *) value);
+}
+
+
+/* TODO: implement
+void put_float(void *map_in, int *key, float value) {
+	put(map_in, key, (void *) value);
+}
+*/
+
 /* The following functions implement get() for the built-in types in giraph. */
 
 int get_int(void *map_in, int *key) {
 	return (int) get(map_in, key);
 }
+
+int *get_int_ptr(void *map_in, int *key) {
+	return (int *) get(map_in, key);
+}
+
+/* TODO: implement
+int get_float(void *map_in, int *key) {
+	return (float) get(map_in, key);
+}
+*/
 
 
 

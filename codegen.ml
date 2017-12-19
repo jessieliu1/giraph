@@ -196,11 +196,28 @@ let translate (globals, functions) =
   let map_put_int_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_t |] in
   let map_put_int_func = L.declare_function "put_int" map_put_int_t the_module in
 
+  (* TODO: remove when nodes become generic *)
+  let map_put_int_ptr_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t |] in
+  let map_put_int_ptr_func = L.declare_function "put_int_ptr" map_put_int_ptr_t the_module in
+
+  (* TODO: implement
+  let map_put_float_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; float_t |] in
+  let map_put_float_func = L.declare_function "put_float" map_put_float_t the_module in *)
+
   let map_get_void_ptr_t = L.function_type void_ptr_t [| void_ptr_t ; i32_ptr_t |] in
   let map_get_void_ptr_func = L.declare_function "get" map_get_void_ptr_t the_module in
 
   let map_get_int_t = L.function_type i32_t [| void_ptr_t ; i32_ptr_t |] in
   let map_get_int_func = L.declare_function "get_int" map_get_int_t the_module in
+
+  (* TODO: remove when nodes become generic *)
+  let map_get_int_ptr_t = L.function_type i32_ptr_t [| void_ptr_t ; i32_ptr_t |] in
+  let map_get_int_ptr_func = L.declare_function "get_int_ptr" map_get_int_ptr_t the_module in
+
+
+  (* TODO: implement
+  let map_get_float_t = L.function_type float_t [| void_ptr_t ; i32_ptr_t |] in
+  let map_get_float_func = L.declare_function "get_float" map_get_float_t the_module in *)
 
 
 
@@ -485,6 +502,8 @@ let translate (globals, functions) =
         let value_type = (match map_type with Map(t) -> t | _ -> A.Graph (* never happens *)) in
         let which_func = (match value_type with
               A.Int -> map_put_int_func
+            | A.Node -> map_put_int_ptr_func
+            (* TODO: implement | A.Float -> map_put_float_func *)
             | _ -> map_put_void_ptr_func) in
         L.build_call which_func [| map_ptr ; node_ptr ; value |] "" builder
       | S.SMethod (map_expr, "get", [node_expr], _) ->
@@ -494,6 +513,8 @@ let translate (globals, functions) =
         let value_type = (match map_type with Map(t) -> t | _ -> A.Graph) in
         let which_func = (match value_type with
               A.Int -> map_get_int_func
+            | A.Node -> map_get_int_ptr_func
+            (* TODO: implement | A.Float -> map_get_float_func *)
             | _ -> map_get_void_ptr_func) in
         L.build_call which_func [| map_ptr ; node_ptr |] "tmp_get" builder
       | S.SMethod (map_expr, "contains", [node_expr], _) ->

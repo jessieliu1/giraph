@@ -981,11 +981,18 @@ and check_vdecl t str e from_graph_lit env =
     then
       (* if this vdecl is from a graph literal and we've already declared str as a node,
          this is fine - otherwise, reject *)
-      (if (from_graph_lit && t == Node && StringMap.mem str env.env_flocals) then
-         (if (StringMap.find str env.env_flocals = Node) then ()
-          else raise(Failure("cannot reinitialize existing variable")); ())
-      else
-        raise(Failure("cannot reinitialize existing variable")); ());
+      if (from_graph_lit && t == Node) then
+        (if (StringMap.mem str env.env_flocals) then
+           (if (StringMap.find str env.env_flocals != Node) then
+              raise(Failure("cannot reinitialize existing variable")))
+         else if (StringMap.mem str env.env_fformals) then
+           (if (StringMap.find str env.env_fformals != Node) then
+              raise(Failure("cannot reinitialize existing variable")))
+         else if (StringMap.mem str env.env_globals) then
+           (if (StringMap.find str env.env_globals != Node) then
+              raise(Failure("cannot reinitialize existing variable")))
+         else raise(Failure("cannot reinitialize existing variable")))
+       else raise(Failure("cannot reinitialize existing variable"));
     if t == Void then raise(Failure("cannot declare " ^ str ^ " as type void"))
     else
     let flocals = StringMap.add str t env.env_flocals in
