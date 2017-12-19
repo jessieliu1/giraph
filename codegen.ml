@@ -520,8 +520,14 @@ let translate (globals, functions) =
               A.Int -> map_put_int_func
             | A.Node -> map_put_int_ptr_func
             | A.String -> map_put_char_ptr_func
+            | A.Bool -> map_put_int_func
             (* TODO: implement | A.Float -> map_put_float_func *)
             | _ -> map_put_void_ptr_func) in
+        let value = if (value_type = A.Bool) then
+            L.build_intcast value i32_t "tmp_intcast" builder
+          else
+            value
+        in
         L.build_call which_func [| map_ptr ; node_ptr ; value |] "" builder
       | S.SMethod (map_expr, "get", [node_expr], _) ->
         let map_ptr = expr vars builder map_expr
@@ -531,10 +537,15 @@ let translate (globals, functions) =
         let which_func = (match value_type with
               A.Int -> map_get_int_func
             | A.Node -> map_get_int_ptr_func
-            | A.String -> map_get_char_ptr_func 
+            | A.String -> map_get_char_ptr_func
+            | A.Bool -> map_get_int_func
             (* TODO: implement | A.Float -> map_get_float_func *)
             | _ -> map_get_void_ptr_func) in
-        L.build_call which_func [| map_ptr ; node_ptr |] "tmp_get" builder
+        let ret = L.build_call which_func [| map_ptr ; node_ptr |] "tmp_get" builder in
+        if (value_type = A.Bool) then
+          (L.build_icmp L.Icmp.Ne ret (L.const_int i32_t 0) "tmp_get_bool" builder)
+        else
+          ret
       | S.SMethod (map_expr, "contains", [node_expr], _) ->
         let map_ptr = expr vars builder map_expr
         and node_ptr = expr vars builder node_expr in
