@@ -13,11 +13,10 @@ graph bar(graph g1, graph g2) {
 }
 
 int main() {
-	graph g = foo([E:7]);
+	!~ graph g = foo([E:7]); ~!
 	for_node(n : bar(foo([A:5 -- B:3]), [C:7 -- D:8])) {
 		print(n.data());
 	}
 
-	if (true) {printb([Q].has_node(Q));}
 	return 0;
 }
