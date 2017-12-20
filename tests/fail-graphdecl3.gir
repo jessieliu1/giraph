@@ -1,5 +1,5 @@
 int main() {
-	graph g = [A:5 -- B:6];
-	node A;
+	graph<int> g = [A:5 -- B:6];
+	node<int> A;
 	return 0;
 }

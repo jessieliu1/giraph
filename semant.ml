@@ -116,7 +116,7 @@ and check_id_typ str typ env =
       let lval = try StringMap.find str env.env_flocals with
           Not_found -> (try StringMap.find str env.env_fformals with
               Not_found -> StringMap.find str env.env_globals) in
-      if lval != typ then raise(Failure("variable " ^ str ^ " is of type " ^ string_of_typ lval ^ " when " ^ string_of_typ typ ^ " was expected"));
+      if lval <> typ then raise(Failure("variable " ^ str ^ " is of type " ^ string_of_typ lval ^ " when " ^ string_of_typ typ ^ " was expected"));
 
 
 and check_binop e1 op e2 env =
@@ -190,16 +190,21 @@ and check_assign str e env =
         (* if types match *)
         if lvaluet = rvaluet then SAssign(str, r, lvaluet), env
         else
-          (* TODO: HANDLE ASSIGNING digraph<str> = digraph<void> !!! *)
           (* The parser always says an edgeless graph literal is of type Graph,
              but it is a valid rvalue for Digraph, Wegraph, and Wedigraph too -
-             if this is why lvaluet == rvaluet, this is fine*)
-          (let l_is_graph_subtyp = match lvaluet with Digraph(_) | Wegraph(_) | Wedigraph(_) -> true
-                                                    | _ -> false in
-           let r_is_edgeless_graph = match e with Graph_Lit (_, [], _, _, _) -> true
-                                                | _ -> false in
-           if (l_is_graph_subtyp && r_is_edgeless_graph) then SAssign(str, r, lvaluet), env
-           else report_bad_assign lvaluet rvaluet)
+             if this is why lvaluet <> rvaluet, this is fine.
+             Similarly, semant always says the graph literal  is of type Graph<Void>, 
+             but it is always a valid rvalue for any type of Graph with any data type. *)
+          (match (lvaluet, r) with
+             (Digraph(t1), SGraph_Lit (_, [], _, Graph(t2), _)) when t1 = t2 -> SAssign(str, r, lvaluet), env
+           | (Wegraph(t1), SGraph_Lit (_, [], _, Graph(t2), _)) when t1 = t2 -> SAssign(str, r, lvaluet), env
+           | (Wedigraph(t1), SGraph_Lit (_, [], _, Graph(t2), _)) when t1 = t2 -> SAssign(str, r, lvaluet), env
+           | (Graph(_), SGraph_Lit (_, [], _, Graph(Void), _))
+           | (Digraph(_), SGraph_Lit (_, [], _, Graph(Void), _))
+           | (Wegraph(_), SGraph_Lit (_, [], _, Graph(Void), _))
+           | (Wedigraph(_), SGraph_Lit (_, [], _, Graph(Void), _)) -> SAssign(str, r, lvaluet), env
+           | _ -> report_bad_assign lvaluet rvaluet
+          )
     else report_undeclared_id_assign str
 
 
@@ -412,7 +417,7 @@ and check_mapmtd m name args e_lst env =
           Node(dt) -> ()
         | _ -> raise(Failure("map method " ^ name ^ " may not be called with key type "
                          ^ string_of_typ t1)));
-      if ( t2 != value_typ )
+      if ( t2 <> value_typ )
       then raise(Failure("map method " ^ name ^ " called with value type "
                          ^ string_of_typ t2 ^ " on map of type " ^ string_of_typ value_typ ));
       let new_env = {
@@ -439,7 +444,7 @@ and check_graph str_lst ed_lst n_lst is_d is_w env =
     (* convert each weight expression *)
     let ed_lst_checked = List.map (fun (f,t,w) -> (f, t, fst (convert_expr w env))) ed_lst in
     let weight_types = List.map (fun (_,_,w_sexpr) -> get_sexpr_type w_sexpr) ed_lst_checked in
-    List.iter (fun t -> if t != Int then
+    List.iter (fun t -> if t <> Int then
                   raise (Failure("edge weights must be of type int"))) weight_types;
     (* make sure no nodes are initialized more than once *)
     ignore(List.fold_left (fun m (n, _)  -> if StringMap.mem n m then
@@ -449,25 +454,55 @@ and check_graph str_lst ed_lst n_lst is_d is_w env =
     ignore(List.fold_left (fun m (f,t,_)  -> if StringMap.mem (f ^ "+" ^ t) m then
                               raise(Failure("graph literal cannot feature the same edge with different weights"))
                             else StringMap.add (f ^ "+" ^ t) true m) StringMap.empty ed_lst);
-    (* first elt must be int *)
-    (* match first elt to other elts *)
     match str_lst with
       [] -> SGraph_Lit([], [], [], Graph(Void), Void), env
     | _ ->
-      (match n_lst with
-         [] -> let newenv = List.fold_left (fun x y -> let (_, z) = check_vdecl (Node(Void)) y Noexpr true x in z) env str_lst in
-         SGraph_Lit(str_lst, ed_lst_checked, [], (graph_type Void), Void), newenv
-       | _ ->
-         let (s,_) = convert_expr (snd (List.hd n_lst)) env in
+      let is_declared env str = (StringMap.mem str env.env_flocals ||
+                                 StringMap.mem str env.env_fformals ||
+                                 StringMap.mem str env.env_globals) in
+      let get_declared_type env str =
+        let node_type = 
+          if (StringMap.mem str env.env_flocals) then
+            StringMap.find str env.env_flocals
+          else if (StringMap.mem str env.env_fformals) then
+            StringMap.find str env.env_fformals
+          else
+            StringMap.find str env.env_globals
+        in match node_type with Node(t) -> t | _ -> node_type
+      in
+      let declared = List.filter (is_declared env) str_lst in
+      let declared_types = List.map (get_declared_type env) declared in
+      let rec check_consistent types = (match types with
+            [] -> true
+          | [_] -> true
+          | hd :: tl -> (hd = List.hd tl) && (check_consistent tl))
+      in
+      if (not (check_consistent declared_types)) then
+        raise(Failure("all nodes in graph literal must have the same data type"));
+      (match (declared_types, n_lst) with
+         [], [] -> raise(Failure("graph literal must contain at least one previously " ^
+                                 "declared node or at least one initialized node"));
+       | _, [] -> let t = List.hd declared_types in
+         let newenv = List.fold_left (fun x y -> let (_, z) = check_vdecl (Node(t)) y Noexpr true x in z) env str_lst in
+         SGraph_Lit(str_lst, ed_lst_checked, [], (graph_type t), t), newenv
+       | [], _ -> let (s,_) = convert_expr (snd (List.hd n_lst)) env in
          let t = get_sexpr_type s in
          List.iter (fun n -> let (sn,_) = convert_expr (snd n) env in
                      let tn = get_sexpr_type sn in
-                     if tn != t then raise (Failure("node type mismatch of " ^ string_of_typ t ^ " and " ^ string_of_typ tn))) n_lst;
+                     if tn <> t then raise (Failure("node type mismatch of " ^ string_of_typ t ^ " and " ^ string_of_typ tn))) n_lst;
          let newenv = List.fold_left (fun x y -> let (_, z) = check_vdecl (Node(t)) y Noexpr true x in z) env str_lst in
          let nodes = List.map (fun (x,y) -> let (s,_) = convert_expr y newenv in (x,s)) n_lst
          in
-         (SGraph_Lit(str_lst, ed_lst_checked, nodes, (graph_type t), t), newenv))
-
+         (SGraph_Lit(str_lst, ed_lst_checked, nodes, (graph_type t), t), newenv)
+       | _, _ ->
+         let n_lst_types = List.map (fun n -> (get_sexpr_type (fst (convert_expr (snd n) env)))) n_lst in
+         if (check_consistent (declared_types @ n_lst_types)) then
+           let t = List.hd declared_types in
+           let newenv = List.fold_left (fun x y -> let (_, z) = check_vdecl (Node(t)) y Noexpr true x in z) env str_lst in
+           let nodes = List.map (fun (x,y) -> let (s,_) = convert_expr y newenv in (x,s)) n_lst
+           in (SGraph_Lit(str_lst, ed_lst_checked, nodes, (graph_type t), t), newenv)
+         else
+           raise(Failure("all nodes in graph literal must have the same data type"));)
 
 and check_call str e_lst env = 
     (* can't call main *)
@@ -501,7 +536,7 @@ and check_call str e_lst env =
         let sfdecl = StringMap.find str nenv.env_sfmap
         in try
               (* confirm types match *)
-              List.iter2 (fun t1 (t2, _) -> if t1 != t2 then report_typ_args t2 t1 else ()) arg_types sfdecl.sf_formals;
+              List.iter2 (fun t1 (t2, _) -> if t1 <> t2 then report_typ_args t2 t1 else ()) arg_types sfdecl.sf_formals;
               let sexpr_lst, env = convert_expr_list e_lst env in 
                   SCall(str, sexpr_lst, sfdecl.sf_typ), nenv
           with 
@@ -512,7 +547,7 @@ and check_call str e_lst env =
           let sfdecl = StringMap.find str env.env_sfmap in
           try 
               (* confirm types match *)
-              List.iter2 (fun t1 (t2, _) -> if t1 != t2 then report_typ_args t2 t1 else ()) arg_types sfdecl.sf_formals;
+              List.iter2 (fun t1 (t2, _) -> if t1 <> t2 then report_typ_args t2 t1 else ()) arg_types sfdecl.sf_formals;
               let sexpr_lst, env = convert_expr_list e_lst env in 
                   SCall(str, sexpr_lst, sfdecl.sf_typ), env
           with 
@@ -774,13 +809,11 @@ and check_for_edge str e s env =
 
 
 and check_bfs str e1 e2 s env =
-  (*TODO: see what happens if you do bfs w/ source having different type than
-    graph (hopefully nothing )*)
     let graph_type = get_sexpr_type (fst (convert_expr e1 env)) in
     let node_type = match graph_type with
         Wedigraph(dt) | Wegraph(dt) | Graph(dt) | Digraph(dt) -> Node(dt)
       | _ -> raise(Failure("type " ^ string_of_typ graph_type ^
-                           " may not be iterated with bfs")); (* TODO: write a test for this *)
+                           " may not be iterated with bfs"));
     in
     let flocals = StringMap.add str node_type env.env_flocals in
     let new_env = 
@@ -841,13 +874,11 @@ and check_bfs str e1 e2 s env =
 
 
 and check_dfs str e1 e2 s env = 
-  (*TODO: see what happens if you do dfs w/ source having different type than
-    graph (hopefully nothing )*)
-    let graph_type = get_sexpr_type (fst (convert_expr e2 env)) in
+    let graph_type = get_sexpr_type (fst (convert_expr e1 env)) in
     let node_type = match graph_type with
         Wedigraph(dt) | Wegraph(dt) | Graph(dt) | Digraph(dt) -> Node(dt)
       | _ -> raise(Failure("type " ^ string_of_typ graph_type ^
-                           " may not be iterated with bfs")); (* TODO: write a test for this *)
+                           " may not be iterated with dfs"));
     in
     let flocals = StringMap.add str node_type env.env_flocals in
     let new_env = 
@@ -943,7 +974,7 @@ and convert_fdecl fname fformals env =
     in 
 
     let _ = match fdecl.f_typ with 
-      Map(typ) -> if typ == Void then raise(Failure("cannot return map with type void"))
+      Map(typ) -> if typ = Void then raise(Failure("cannot return map with type void"))
       | _ -> ()
     in
 
@@ -1017,7 +1048,7 @@ and check_vdecl t str e from_graph_lit env =
 
     let _ = match t with 
         Void -> raise(Failure("cannot declare " ^ str ^ " as type void"))
-        | Map(typ) -> if typ == Void then raise(Failure("cannot declare variable " ^ str ^ " with type map<void>"))
+        | Map(typ) -> if typ = Void then raise(Failure("cannot declare variable " ^ str ^ " with type map<void>"))
         | _ -> ()
     in
 
@@ -1039,8 +1070,8 @@ and check_vdecl t str e from_graph_lit env =
     in
     let typ = get_sexpr_type se 
     in
-    if typ != Void then
-      (if t != typ then (raise(Failure("expression type mismatch " ^ string_of_typ t ^ " and " ^ string_of_typ typ)))
+    if typ <> Void then
+      (if t <> typ then (raise(Failure("expression type mismatch " ^ string_of_typ t ^ " and " ^ string_of_typ typ)))
       else (SVdecl(t, str, se), nenv))
     else 
        (SVdecl(t, str, se), nenv)
@@ -1076,7 +1107,7 @@ let convert_ast globals fdecls fmap =
 
     let convert_globals m global = 
       match global with
-      (typ, str) -> if (typ != Void) then StringMap.add str typ m
+      (typ, str) -> if (typ <> Void) then StringMap.add str typ m
       else raise(Failure("global " ^ str ^ " cannot have a void type"))
     in
 

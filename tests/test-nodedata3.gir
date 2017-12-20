@@ -1,11 +1,11 @@
-graph foo() {
-	graph g = [A:5 -- B:6];
+graph<int> foo() {
+	graph<int> g = [A:5 -- B:6];
 	return g;
 }
 
 int main() {
 	!~ test if node data still exists after node names go out of scope ~!
-    graph g = foo();
+    graph<int> g = foo();
 	for_node(n : g) {
 		print(n.data());
 	}

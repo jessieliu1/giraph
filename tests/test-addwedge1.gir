@@ -1,5 +1,6 @@
 int main() {
-	wegraph g = [A -{5}- B -{7}- C];
+	node<int> A;
+	wegraph<int> g = [A -{5}- B -{7}- C];
 	g.add_edge(C, A, 9);
 	g.add_edge(A, C, 9); !~ should do nothing ~!
 

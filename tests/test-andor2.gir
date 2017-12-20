@@ -1,6 +1,6 @@
 int main() {
-	graph g = [A];
-	node B;
+	graph<int> g = [A:5];
+	node<int> B;
 	if (g.has_node(A) || g.has_node(B)) {
 		prints("1");
 	}

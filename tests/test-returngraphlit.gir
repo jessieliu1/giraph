@@ -1,4 +1,4 @@
-graph foo() {
+graph<int> foo() {
 	return [A:3 -- B:5 -- C:8];
 }
 

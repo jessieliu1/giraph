@@ -1,6 +1,6 @@
 int main(){
-        node E; 
-        graph g = [ A:2 -- B:4 -- C:2 -- D:4 ];
+        node<int> E; 
+        graph<int> g = [ A:2 -- B:4 -- C:2 -- D:4 ];
         for_node ( n : g){
                 g.add_node(n);
         }

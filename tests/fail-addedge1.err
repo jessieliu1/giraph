@@ -1,1 +1,1 @@
-Fatal error: exception Failure("graph method add_edge may not be called on types node, str")
+Fatal error: exception Failure("graph method add_edge may not be called on graph of type digraph<int> with parameters node<int>, str")

@@ -1,6 +1,6 @@
 int main(){
         int a = 0;
-        graph g = [A:2 -- B:3 -- a];
+        graph<int> g = [A:2 -- B:3 -- a];
 
 
 return 0;

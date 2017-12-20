@@ -1,5 +1,6 @@
 int main() {
-	wedigraph g = [A -{5}-> B -{7}-> C];
+	node<int> A;
+	wedigraph<int> g = [A -{5}-> B -{7}-> C];
 	g.add_edge(C, A, 9);
 
 	for_edge(e : g) {

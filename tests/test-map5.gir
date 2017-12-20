@@ -1,10 +1,10 @@
-graph get_graph(node foo) {
+graph<int> get_graph(node<int> foo) {
 	return [foo:0 -- A:1 -- B:2 -- C:3 -- D:4];
 }
 
 int main() {
-	node foo;
-	map<graph> m;
+	node<int> foo;
+	map<graph<int>> m;
 	m.put(foo, get_graph(foo));
 
 	bfs(n : m.get(foo) ; foo) {

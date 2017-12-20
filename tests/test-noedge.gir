@@ -1,7 +1,7 @@
 int main() {
-	graph g = [A:5 ; B:6 ; C:7];
-	digraph d = [A ; B ; C];
-	wegraph w = [A ; B ; C];
-	wedigraph wd = [A ; B ; C];
+	graph<int> g = [A:5 ; B:6 ; C:7];
+	digraph<int> d = [A ; B ; C];
+	wegraph<int> w = [A ; B ; C];
+	wedigraph<int> wd = [A ; B ; C];
 	return 0;
 }

@@ -1,5 +1,5 @@
 int main() {
-	graph g = [];
+	graph<int> g = [];
 	for_edge(e : g) {
 		print(e.from().data());
 	}

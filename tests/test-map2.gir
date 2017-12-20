@@ -1,6 +1,6 @@
 int main() {
-	graph g = [A:5 -- B:3];
-	node C;
+	graph<int> g = [A:5 -- B:3];
+	node<int> C;
 	map<int> m;
 
 	for_node(n : g) {

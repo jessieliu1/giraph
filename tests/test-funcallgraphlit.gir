@@ -1,11 +1,11 @@
-graph foo(graph g) {
-	node n;
+graph<int> foo(graph<int> g) {
+	node<int> n;
 	n.set_data(6);
 	g.add_node(n);
 	return g;
 }
 
-graph bar(graph g1, graph g2) {
+graph<int> bar(graph<int> g1, graph<int> g2) {
 	for_node(n : g2) {
 		g1.add_node(n);
 	}
@@ -13,7 +13,7 @@ graph bar(graph g1, graph g2) {
 }
 
 int main() {
-	!~ graph g = foo([E:7]); ~!
+	!~ graph<int> g = foo([E:7]); ~!
 	for_node(n : bar(foo([A:5 -- B:3]), [C:7 -- D:8])) {
 		print(n.data());
 	}

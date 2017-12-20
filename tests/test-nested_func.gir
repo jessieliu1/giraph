@@ -8,7 +8,7 @@ int foo()
 }
 
 int main() {
-    wegraph g = [A:5 -{2}- B:3 -{3}- C:1];
+    wegraph<int> g = [A:5 -{2}- B:3 -{3}- C:1];
     for_edge(e : g) {
         e.set_weight(foo());
         print(e.weight());

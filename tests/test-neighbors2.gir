@@ -1,5 +1,5 @@
 int main() {
-	digraph g = [A:1 <-> B:2 ; C:3 -> D:4 ; E:5 <- A <- F:7];
+	digraph<int> g = [A:1 <-> B:2 ; C:3 -> D:4 ; E:5 <- A <- F:7];
 
 	for_node(n : g.neighbors(A)) {
 		print(n.data());

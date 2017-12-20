@@ -1,6 +1,6 @@
 int main() {
-	graph g = [A--B];
-	node n = A;
+	graph<int> g = [A:1--B];
+	node<int> n = A;
 
 	if (A == n) {
 		prints("yay");

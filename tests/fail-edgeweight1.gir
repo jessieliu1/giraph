@@ -1,5 +1,5 @@
 int main() {
-	digraph g = [A:5 -> B:3];
+	digraph<int> g = [A:5 -> B:3];
 	for_edge(e : g) {
 		print(e.weight());
 	}

@@ -1,10 +1,8 @@
 int main() {
-	float f = 1.0;
-	graph g = [A -- B];
+	graph<float> g = [A:1.0 -- B:2.0];
 	map<float> m;
 	for_node(n : g) {
-		m.put(n, f);
-		f = f + 1.0;
+		m.put(n, n.data());
 	}
 
 	!~ i know comparing floats is a no-no but i couldn't get

@@ -1,5 +1,5 @@
 int main() {
-	graph g = [A:5 -- B:3 -- C:1];
+	graph<int> g = [A:5 -- B:3 -- C:1];
 	for_edge(e : g) {
 		print(e.weight());
 	}

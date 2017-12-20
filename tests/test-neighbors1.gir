@@ -1,6 +1,6 @@
 int main() {
-	graph g = [A:1 -- B:2 -- C:3 -- D:4 -- A ; E:5 -- A];
-	graph g2 = g.neighbors(A);
+	graph<int> g = [A:1 -- B:2 -- C:3 -- D:4 -- A ; E:5 -- A];
+	graph<int> g2 = g.neighbors(A);
 
 	for_node(n : g2) {
 		print(n.data());

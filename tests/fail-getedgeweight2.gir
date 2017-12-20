@@ -1,5 +1,5 @@
 int main() {
-    digraph g = [A:5 <- B:6 <-> C:9];
+    digraph<int> g = [A:5 <- B:6 <-> C:9];
     int i = g.get_edge_weight(A, B);
 
 	return 0;

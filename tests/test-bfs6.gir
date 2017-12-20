@@ -1,5 +1,5 @@
 int main() {
-	digraph g = [A:3 -> B:4 -> C:5 -> D:6];
+	digraph<int> g = [A:3 -> B:4 -> C:5 -> D:6];
 	bfs(n : g ; C) {
 		print(n.data());
 	}

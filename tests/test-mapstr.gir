@@ -3,7 +3,7 @@ string get_string() {
 }
 
 int main() {
-	graph g = [A:1 -- B:3 -- C:5];
+	graph<int> g = [A:1 -- B:3 -- C:5];
 	map<string> m;
 	for_node(n : g) {
 		m.put(n, get_string());

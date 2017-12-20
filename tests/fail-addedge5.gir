@@ -1,5 +1,5 @@
 int main() {
-    wedigraph g = [A:5 -{6}-> B:6 <-{7}-> C:9];
+    wedigraph<int> g = [A:5 -{6}-> B:6 <-{7}-> C:9];
     g.add_edge(A, C);
 
 	return 0;

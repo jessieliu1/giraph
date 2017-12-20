@@ -1,16 +1,16 @@
-node makenode(int a){
-   node r;
+node<int> makenode(int a){
+   node<int> r;
    r.set_data(a);
    return r;
 }
 
-digraph makegraph(int a,int b){
-   digraph g = [A:a <-> B:b];
+digraph<int> makegraph(int a,int b){
+   digraph<int> g = [A:a <-> B:b];
    return g;
 }
 
 int main(){
-   node n = makenode(1);
+   node<int> n = makenode(1);
    print(makenode(450).data());
    for_edge(e : makegraph(makenode(39).data(), 5) ){
         print(e.to().data() + n.data());

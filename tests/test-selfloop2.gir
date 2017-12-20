@@ -1,5 +1,5 @@
 int main() {
-	wegraph g = [A:3 -{5}- A];
+	wegraph<int> g = [A:3 -{5}- A];
 	for_node(n : g) {
 		print(n.data());
 	}
@@ -9,7 +9,7 @@ int main() {
 		print(e.weight());
 	}
 
-	wedigraph g2 = [B:4 -{6}-> B];
+	wedigraph<int> g2 = [B:4 -{6}-> B];
 	for_node(n : g2) {
 		print(n.data());
 	}
