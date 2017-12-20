@@ -56,11 +56,11 @@ typ:
   | BOOL { Bool }
   | VOID { Void }
   | STRING { String }
-  | NODE { Node }
-  | GRAPH { Graph }
-  | DIGRAPH { Digraph }
-  | WEGRAPH { Wegraph }
-  | WEDIGRAPH { Wedigraph }
+  | NODE LT typ GT { Node($3) }
+  | GRAPH LT typ GT { Graph($3) }
+  | DIGRAPH LT typ GT { Digraph($3) }
+  | WEGRAPH LT typ GT { Wegraph($3) }
+  | WEDIGRAPH LT typ GT { Wedigraph($3) }
   | MAP LT typ GT { Map($3) }
 
 formals_opt: /* nothing */  { [] }

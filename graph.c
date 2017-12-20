@@ -2,7 +2,17 @@
 #include <string.h>
 #include <stdlib.h>
 
-/* so we can cast void *'s to floats/ints without triggering undefined behavior */
+/* for use with generic graph/node types */
+union data_type {
+	int i;
+	float f;
+	char *s;
+	void *v;
+};
+
+/* so we can cast void *'s to floats/ints in maps without triggering undefined
+   behavior 
+   shoulda done the whole map thing with a union but hindsight is 20/20 */
 union extract_float {
     float vf;
     void *vp;
@@ -36,7 +46,7 @@ struct edge_list_node {
 
 /* A single vertex in a graph. */
 struct vertex_list_node {
-	int *data;
+	void *data;
 	struct adj_list_node *adjacencies;
 	struct vertex_list_node *next;
 };
@@ -115,7 +125,7 @@ int hash(unsigned int in, int size) {
 }
 
 /* if putting into a key already in map, replace value */
-void put(void *map_in, int *key, void *value) {
+void put(void *map_in, void *key, void *value) {
 	struct map_node **map = (struct map_node **) map_in;
 	int size = *((int *) map[0]->value);
 	unsigned int for_hash = (unsigned int) key;
@@ -140,7 +150,7 @@ void put(void *map_in, int *key, void *value) {
 }
 
 /* returns NULL if not found */
-void *get(void *map_in, int *key) {
+void *get(void *map_in, void *key) {
 	struct map_node **map = (struct map_node **) map_in;
 	int size = *((int *) map[0]->value);
 	unsigned int for_hash = (unsigned int) key;
@@ -158,7 +168,7 @@ void *get(void *map_in, int *key) {
 	return NULL;
 }
 
-int contains_key(void *map_in, int *key) {
+int contains_key(void *map_in, void *key) {
 	struct map_node **map = (struct map_node **) map_in;
 	int size = *((int *) map[0]->value);
 	unsigned int for_hash = (unsigned int) key;
@@ -178,21 +188,21 @@ int contains_key(void *map_in, int *key) {
 
 /* The following functions implement put() for the built-in types in giraph. */
 
-void put_int(void *map_in, int *key, int value) {
+void put_int(void *map_in, void *key, int value) {
 	union extract_int ei;
 	ei.vi = value;
 	put(map_in, key, ei.vp);
 }
 
-void put_int_ptr(void *map_in, int *key, int *value) {
+void put_int_ptr(void *map_in, void *key, void *value) {
 	put(map_in, key, (void *) value);
 }
 
-void put_char_ptr(void *map_in, int *key, char *value) {
+void put_char_ptr(void *map_in, void *key, char *value) {
 	put(map_in, key, (void *) value);
 }
 
-void put_float(void *map_in, int *key, float value) {
+void put_float(void *map_in, void *key, float value) {
 	union extract_float ef;
 	ef.vf = value;
 	put(map_in, key, ef.vp);
@@ -200,21 +210,21 @@ void put_float(void *map_in, int *key, float value) {
 
 /* The following functions implement get() for the built-in types in giraph. */
 
-int get_int(void *map_in, int *key) {
+int get_int(void *map_in, void *key) {
 	union extract_int ei;
 	ei.vp = get(map_in, key);
 	return ei.vi;
 }
 
-int *get_int_ptr(void *map_in, int *key) {
+int *get_int_ptr(void *map_in, void *key) {
 	return (int *) get(map_in, key);
 }
 
-char *get_char_ptr(void *map_in, int *key) {
+char *get_char_ptr(void *map_in, void *key) {
 	return (char *) get(map_in, key);
 }
 
-float get_float(void *map_in, int *key) {
+float get_float(void *map_in, void *key) {
 	union extract_float ef;
 	ef.vp = get(map_in, key);
 	return ef.vf;
@@ -228,11 +238,11 @@ float get_float(void *map_in, int *key) {
 
 ////////////////////// EDGE METHODS /////////////////////
 
-int *edge_from(void *e) {
+void *edge_from(void *e) {
 	return ((struct edge_list_node *) e)->from->data;
 }
 
-int *edge_to(void *e) {
+void *edge_to(void *e) {
 	return ((struct edge_list_node *) e)->to->data;
 }
 
@@ -276,14 +286,46 @@ void edge_set_weight(void *e_in, int new_weight) {
 
 ////////////////////// NODE METHODS /////////////////////
 
-/* Change the data stored in a data pointer. */
-void set_data(int *data_ptr, int data_val) {
-	*data_ptr = data_val;
+/* Change the data stored in a node<int> data pointer. */
+void set_data_int(void *data_ptr, int data_val) {
+	((union data_type *) data_ptr)->i = data_val;
 }
 
-/* Get data stored in a data pointer. */
-int get_data(int *data_ptr) {
-	return *data_ptr;
+/* Change the data stored in a node<float> data pointer. */
+void set_data_float(void *data_ptr, float data_val) {
+	((union data_type *) data_ptr)->f = data_val;
+}
+
+/* Change the data stored in a node<string> data pointer. */
+void set_data_char_ptr(void *data_ptr, char *data_val) {
+	((union data_type *) data_ptr)->s = data_val;
+}
+
+/* Change the data stored in a data pointer for all other node types. */
+void set_data_void_ptr(void *data_ptr, void *data_val) {
+	/* *((void **) data_ptr) = data_val; */
+	((union data_type *) data_ptr)->v = data_val;
+}
+
+/* Get data stored in a node<int> data pointer. */
+int get_data_int(void *data_ptr) {
+	return ((union data_type *) data_ptr)->i;
+}
+
+/* Get data stored in a node<float> data pointer. */
+float get_data_float(void *data_ptr) {
+	return ((union data_type *) data_ptr)->f;
+}
+
+/* Get data stored in a node<string> data pointer. */
+char *get_data_char_ptr(void *data_ptr) {
+	return ((union data_type *) data_ptr)->s;
+}
+
+/* Get data stored in a data pointer for all other node types. */
+void *get_data_void_ptr(void *data_ptr) {
+	/* return *((void **) data_ptr); */
+	return ((union data_type *) data_ptr)->v;
 }
 
 //////////////////// END NODE METHODS ///////////////////
@@ -292,7 +334,7 @@ int get_data(int *data_ptr) {
 ////////////////// GRAPH HELPER METHODS /////////////////
 /* Find and return the vertex_list_node associated with a data pointer.
    Returns null if there is none. */
-void *find_vertex(void *g_in, int *data_ptr) {
+void *find_vertex(void *g_in, void *data_ptr) {
 	struct graph *g = (struct graph *) g_in;
 	struct vertex_list_node *vertex = g->head;
 	while (vertex) {
@@ -313,13 +355,13 @@ void *new_graph() {
 }
 
 /* Allocate a new unique data pointer. */
-int *new_data() {
-	return malloc(sizeof(int));
+void *new_data() {
+	return (void *) malloc(sizeof(union data_type));
 }
 
 /* Add a new vertex to the end of the vertex list in a graph, and return a
    pointer to the new vertex. */
-void *add_vertex(void *graph_ptr, int *data_ptr) {
+void *add_vertex(void *graph_ptr, void *data_ptr) {
 	struct vertex_list_node *vertex = malloc(sizeof(struct vertex_list_node));
 	vertex->data = data_ptr;
 	vertex->adjacencies = NULL;
@@ -372,7 +414,7 @@ void add_edge(void *from_ptr, void *to_ptr) {
 /* Given a graph and a data pointer, checks if the graph has a vertex associated
    with the data pointer, and if not, creates one and adds it to the graph.
    Corresponds to add_node method in giraph. */
-void add_vertex_if_not_present(void *g_in, int *data_ptr) {
+void add_vertex_if_not_present(void *g_in, void *data_ptr) {
 	struct graph *g = (struct graph *) g_in;
 	if (find_vertex(g_in, data_ptr) == NULL) {
 		add_vertex(g_in, data_ptr);
@@ -383,7 +425,7 @@ void add_vertex_if_not_present(void *g_in, int *data_ptr) {
    with the data pointer and removes it from the vertex list and all adjacency
    lists. If no such vertex exists, does nothing.
    Corresponds to remove_node method in giraph. */
-void remove_vertex(void *g_in, int *data_ptr) {
+void remove_vertex(void *g_in, void *data_ptr) {
 	struct graph *g = (struct graph *) g_in;
 	struct vertex_list_node *remove = (struct vertex_list_node *) find_vertex(g_in, data_ptr);
 	if (remove == NULL) {
@@ -448,7 +490,7 @@ void remove_vertex(void *g_in, int *data_ptr) {
    vertices corresponding to each data pointer. If either of such vertices
    does not exist, they are created. If the edge already exists, does nothing.
    Corresponds to add_edge method in giraph. */
-void add_wedge_method(void *g_in, int *from_data_ptr, int *to_data_ptr, int w) {
+void add_wedge_method(void *g_in, void *from_data_ptr, void *to_data_ptr, int w) {
 	struct graph *g = (struct graph *) g_in;
 	void *from = find_vertex(g_in, from_data_ptr);
 	if (from == NULL) {
@@ -471,7 +513,7 @@ void add_wedge_method(void *g_in, int *from_data_ptr, int *to_data_ptr, int w) {
 }
 
 /* calls add_wedge_method with default weight of 0 */
-void add_edge_method(void *g_in, int *from_data_ptr, int *to_data_ptr) {
+void add_edge_method(void *g_in, void *from_data_ptr, void *to_data_ptr) {
 	add_wedge_method(g_in, from_data_ptr, to_data_ptr, 0);
 }
 
@@ -479,7 +521,7 @@ void add_edge_method(void *g_in, int *from_data_ptr, int *to_data_ptr) {
    vertices corresponding to each data pointer. If either of such vertices
    does not exist, or if the edge does not exist, does nothing.
    Corresponds to remove_edge method in giraph. */
-void remove_edge(void *g_in, int *from_data_ptr, int *to_data_ptr) {
+void remove_edge(void *g_in, void *from_data_ptr, void *to_data_ptr) {
 	struct graph *g = (struct graph *) g_in;
 	struct vertex_list_node *from = (struct vertex_list_node *) find_vertex(g_in, from_data_ptr);
 	struct vertex_list_node *to = (struct vertex_list_node *) find_vertex(g_in, to_data_ptr);
@@ -516,14 +558,14 @@ void remove_edge(void *g_in, int *from_data_ptr, int *to_data_ptr) {
 
 /* Checks if a graph contains a vertex. Returns 1 if so, 0 otherwise.
    Corresponds to graph.has_node() method in giraph. */
-int has_vertex(void *g_in, int *data_ptr) {
+int has_vertex(void *g_in, void *data_ptr) {
 	return (find_vertex(g_in, data_ptr) != NULL);
 }
 
 /* Checks if a graph contains an edge between two vertices. 
    Returns 1 if so, 0 otherwise.
    Corresponds to graph.has_edge() method in giraph. */
-int has_edge(void *g_in, int *from_data_ptr, int *to_data_ptr) {
+int has_edge(void *g_in, void *from_data_ptr, void *to_data_ptr) {
 	struct graph *g = (struct graph *) g_in;
 	struct vertex_list_node *from = (struct vertex_list_node *) find_vertex(g_in, from_data_ptr);
 	struct vertex_list_node *to = (struct vertex_list_node *) find_vertex(g_in, to_data_ptr);
@@ -676,7 +718,7 @@ void *get_next_vertex(void *v_in) {
 }
 
 /* return the data pointer stored in a vertex */
-int *get_data_from_vertex(void *v_in) {
+void *get_data_from_vertex(void *v_in) {
 	struct vertex_list_node *v = (struct vertex_list_node *) v_in;
 
 	return v->data;
@@ -731,7 +773,7 @@ void *construct_undirected_edge_list(void *g_in) {
 	while (v) {
 		struct adj_list_node *adjacency = v->adjacencies;
 		while (adjacency) {
-			struct adj_list_node *to_adj_list = get(map, (int *) adjacency->vertex);
+			struct adj_list_node *to_adj_list = get(map, (void *) adjacency->vertex);
 			int opposite_edge_exists = 0;
 			while (to_adj_list) {
 				/*  if this v is not in an already edge-ified adj list */

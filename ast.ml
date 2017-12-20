@@ -3,8 +3,16 @@ type binop = Add | Sub | Mult | Div | Mod | Eq | Neq |
 
 type unop = Neg | Not
 
-type typ = Int | Float | Bool | Void | String | Graph | Digraph | Wegraph | Wedigraph |
-           Node | Edge | Wedge | Diwedge | Map of typ
+type typ = Int | Float | Bool | Void | String
+         | Graph of typ
+         | Digraph of typ
+         | Wegraph of typ
+         | Wedigraph of typ
+         | Node of typ
+         | Edge of typ
+         | Wedge of typ
+         | Diwedge of typ
+         | Map of typ
 
 type bind = typ * string
 
@@ -77,14 +85,14 @@ let rec string_of_typ = function
   | Float -> "float"
   | Bool -> "bool"
   | String -> "str"
-  | Node -> "node"
-  | Graph -> "graph"
-  | Digraph -> "digraph"
-  | Wegraph -> "wegraph"
-  | Wedigraph -> "wedigraph"
-  | Edge -> "edge"
-  | Wedge -> "wedge"
-  | Diwedge -> "diwedge"
+  | Node(t) -> "node<" ^ string_of_typ t ^ ">"
+  | Graph(t) -> "graph<" ^ string_of_typ t ^ ">"
+  | Digraph(t) -> "digraph<" ^ string_of_typ t ^ ">"
+  | Wegraph(t) -> "wegraph<" ^ string_of_typ t ^ ">"
+  | Wedigraph(t) -> "wedigraph<" ^ string_of_typ t ^ ">"
+  | Edge(t) -> "edge<" ^ string_of_typ t ^ ">"
+  | Wedge(t) -> "wedge<" ^ string_of_typ t ^ ">"
+  | Diwedge(t) -> "diwedge<" ^ string_of_typ t ^ ">"
   | Map(t) -> "map<" ^ string_of_typ t ^ ">"
   | Void -> "void"
 

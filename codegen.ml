@@ -22,14 +22,14 @@ let translate (globals, functions) =
     | A.Bool -> i1_t
     | A.Float -> float_t
     | A.String -> str_t
-    | A.Node -> i32_ptr_t
-    | A.Graph -> void_ptr_t
-    | A.Digraph -> void_ptr_t
-    | A.Wegraph -> void_ptr_t
-    | A.Wedigraph -> void_ptr_t
-    | A.Edge -> void_ptr_t
-    | A.Wedge -> void_ptr_t
-    | A.Diwedge -> void_ptr_t
+    | A.Node(_) -> void_ptr_t
+    | A.Graph(_) -> void_ptr_t
+    | A.Digraph(_) -> void_ptr_t
+    | A.Wegraph(_) -> void_ptr_t
+    | A.Wedigraph(_) -> void_ptr_t
+    | A.Edge(_) -> void_ptr_t
+    | A.Wedge(_) -> void_ptr_t
+    | A.Diwedge(_) -> void_ptr_t
     | A.Map(_) -> void_ptr_t
     | A.Void -> void_t
     (* TODO: add wedge, handle generics *)
@@ -65,7 +65,7 @@ let translate (globals, functions) =
   let new_graph_t = L.function_type void_ptr_t [||] in
   let new_graph_func = L.declare_function "new_graph" new_graph_t the_module in
 
-  let add_vertex_t = L.function_type void_ptr_t [| void_ptr_t ; i32_ptr_t |] in
+  let add_vertex_t = L.function_type void_ptr_t [| void_ptr_t ; void_ptr_t |] in
   let add_vertex_func = L.declare_function "add_vertex" add_vertex_t the_module in
 
   let add_edge_t = L.function_type void_t [| void_ptr_t ; void_ptr_t |] in
@@ -74,14 +74,32 @@ let translate (globals, functions) =
   let add_wedge_t = L.function_type void_t [| void_ptr_t ; void_ptr_t ; i32_t |] in
   let add_wedge_func = L.declare_function "add_wedge" add_wedge_t the_module in
 
-  let new_data_t = L.function_type i32_ptr_t [||] in
+  let new_data_t = L.function_type void_ptr_t [||] in
   let new_data_func = L.declare_function "new_data" new_data_t the_module in
 
-  let set_data_t = L.function_type void_t [| i32_ptr_t ; i32_t |] in
-  let set_data_func = L.declare_function "set_data" set_data_t the_module in
+  let set_data_int_t = L.function_type void_t [| void_ptr_t ; i32_t |] in
+  let set_data_int_func = L.declare_function "set_data_int" set_data_int_t the_module in
 
-  let get_data_t = L.function_type i32_t [| i32_ptr_t |] in
-  let get_data_func = L.declare_function "get_data" get_data_t the_module in
+  let set_data_float_t = L.function_type void_t [| void_ptr_t ; float_t |] in
+  let set_data_float_func = L.declare_function "set_data_float" set_data_float_t the_module in
+
+  let set_data_char_ptr_t = L.function_type void_t [| void_ptr_t ; str_t |] in
+  let set_data_char_ptr_func = L.declare_function "set_data_char_ptr" set_data_char_ptr_t the_module in
+
+  let set_data_void_ptr_t = L.function_type void_t [| void_ptr_t ; void_ptr_t |] in
+  let set_data_void_ptr_func = L.declare_function "set_data_void_ptr" set_data_void_ptr_t the_module in
+
+  let get_data_int_t = L.function_type i32_t [| void_ptr_t |] in
+  let get_data_int_func = L.declare_function "get_data_int" get_data_int_t the_module in
+
+  let get_data_float_t = L.function_type float_t [| void_ptr_t |] in
+  let get_data_float_func = L.declare_function "get_data_float" get_data_float_t the_module in
+
+  let get_data_char_ptr_t = L.function_type str_t [| void_ptr_t |] in
+  let get_data_char_ptr_func = L.declare_function "get_data_char_ptr" get_data_char_ptr_t the_module in
+
+  let get_data_void_ptr_t = L.function_type void_ptr_t [| void_ptr_t |] in
+  let get_data_void_ptr_func = L.declare_function "get_data_void_ptr" get_data_void_ptr_t the_module in
 
   (* Declare functions that will be called for for_node *)
   let num_vertices_t = L.function_type i32_t [| void_ptr_t |] in
@@ -93,45 +111,45 @@ let translate (globals, functions) =
   let get_next_vertex_t = L.function_type void_ptr_t [| void_ptr_t |] in
   let get_next_vertex_func = L.declare_function "get_next_vertex" get_next_vertex_t the_module in
 
-  let get_data_from_vertex_t = L.function_type i32_ptr_t [| void_ptr_t |] in
+  let get_data_from_vertex_t = L.function_type void_ptr_t [| void_ptr_t |] in
   let get_data_from_vertex_func = L.declare_function "get_data_from_vertex" get_data_from_vertex_t the_module in
 
   (* Declare functions corresponding to graph methods *)
-  let add_vertex_if_not_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t |] in
+  let add_vertex_if_not_t = L.function_type void_t [| void_ptr_t ; void_ptr_t |] in
   let add_vertex_if_not_func = L.declare_function "add_vertex_if_not_present" add_vertex_if_not_t the_module in
 
-  let remove_vertex_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t |] in
+  let remove_vertex_t = L.function_type void_t [| void_ptr_t ; void_ptr_t |] in
   let remove_vertex_func = L.declare_function "remove_vertex" remove_vertex_t the_module in
   
-  let has_vertex_t = L.function_type i32_t [| void_ptr_t ; i32_ptr_t |] in
+  let has_vertex_t = L.function_type i32_t [| void_ptr_t ; void_ptr_t |] in
   let has_vertex_func = L.declare_function "has_vertex" has_vertex_t the_module in
 
-  let add_edge_method_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t |] in
+  let add_edge_method_t = L.function_type void_t [| void_ptr_t ; void_ptr_t ; void_ptr_t |] in
   let add_edge_method_func = L.declare_function "add_edge_method" add_edge_method_t the_module in
 
-  let add_wedge_method_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t ; i32_t |] in
+  let add_wedge_method_t = L.function_type void_t [| void_ptr_t ; void_ptr_t ; void_ptr_t ; i32_t |] in
   let add_wedge_method_func = L.declare_function "add_wedge_method" add_wedge_method_t the_module in
 
-  let remove_edge_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t |] in
+  let remove_edge_t = L.function_type void_t [| void_ptr_t ; void_ptr_t ; void_ptr_t |] in
   let remove_edge_func = L.declare_function "remove_edge" remove_edge_t the_module in
 
-  let has_edge_t = L.function_type i32_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t |] in
+  let has_edge_t = L.function_type i32_t [| void_ptr_t ; void_ptr_t ; void_ptr_t |] in
   let has_edge_func = L.declare_function "has_edge" has_edge_t the_module in
 
-  let graph_neighbors_t = L.function_type void_ptr_t [| void_ptr_t ; i32_ptr_t |] in
+  let graph_neighbors_t = L.function_type void_ptr_t [| void_ptr_t ; void_ptr_t |] in
   let graph_neighbors_func = L.declare_function "graph_neighbors" graph_neighbors_t the_module in
 
-  let get_edge_weight_t = L.function_type i32_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t |] in
+  let get_edge_weight_t = L.function_type i32_t [| void_ptr_t ; void_ptr_t ; void_ptr_t |] in
   let get_edge_weight_func = L.declare_function "graph_get_edge_weight" get_edge_weight_t the_module in
 
-  let set_edge_weight_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t ; i32_t |] in
+  let set_edge_weight_t = L.function_type void_t [| void_ptr_t ; void_ptr_t ; void_ptr_t ; i32_t |] in
   let set_edge_weight_func = L.declare_function "graph_set_edge_weight" set_edge_weight_t the_module in
 
-  let set_undirected_edge_weight_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t ; i32_t |] in
+  let set_undirected_edge_weight_t = L.function_type void_t [| void_ptr_t ; void_ptr_t ; void_ptr_t ; i32_t |] in
   let set_undirected_edge_weight_func = L.declare_function "graph_set_undirected_edge_weight" set_undirected_edge_weight_t the_module in
   
   (* Declare functions that will be called for bfs and dfs on graphs*)
-  let find_vertex_t = L.function_type void_ptr_t [| void_ptr_t ; i32_ptr_t |] in
+  let find_vertex_t = L.function_type void_ptr_t [| void_ptr_t ; void_ptr_t |] in
   let find_vertex_func = L.declare_function "find_vertex" find_vertex_t the_module in
 
   let get_visited_array_t = L.function_type void_ptr_t [| void_ptr_t |] in
@@ -156,10 +174,10 @@ let translate (globals, functions) =
   let dfs_done_func = L.declare_function "dfs_done" dfs_done_t the_module in
 
   (* Declare functions that will be used for edge creation and for_edge *)
-  let edge_from_t = L.function_type i32_ptr_t [| void_ptr_t |] in
+  let edge_from_t = L.function_type void_ptr_t [| void_ptr_t |] in
   let edge_from_func = L.declare_function "edge_from" edge_from_t the_module in
 
-  let edge_to_t = L.function_type i32_ptr_t [| void_ptr_t |] in
+  let edge_to_t = L.function_type void_ptr_t [| void_ptr_t |] in
   let edge_to_func = L.declare_function "edge_to" edge_to_t the_module in
 
   let edge_weight_t = L.function_type i32_t [| void_ptr_t |] in
@@ -187,39 +205,39 @@ let translate (globals, functions) =
   let make_map_t = L.function_type void_ptr_t [||] in
   let make_map_func = L.declare_function "make_map" make_map_t the_module in
 
-  let map_contains_t = L.function_type i32_t [| void_ptr_t ; i32_ptr_t |] in
+  let map_contains_t = L.function_type i32_t [| void_ptr_t ; void_ptr_t |] in
   let map_contains_func = L.declare_function "contains_key" map_contains_t the_module in
 
-  let map_put_void_ptr_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; void_ptr_t |] in
+  let map_put_void_ptr_t = L.function_type void_t [| void_ptr_t ; void_ptr_t ; void_ptr_t |] in
   let map_put_void_ptr_func = L.declare_function "put" map_put_void_ptr_t the_module in
 
-  let map_put_int_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_t |] in
+  let map_put_int_t = L.function_type void_t [| void_ptr_t ; void_ptr_t ; i32_t |] in
   let map_put_int_func = L.declare_function "put_int" map_put_int_t the_module in
 
   (* TODO: remove when nodes become generic *)
-  let map_put_int_ptr_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; i32_ptr_t |] in
-  let map_put_int_ptr_func = L.declare_function "put_int_ptr" map_put_int_ptr_t the_module in
+  (*let map_put_int_ptr_t = L.function_type void_t [| void_ptr_t ; void_ptr_t ; i32_ptr_t |] in
+  let map_put_int_ptr_func = L.declare_function "put_int_ptr" map_put_int_ptr_t the_module in*)
 
-  let map_put_char_ptr_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; str_t |] in
+  let map_put_char_ptr_t = L.function_type void_t [| void_ptr_t ; void_ptr_t ; str_t |] in
   let map_put_char_ptr_func = L.declare_function "put_char_ptr" map_put_char_ptr_t the_module in
 
-  let map_put_float_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; float_t |] in
+  let map_put_float_t = L.function_type void_t [| void_ptr_t ; void_ptr_t ; float_t |] in
   let map_put_float_func = L.declare_function "put_float" map_put_float_t the_module in
 
-  let map_get_void_ptr_t = L.function_type void_ptr_t [| void_ptr_t ; i32_ptr_t |] in
+  let map_get_void_ptr_t = L.function_type void_ptr_t [| void_ptr_t ; void_ptr_t |] in
   let map_get_void_ptr_func = L.declare_function "get" map_get_void_ptr_t the_module in
 
-  let map_get_int_t = L.function_type i32_t [| void_ptr_t ; i32_ptr_t |] in
+  let map_get_int_t = L.function_type i32_t [| void_ptr_t ; void_ptr_t |] in
   let map_get_int_func = L.declare_function "get_int" map_get_int_t the_module in
 
   (* TODO: remove when nodes become generic *)
-  let map_get_int_ptr_t = L.function_type i32_ptr_t [| void_ptr_t ; i32_ptr_t |] in
-  let map_get_int_ptr_func = L.declare_function "get_int_ptr" map_get_int_ptr_t the_module in
+  (*let map_get_int_ptr_t = L.function_type i32_ptr_t [| void_ptr_t ; void_ptr_t |] in
+  let map_get_int_ptr_func = L.declare_function "get_int_ptr" map_get_int_ptr_t the_module in*)
 
-  let map_get_char_ptr_t = L.function_type str_t [| void_ptr_t ; i32_ptr_t |] in
+  let map_get_char_ptr_t = L.function_type str_t [| void_ptr_t ; void_ptr_t |] in
   let map_get_char_ptr_func = L.declare_function "get_char_ptr" map_get_char_ptr_t the_module in
 
-  let map_get_float_t = L.function_type float_t [| void_ptr_t ; i32_ptr_t |] in
+  let map_get_float_t = L.function_type float_t [| void_ptr_t ; void_ptr_t |] in
   let map_get_float_func = L.declare_function "get_float" map_get_float_t the_module in
 
   let print_graph_t = L.function_type void_t [| void_ptr_t |] in
@@ -268,12 +286,12 @@ let translate (globals, functions) =
          whenever we encounter a graph literal, we have to construct all the new nodes
          it uses as local variables. The following function handles this. *)
       let rec add_nodes_from_graph_lits m expr = match expr with
-          S.SGraph_Lit(nodes, edges, _, _, _) -> (* TODO: use the last field w/ generics*)
+          S.SGraph_Lit(nodes, edges, _, _, _) ->
           let add_node m node =
             if (StringMap.mem node m) then
               m
             else
-              let local_node_var = L.build_alloca (ltype_of_typ A.Node) node builder in
+              let local_node_var = L.build_alloca (ltype_of_typ (A.Node(A.Int))) node builder in
               let new_data_ptr = L.build_call new_data_func [||] "tmp_data" builder in
               ignore(L.build_store new_data_ptr local_node_var builder);
               StringMap.add node local_node_var m
@@ -303,7 +321,7 @@ let translate (globals, functions) =
              we need to call new_data() from C to get a unique data pointer and store it in
              the allocated register *)
           (match t with
-             A.Node -> if e == S.SNoexpr then
+             A.Node(_) -> if e == S.SNoexpr then
                let new_data_ptr = L.build_call new_data_func [||] "tmp_data" builder in
                ignore(L.build_store new_data_ptr local_var builder);
              else ()
@@ -397,11 +415,21 @@ let translate (globals, functions) =
         and add_wedge n1 n2 w =
           L.build_call add_wedge_func [| (StringMap.find n1 nodes_map) ; (StringMap.find n2 nodes_map) ; (expr vars builder w) |] "" builder
         in ignore(match graph_subtyp with
-              A.Wegraph | A.Wedigraph -> List.map (fun (n1, n2, w) -> add_wedge n1 n2 w) edges
+              A.Wegraph(_) | A.Wedigraph(_) -> List.map (fun (n1, n2, w) -> add_wedge n1 n2 w) edges
             | _ (* unweighted graphs *) -> List.map (fun (n1, n2, _) -> add_edge n1 n2) edges);
         (* initialize nodes with data *)
-        let set_data (node, data) = L.build_call set_data_func [| (get_data_ptr node) ; (expr vars builder data) |] "" builder in
-        ignore(List.map set_data nodes_init);
+        let data_type = (match graph_subtyp with A.Graph(t) | A.Digraph(t) | A.Wegraph(t) | A.Wedigraph(t) -> t
+                                               | _ -> A.Void) in
+        let set_data type_func (node, data)  =
+          L.build_call type_func [| (get_data_ptr node) ; (expr vars builder data) |] "" builder in
+        let set_all_data = (match data_type with
+              A.Int -> List.map (set_data set_data_int_func) nodes_init
+            (* TODO: implement bools*)
+            | A.Float -> List.map (set_data set_data_float_func) nodes_init
+            | A.String -> List.map (set_data set_data_char_ptr_func) nodes_init
+            | _ -> List.map (set_data set_data_void_ptr_func) nodes_init)
+        in
+        if (data_type <> A.Void) then ignore(set_all_data);
         (* return pointer to graph struct *)
         g
       | S.SCall ("print", [e], _) | S.SCall ("printb", [e], _) ->
@@ -425,9 +453,23 @@ let translate (globals, functions) =
       (* node methods *)
       | S.SMethod (node_expr, "data", [], _) ->
         let data_ptr = expr vars builder node_expr in
+        let data_type = (match (get_sexpr_type node_expr) with A.Node(t) -> t) in
+        let get_data_func = (match data_type with
+              A.Int -> get_data_int_func
+            (* TODO: implement bools*)
+            | A.Float -> get_data_float_func
+            | A.String -> get_data_char_ptr_func
+            | _ -> get_data_void_ptr_func) in
         L.build_call get_data_func [| data_ptr |] "tmp_data" builder
       | S.SMethod (node_expr, "set_data", [data], _) ->
         let data_ptr = expr vars builder node_expr in
+        let data_type = (match (get_sexpr_type node_expr) with A.Node(t) -> t) in
+        let set_data_func = (match data_type with
+              A.Int -> set_data_int_func
+            (* TODO: implement bools*)
+            | A.Float -> set_data_float_func
+            | A.String -> set_data_char_ptr_func
+            | _ -> set_data_void_ptr_func) in
         L.build_call set_data_func [| data_ptr ; (expr vars builder data) |] "" builder
 
       (* edge methods *)
@@ -443,7 +485,7 @@ let translate (globals, functions) =
       | S.SMethod (edge_expr, "set_weight", [data], _) ->
         let data_ptr = expr vars builder edge_expr in
         let edge_type = get_sexpr_type edge_expr in
-        let which_func = match edge_type with Diwedge -> edge_set_weight_func
+        let which_func = match edge_type with Diwedge(_) -> edge_set_weight_func
                                             | _ -> undirected_edge_set_weight_func in
         L.build_call which_func [| data_ptr ; (expr vars builder data) |] "" builder
 
@@ -468,7 +510,7 @@ let translate (globals, functions) =
         (* if is an undirected graph, add reverse edge as well *)
         let graph_type = get_sexpr_type graph_expr in
         (match graph_type with
-           A.Graph ->
+           A.Graph(_) ->
            ignore(L.build_call add_edge_method_func [| graph_ptr ; to_data_ptr ; from_data_ptr |] "" builder)
          | _ -> ());
         L.build_call add_edge_method_func [| graph_ptr ; from_data_ptr ; to_data_ptr |] "" builder
@@ -480,7 +522,7 @@ let translate (globals, functions) =
         (* if is an undirected graph, add reverse edge as well *)
         let graph_type = get_sexpr_type graph_expr in
         (match graph_type with
-           A.Wegraph ->
+           A.Wegraph(_) ->
            ignore(L.build_call add_wedge_method_func [| graph_ptr ; to_data_ptr ; from_data_ptr ; weight |] "" builder)
          | _ -> ());
         L.build_call add_wedge_method_func [| graph_ptr ; from_data_ptr ; to_data_ptr ; weight |] "" builder
@@ -491,7 +533,7 @@ let translate (globals, functions) =
         (* if this is an undirected graph, remove reverse edge as well *)
         let graph_type = get_sexpr_type graph_expr in
         (match graph_type with
-           A.Graph | A.Wegraph ->
+           A.Graph(_) | A.Wegraph(_) ->
            ignore(L.build_call remove_edge_func [| graph_ptr ; to_data_ptr ; from_data_ptr |] "" builder)
          | _ -> ());
         L.build_call remove_edge_func [| graph_ptr ; from_data_ptr ; to_data_ptr |] "" builder
@@ -517,7 +559,7 @@ let translate (globals, functions) =
         and weight = expr vars builder weight_expr in
         let graph_type = get_sexpr_type graph_expr in
         let which_func = (match graph_type with
-              A.Wegraph -> set_undirected_edge_weight_func
+              A.Wegraph(_) -> set_undirected_edge_weight_func
             | _ -> set_edge_weight_func) in
         L.build_call which_func [| graph_ptr ; from_data_ptr ; to_data_ptr ; weight |] "" builder
 
@@ -527,10 +569,9 @@ let translate (globals, functions) =
         and node_ptr = expr vars builder node_expr
         and value = expr vars builder value_expr in
         let map_type = get_sexpr_type map_expr in
-        let value_type = (match map_type with Map(t) -> t | _ -> A.Graph (* never happens *)) in
+        let value_type = (match map_type with Map(t) -> t | _ -> A.Int (* never happens *)) in
         let which_func = (match value_type with
               A.Int -> map_put_int_func
-            | A.Node -> map_put_int_ptr_func
             | A.String -> map_put_char_ptr_func
             | A.Bool -> map_put_int_func
             | A.Float -> map_put_float_func
@@ -545,10 +586,9 @@ let translate (globals, functions) =
         let map_ptr = expr vars builder map_expr
         and node_ptr = expr vars builder node_expr in
         let map_type = get_sexpr_type map_expr in
-        let value_type = (match map_type with Map(t) -> t | _ -> A.Graph) in
+        let value_type = (match map_type with Map(t) -> t | _ -> A.Int) in
         let which_func = (match value_type with
               A.Int -> map_get_int_func
-            | A.Node -> map_get_int_ptr_func
             | A.String -> map_get_char_ptr_func
             | A.Bool -> map_get_int_func
             | A.Float -> map_get_float_func
@@ -627,7 +667,7 @@ let translate (globals, functions) =
         (* get number of nodes in graph *)
         let size = L.build_call num_vertices_func [| graph_ptr |] "size" builder in
         (* allocate register for n; then, add to symbol table, so the body can access it *)
-        let node_var = L.build_alloca (ltype_of_typ A.Node) n builder in
+        let node_var = L.build_alloca (ltype_of_typ (A.Node(A.Int))) n builder in
         let vars = StringMap.add n node_var vars in
 
         (* allocate pointer to current vertex struct *)
@@ -674,7 +714,7 @@ let translate (globals, functions) =
         ignore(L.build_store (L.const_int i32_t 0) counter builder);
 
         (* allocate register for e; then, add to symbol table, so the body can access it *)
-        let edge_var = L.build_alloca (ltype_of_typ A.Edge) e builder in
+        let edge_var = L.build_alloca (ltype_of_typ (A.Edge(A.Int))) e builder in
         let vars = StringMap.add e edge_var vars in
 
         (* allocate pointer to current edge struct *)
@@ -682,7 +722,7 @@ let translate (globals, functions) =
         (* construct edge list and get head *)
         let graph_type = get_sexpr_type g in
         let construct_func = (match graph_type with
-              A.Digraph | A.Wedigraph -> construct_edge_list_func
+              A.Digraph(_) | A.Wedigraph(_) -> construct_edge_list_func
             | _ -> construct_undirected_edge_list_func) in
         let head_edge = L.build_call construct_func [| graph_ptr |] "head" builder in
         ignore(L.build_store head_edge current_edge_ptr builder);
@@ -725,7 +765,7 @@ let translate (globals, functions) =
         let root_ptr = (expr vars builder r) in
 
         (* allocate register for n; then, add to symbol table, so the body can access it *)
-        let node_var = L.build_alloca (ltype_of_typ A.Node) n builder in
+        let node_var = L.build_alloca (ltype_of_typ (A.Node(A.Int))) n builder in
         (* add the node data pointer to symbol table, so the body can access it *)
         let vars = StringMap.add n node_var vars in
         (* allocate pointer to current vertex struct *)
@@ -773,7 +813,7 @@ let translate (globals, functions) =
         let root_ptr = (expr vars builder r) in
 
         (* allocate register for n; then, add to symbol table, so the body can access it *)
-        let node_var = L.build_alloca (ltype_of_typ A.Node) n builder in
+        let node_var = L.build_alloca (ltype_of_typ (A.Node(A.Int))) n builder in
         (* add the node data pointer to symbol table, so the body can access it *)
         let vars = StringMap.add n node_var vars in
         (* allocate pointer to current vertex struct *)
