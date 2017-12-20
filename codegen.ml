@@ -147,6 +147,24 @@ let translate (globals, functions) =
 
   let set_undirected_edge_weight_t = L.function_type void_t [| void_ptr_t ; void_ptr_t ; void_ptr_t ; i32_t |] in
   let set_undirected_edge_weight_func = L.declare_function "graph_set_undirected_edge_weight" set_undirected_edge_weight_t the_module in
+
+  let print_int_t = L.function_type void_t [| void_ptr_t |] in
+  let print_int_func = L.declare_function "print_int" print_int_t the_module in
+
+  let print_float_t = L.function_type void_t [| void_ptr_t |] in
+  let print_float_func = L.declare_function "print_float" print_float_t the_module in
+
+  let print_char_ptr_t = L.function_type void_t [| void_ptr_t |] in
+  let print_char_ptr_func = L.declare_function "print_char_ptr" print_char_ptr_t the_module in
+
+  let print_unweighted_int_t = L.function_type void_t [| void_ptr_t |] in
+  let print_unweighted_int_func = L.declare_function "print_unweighted_int" print_unweighted_int_t the_module in
+
+  let print_unweighted_float_t = L.function_type void_t [| void_ptr_t |] in
+  let print_unweighted_float_func = L.declare_function "print_unweighted_float" print_unweighted_float_t the_module in
+
+  let print_unweighted_char_ptr_t = L.function_type void_t [| void_ptr_t |] in
+  let print_unweighted_char_ptr_func = L.declare_function "print_unweighted_char_ptr" print_unweighted_char_ptr_t the_module in
   
   (* Declare functions that will be called for bfs and dfs on graphs*)
   let find_vertex_t = L.function_type void_ptr_t [| void_ptr_t ; void_ptr_t |] in
@@ -239,9 +257,6 @@ let translate (globals, functions) =
 
   let map_get_float_t = L.function_type float_t [| void_ptr_t ; void_ptr_t |] in
   let map_get_float_func = L.declare_function "get_float" map_get_float_t the_module in
-
-  let print_graph_t = L.function_type void_t [| void_ptr_t |] in
-  let print_graph_func = L.declare_function "print_data" print_graph_t the_module in
 
 
 
@@ -487,7 +502,18 @@ let translate (globals, functions) =
       (* graph methods *)
       | S.SMethod (graph_expr, "print", [], _) ->
         let graph_ptr = expr vars builder graph_expr in
-        L.build_call print_graph_func [| graph_ptr |] "" builder
+        let graph_type = get_sexpr_type graph_expr in
+        let print_func = (match graph_type with
+              A.Graph(A.Int) | A.Digraph(A.Int)
+            | A.Graph(A.Bool) | A.Digraph(A.Bool) -> print_unweighted_int_func
+            | A.Wegraph(A.Int) | A.Wedigraph(A.Int)
+            | A.Wegraph(A.Bool) | A.Wedigraph(A.Bool) -> print_int_func
+            | A.Graph(A.Float) | A.Digraph(A.Float) -> print_unweighted_float_func
+            | A.Wegraph(A.Float) | A.Wedigraph(A.Float) -> print_float_func
+            | A.Graph(A.String) | A.Digraph(A.String) -> print_unweighted_char_ptr_func
+            | A.Wegraph(A.String) | A.Wedigraph(A.String) -> print_char_ptr_func
+          ) in
+        L.build_call print_func [| graph_ptr |] "" builder
       | S.SMethod (graph_expr, "add_node", [node_expr], _) ->
         let graph_ptr = expr vars builder graph_expr
         and data_ptr = expr vars builder node_expr in

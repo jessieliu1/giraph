@@ -248,7 +248,9 @@ and check_graphmtd g name args e_lst ret_typ env =
 
     let sexpr,env =  
       match args with
-      0 -> (SMethod(id, name, [], ret_typ)), env (* nothing to check for print other than that it's a graph *)
+      0 (* print *) -> (match data_type with
+          | Int | Float | Bool | String -> (SMethod(id, name, [], ret_typ)), env
+          | _ -> raise(Failure("print cannot be called on graphs with generic data types")))
     | 1 -> (
           let e1 = (List.hd e_lst) in
           let (ex,nenv) = convert_expr e1 env in

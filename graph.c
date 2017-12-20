@@ -1042,15 +1042,52 @@ int dfs_done(void *curr_v) {
 
 ////////////////////// END BFS and DFS //////////////////////
 
+//////////////////////// PRINT ///////////////////////
 
-//////////////////////// TESTING ////////////////////////
+void print_int(void *graph_ptr) {
+	struct graph *g = (struct graph *) graph_ptr;
+	struct vertex_list_node *vertex = g->head;
+	while (vertex) {
+		printf("vertex: %d\n", ((union data_type *) vertex->data)->i);
+		printf("adjacencies: ");
+		struct adj_list_node *adjacency = vertex->adjacencies;
+		while (adjacency) {
+			printf("(%d, weight: %d) ",
+				   ((union data_type *) adjacency->vertex->data)->i,
+				   adjacency->weight);
+			adjacency = adjacency->next;
+		}
+		printf("\n");
+		vertex = vertex->next;
+	}
+	printf("\n");
+}
 
-void print_data(void *graph_ptr) {
+void print_float(void *graph_ptr) {
+	struct graph *g = (struct graph *) graph_ptr;
+	struct vertex_list_node *vertex = g->head;
+	while (vertex) {
+		printf("vertex: %f\n", ((union data_type *) vertex->data)->f);
+		printf("adjacencies: ");
+		struct adj_list_node *adjacency = vertex->adjacencies;
+		while (adjacency) {
+			printf("(%f, weight: %d) ",
+				   ((union data_type *) adjacency->vertex->data)->f,
+				   adjacency->weight);
+			adjacency = adjacency->next;
+		}
+		printf("\n");
+		vertex = vertex->next;
+	}
+	printf("\n");
+}
+
+void print_char_ptr(void *graph_ptr) {
 	struct graph *g = (struct graph *) graph_ptr;
 	struct vertex_list_node *vertex = g->head;
 	while (vertex) {
 		printf("vertex: %s\n", ((union data_type *) vertex->data)->s);
-		printf("adjacencies:");
+		printf("adjacencies: ");
 		struct adj_list_node *adjacency = vertex->adjacencies;
 		while (adjacency) {
 			printf("(%s, weight: %d) ",
@@ -1064,6 +1101,59 @@ void print_data(void *graph_ptr) {
 	printf("\n");
 }
 
+void print_unweighted_int(void *graph_ptr) {
+	struct graph *g = (struct graph *) graph_ptr;
+	struct vertex_list_node *vertex = g->head;
+	while (vertex) {
+		printf("vertex: %d\n", ((union data_type *) vertex->data)->i);
+		printf("adjacencies: ");
+		struct adj_list_node *adjacency = vertex->adjacencies;
+		while (adjacency) {
+			printf("%d ", ((union data_type *) adjacency->vertex->data)->i);
+			adjacency = adjacency->next;
+		}
+		printf("\n");
+		vertex = vertex->next;
+	}
+	printf("\n");
+}
+
+void print_unweighted_float(void *graph_ptr) {
+	struct graph *g = (struct graph *) graph_ptr;
+	struct vertex_list_node *vertex = g->head;
+	while (vertex) {
+		printf("vertex: %f\n", ((union data_type *) vertex->data)->f);
+		printf("adjacencies: ");
+		struct adj_list_node *adjacency = vertex->adjacencies;
+		while (adjacency) {
+			printf("%f ", ((union data_type *) adjacency->vertex->data)->f);
+			adjacency = adjacency->next;
+		}
+		printf("\n");
+		vertex = vertex->next;
+	}
+	printf("\n");
+}
+
+void print_unweighted_char_ptr(void *graph_ptr) {
+	struct graph *g = (struct graph *) graph_ptr;
+	struct vertex_list_node *vertex = g->head;
+	while (vertex) {
+		printf("vertex: %s\n", ((union data_type *) vertex->data)->s);
+		printf("adjacencies: ");
+		struct adj_list_node *adjacency = vertex->adjacencies;
+		while (adjacency) {
+			printf("%s ", ((union data_type *) adjacency->vertex->data)->s);
+			adjacency = adjacency->next;
+		}
+		printf("\n");
+		vertex = vertex->next;
+	}
+	printf("\n");
+}
+
+
+//////////////////////// TESTING ////////////////////////
 
 /*void print_graph(void *graph_ptr) {
 	struct graph *g = (struct graph *) graph_ptr;
