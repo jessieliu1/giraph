@@ -27,6 +27,7 @@ let rec convert_expr e env = match e with
   | Method (e, "set_weight", e_lst)   -> (check_edgemtd e "set_weight" e_lst env)
   | Method(e, "data", e_lst)     -> (check_data e e_lst env)
   | Method (e, "set_data", e_lst) -> (check_sdata e e_lst env)
+  | Method (e, "print", e_lst) -> (check_graphmtd e "print" 0 e_lst Void env)
   | Method (e, "add_node", e_lst) -> (check_graphmtd e "add_node" 1 e_lst Void env)
   | Method (e, "remove_node", e_lst) -> (check_graphmtd e "remove_node" 1 e_lst Void env)
   | Method (e, "has_node", e_lst) -> (check_graphmtd e "has_node" 1 e_lst Bool env)
@@ -246,8 +247,9 @@ and check_graphmtd g name args e_lst ret_typ env =
     if (len != args) then raise(Failure( name ^ " takes " ^ string_of_int args ^ " arguments but " ^ string_of_int len ^ " arguments given"));
 
     let sexpr,env =  
-      match args with 
-        1 -> (
+      match args with
+      0 -> (SMethod(id, name, [], ret_typ)), env (* nothing to check for print other than that it's a graph *)
+    | 1 -> (
           let e1 = (List.hd e_lst) in
           let (ex,nenv) = convert_expr e1 env in
           let t1 = get_sexpr_type ex in

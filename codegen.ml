@@ -438,11 +438,6 @@ let translate (globals, functions) =
       | S.SCall ("prints", [e], _) ->
         L.build_call printf_func [| string_format_str ; (expr vars builder e) |]
           "prints" builder
-      | S.SCall ("printg", [e], _)
-      | S.SCall ("printg_d", [e], _)
-      | S.SCall ("printg_w", [e], _)
-      | S.SCall ("printg_wd", [e], _) ->
-        L.build_call print_graph_func [| (expr vars builder e) |] "" builder
       | S.SCall (f, act, _) ->
         let (fdef, fdecl) = StringMap.find f function_decls in
         let actuals = List.rev (List.map (expr vars builder) (List.rev act)) in
@@ -490,6 +485,9 @@ let translate (globals, functions) =
         L.build_call which_func [| data_ptr ; (expr vars builder data) |] "" builder
 
       (* graph methods *)
+      | S.SMethod (graph_expr, "print", [], _) ->
+        let graph_ptr = expr vars builder graph_expr in
+        L.build_call print_graph_func [| graph_ptr |] "" builder
       | S.SMethod (graph_expr, "add_node", [node_expr], _) ->
         let graph_ptr = expr vars builder graph_expr
         and data_ptr = expr vars builder node_expr in

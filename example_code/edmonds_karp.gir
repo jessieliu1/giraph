@@ -78,11 +78,11 @@ int main() {
 	wedigraph<string> network = [s:"s" -{20}-> u:"u" -{10}-> t:"t" <-{20}- v:"v" <-{10}- s ;
 	                             u -{30}-> v];
 	prints("network");
-	printg_wd(network);
+	network.print();
 
 	wedigraph<string> max_flow = edmonds_karp(network, s, t);
 	prints("max flow");
-	printg_wd(max_flow);
+	max_flow.print();
 
 	return 0;
 }
