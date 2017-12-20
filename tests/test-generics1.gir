@@ -1,0 +1,28 @@
+int main() {
+	graph<int> g = [A:3 -- B:4];
+	for_node(n : g) {
+		print(n.data());
+	}
+
+	graph<string> g2 = [C:"hey" -- D:"you"];
+	for_node(n : g2) {
+		print(n.data());
+	}
+
+	graph<float> g3 = [E:1.0 -- F:2.0];
+	for_node(n : g3) {
+		if (n.data() == 1.0) {
+			prints("E");
+		} else if (n.data() == 2.0) {
+			prints("F");
+		}
+	}
+
+	graph<graph<string>> g4 = [G:g2];
+	for_node(ng : g4) {
+		for_node(n : ng.data()) {
+			prints(n.data());
+		}
+	}
+	return 0;
+}

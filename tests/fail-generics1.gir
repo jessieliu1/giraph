@@ -1,0 +1,5 @@
+int main() {
+	node<int> n;
+	graph<string> g = [n];
+	return 0;
+}

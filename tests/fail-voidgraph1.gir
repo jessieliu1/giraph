@@ -1,0 +1,4 @@
+int main() {
+    graph<void> m;
+    return 0;
+}

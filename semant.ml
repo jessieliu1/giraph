@@ -968,17 +968,18 @@ and convert_fdecl fname fformals env =
     let formals_to_map m formal = 
       match formal with
           (t, str) -> match t with 
-                          Void -> raise(Failure("cannot declare " ^ str ^ " as type void")) 
-                         | Map(typ) -> (match typ with
-                                          Void -> raise(Failure("cannot have formal with type map<void>")))
-                         | _ -> StringMap.add str t m
+            Void -> raise(Failure("cannot declare " ^ str ^ " as type void")) 
+          | Map(Void) | Graph(Void) | Digraph(Void) | Wegraph(Void) | Wedigraph(Void) ->
+            raise(Failure("cannot have formal with type " ^ string_of_typ t))
+          | _ -> StringMap.add str t m
     in
 
     let formals = List.fold_left formals_to_map StringMap.empty fformals 
     in 
 
     let _ = match fdecl.f_typ with 
-      Map(typ) -> if typ = Void then raise(Failure("cannot return map with type void"))
+        Map(Void) | Graph(Void)  | Digraph(Void) | Wegraph(Void) | Wedigraph(Void) ->
+        raise(Failure("cannot return " ^ string_of_typ fdecl.f_typ))
       | _ -> ()
     in
 
@@ -1052,8 +1053,9 @@ and check_vdecl t str e from_graph_lit env =
 
     let _ = match t with 
         Void -> raise(Failure("cannot declare " ^ str ^ " as type void"))
-        | Map(typ) -> if typ = Void then raise(Failure("cannot declare variable " ^ str ^ " with type map<void>"))
-        | _ -> ()
+      | Map(Void) | Graph(Void) | Digraph(Void) | Wegraph(Void) | Wedigraph(Void) ->
+        raise(Failure("cannot declare variable " ^ str ^ " with type " ^ string_of_typ t))
+      | _ -> ()
     in
 
     let flocals = StringMap.add str t env.env_flocals in

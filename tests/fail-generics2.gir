@@ -1,0 +1,7 @@
+int main() {
+	graph<string> g = [a:"a" -- b:"b"];
+	node<int> n;
+	n.set_data(3);
+	g.add_node(n);
+	return 0;
+}

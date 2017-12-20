@@ -1,0 +1,1 @@
+Fatal error: exception Failure("graph method add_node may not be called on graph of type graph<str> with parameter node<int>")

@@ -1,0 +1,9 @@
+int main() {
+    foo(5);
+    return 0;
+}
+
+int foo(graph<void> m)
+{
+    return m;
+}

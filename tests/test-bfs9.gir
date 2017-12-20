@@ -1,0 +1,8 @@
+int main() {
+	graph<string> g = [A:"a"];
+	node<int> B;
+	bfs(n : g ; B) {
+		prints(n.data());
+	}
+	return 0;
+}

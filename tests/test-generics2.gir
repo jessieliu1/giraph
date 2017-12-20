@@ -1,0 +1,19 @@
+int main() {
+	wedigraph<string> g = [A:"hey" -{5}-> B:"you"];
+	graph<string> g2 = [C:"its" -- D:"me"];
+	for_edge(e : g2) {
+		g.add_edge(e.from(), e.to(), 0);
+		g.add_edge(e.to(), e.from(), 1);
+	}
+	g.set_edge_weight(C, D, g.get_edge_weight(C, D) * 100);
+	g.set_edge_weight(D, C, g.get_edge_weight(D, C) * 100);
+	for_node(n : g) {
+		prints(n.data());
+	}
+	for_edge(e : g) {
+		prints(e.from().data());
+		prints(e.to().data());
+		print(e.weight());
+	}
+	return 0;
+}
