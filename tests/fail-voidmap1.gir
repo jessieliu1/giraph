@@ -1,0 +1,4 @@
+int main() {
+    map<void> m;
+    return 0;
+}

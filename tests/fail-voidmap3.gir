@@ -1,0 +1,9 @@
+int main() {
+    foo(5);
+    return 0;
+}
+
+int foo(map<void> m)
+{
+    return m;
+}

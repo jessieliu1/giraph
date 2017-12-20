@@ -37,9 +37,6 @@ let rec convert_expr e env = match e with
   | Method (e, "neighbors", e_lst) -> (check_graphmtd e "neighbors" 1 e_lst Graph env)
   | Method (e, "get_edge_weight", e_lst) -> (check_graphmtd e "get_edge_weight" 2 e_lst Int env)
   | Method (e, "set_edge_weight", e_lst) -> (check_graphmtd e "set_edge_weight" 3 e_lst Int env)
-  | Method (e, "put", e_lst) -> (check_mapmtd e "put" 2 e_lst env)
-  | Method (e, "get", e_lst) -> (check_mapmtd e "get" 1 e_lst env)
-  | Method (e, "contains", e_lst) -> (check_mapmtd e "contains" 1 e_lst env)
   | Method (e, s2, e_lst)        -> (report_meth_not_found s2)
   | Call("print", e_lst)          -> (check_print e_lst env)
   | Call("printb", e_lst)         -> (check_print e_lst env)
@@ -139,9 +136,8 @@ and check_binop e1 op e2 env =
         | Eq | Neq ->
             (match t1, t2 with
                 Int, Int        -> SBinop(s1, op, s2, Bool)
-              | Bool, Bool    -> SBinop(s1, op, s2, Bool)
-              | Node, Node    -> SBinop(s1, op, s2, Bool)
-              | _             -> report_bad_binop t1 op t2
+                | Bool, Bool    -> SBinop(s1, op, s2, Bool)
+                | _             -> report_bad_binop t1 op t2
                  (* TODO: add string compare? *)
             )
         | Less | Leq | Greater | Geq
@@ -170,10 +166,6 @@ and check_print e_lst env =
                 Int         -> "print"
                 | String    -> "prints"
                 | Bool      -> "printb"
-                | Graph
-                | Digraph
-                | Wegraph
-                | Wedigraph -> "printg"
                 | _         -> 
                     raise(Failure("type " ^ string_of_typ t ^ " is unsupported for this function"))
         in
@@ -203,6 +195,7 @@ and check_assign str e env =
            if (l_is_graph_subtyp && r_is_edgeless_graph) then SAssign(str, r, lvaluet), env
            else report_bad_assign lvaluet rvaluet)
     else report_undeclared_id_assign str
+
 
 and check_data e e_lst env =
     let len = List.length e_lst in
@@ -365,61 +358,6 @@ and check_edgemtd e n e_lst env =
          | "weight" -> raise(Failure("weight() cannot be called on edges of unweighted graphs"));
          | "set_weight" -> raise(Failure("set_weight() cannot be called on edges of unweighted graphs"));)
       | _ -> raise(Failure("Edge method " ^ n ^ " called on type " ^ string_of_typ t));
-
-
-and check_mapmtd m name args e_lst env =
-  let id,env = convert_expr m env in
-  let t = get_sexpr_type id in
-  let value_typ = match t with
-    Map(v) -> v
-  | _ -> raise(Failure(name ^ " called on type " ^ string_of_typ t ^ " when map was expected")) in
-  let len = List.length e_lst in
-  if (len != args) then raise(Failure( name ^ " takes " ^ string_of_int args ^ " arguments but " ^ string_of_int len ^ " arguments given")) ;
-
-  let sexpr,env =
-    match args with
-      1 -> ( (* get(k), contains(k) *)
-        let e1 = (List.hd e_lst) in
-        let (ex,nenv) = convert_expr e1 env in
-        let t1 = get_sexpr_type ex in
-        if ( t1 != Node )
-        then raise(Failure("map method " ^ name ^ " may not be called on type " ^ string_of_typ t1));
-        let new_env = {
-          env_name = env.env_name;
-          env_return_type = env.env_return_type;
-          env_fmap = env.env_fmap;
-          env_sfmap = nenv.env_sfmap;
-          env_globals = env.env_globals;
-          env_flocals = env.env_flocals;
-          env_fformals = env.env_fformals;
-          env_in_loop = env.env_in_loop;
-        } in
-        let ret_typ = (match name with "contains" -> Bool | _ -> value_typ) in
-        (SMethod(id, name, [ex], ret_typ)), new_env)
-
-    | 2 -> (* put(k,v) *)
-      let e1 = (List.hd e_lst) and e2 = (List.nth e_lst 1) in
-      let (ex,env1) = convert_expr e1 env in
-      let (ex2,env2) = convert_expr e2 env1 in
-      let t1 = get_sexpr_type ex and t2 = get_sexpr_type ex2 in
-      if ( t1 != Node )
-      then raise(Failure("map method " ^ name ^ " may not be called with key type "
-                         ^ string_of_typ t1));
-      if ( t2 != value_typ )
-      then raise(Failure("map method " ^ name ^ " called with value type "
-                         ^ string_of_typ t2 ^ " on map of type " ^ string_of_typ value_typ ));
-      let new_env = {
-        env_name = env.env_name;
-        env_return_type = env.env_return_type;
-        env_fmap = env.env_fmap;
-        env_sfmap = env2.env_sfmap;
-        env_globals = env.env_globals;
-        env_flocals = env.env_flocals;
-        env_fformals = env.env_fformals;
-        env_in_loop = env.env_in_loop;
-      } in
-      (SMethod(id, name, [ex; ex2], Void)), new_env
-  in sexpr, env
 
 
 (* TODO *)
@@ -923,13 +861,23 @@ and convert_fdecl fname fformals env =
 
     report_duplicate (fun n -> match n with 
                 _, str -> "duplicate fformal " ^ str) fformals;
-
+    
     let formals_to_map m formal = 
       match formal with
-      (t, str) -> if t == Void then raise(Failure("cannot declare " ^ str ^ " as type void")) else StringMap.add str t m
+          (t, str) -> match t with 
+                          Void -> raise(Failure("cannot declare " ^ str ^ " as type void")) 
+                         | Map(typ) -> (match typ with
+                                          Void -> raise(Failure("cannot have formal with type map<void>")))
+                         | _ -> StringMap.add str t m
     in
+
     let formals = List.fold_left formals_to_map StringMap.empty fformals 
     in 
+
+    let _ = match fdecl.f_typ with 
+      Map(typ) -> if typ == Void then raise(Failure("cannot return map with type void"))
+      | _ -> ()
+    in
 
     let env = {
         env_name = fname;
@@ -985,20 +933,18 @@ and check_vdecl t str e from_graph_lit env =
     then
       (* if this vdecl is from a graph literal and we've already declared str as a node,
          this is fine - otherwise, reject *)
-      if (from_graph_lit && t == Node) then
-        (if (StringMap.mem str env.env_flocals) then
-           (if (StringMap.find str env.env_flocals != Node) then
-              raise(Failure("cannot reinitialize existing variable")))
-         else if (StringMap.mem str env.env_fformals) then
-           (if (StringMap.find str env.env_fformals != Node) then
-              raise(Failure("cannot reinitialize existing variable")))
-         else if (StringMap.mem str env.env_globals) then
-           (if (StringMap.find str env.env_globals != Node) then
-              raise(Failure("cannot reinitialize existing variable")))
-         else raise(Failure("cannot reinitialize existing variable")))
-       else raise(Failure("cannot reinitialize existing variable"));
-    if t == Void then raise(Failure("cannot declare " ^ str ^ " as type void"))
-    else
+      (if (from_graph_lit && t == Node && StringMap.mem str env.env_flocals) then
+         (if (StringMap.find str env.env_flocals = Node) then ()
+          else raise(Failure("cannot reinitialize existing variable")); ())
+      else
+        raise(Failure("cannot reinitialize existing variable")); ());
+
+    let _ = match t with 
+        Void -> raise(Failure("cannot declare " ^ str ^ " as type void"))
+        | Map(typ) -> if typ == Void then raise(Failure("cannot declare variable " ^ str ^ " with type map<void>"))
+        | _ -> ()
+    in
+
     let flocals = StringMap.add str t env.env_flocals in
     let new_env = 
       {
@@ -1089,21 +1035,13 @@ let convert_ast globals fdecls fmap =
 
 let build_fmap fdecls = 
     (* built in *)
-  let built_in_decls = StringMap.add "printg"
-      { f_typ = Void; f_name = "printg"; f_formals = [(Graph, "x")];
-       f_body = [Return (Noexpr)] } (StringMap.add "printg_d"
-      { f_typ = Void; f_name = "printg_d"; f_formals = [(Digraph, "x")];
-       f_body = [Return (Noexpr)] } (StringMap.add "printg_w"
-      { f_typ = Void; f_name = "printg_w"; f_formals = [(Wegraph, "x")];
-       f_body = [Return (Noexpr)] } (StringMap.add "printg_wd"
-      { f_typ = Void; f_name = "printg_wd"; f_formals = [(Wedigraph, "x")];
-       f_body = [Return (Noexpr)] } (StringMap.add "print"
+    let built_in_decls =  StringMap.add "print"
      { f_typ = Void; f_name = "print"; f_formals = [(Int, "x")];
        f_body = [] } (StringMap.add "printb"
      { f_typ = Void; f_name = "printb"; f_formals = [(Bool, "x")];
        f_body = [] } (StringMap.singleton "prints"
      { f_typ = Void; f_name = "prints"; f_formals = [(String, "x")];
-       f_body = [] } ))))))
+       f_body = [] } ))
     in 
 
     let check_fdecls map fdecl = 
