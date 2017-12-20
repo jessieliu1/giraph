@@ -1,4 +1,4 @@
-void augment(wedigraph flow, wedigraph path) {
+void augment(wedigraph<string> flow, wedigraph<string> path) {
 	!~ Get bottleneck capacity of path. ~!
 	int min = -1;
 	for_edge (e : path) {
@@ -22,8 +22,8 @@ void augment(wedigraph flow, wedigraph path) {
 	return;
 }
 
-wedigraph make_residual_graph(wedigraph flow, wedigraph network) {
-	wedigraph residual_graph = [];
+wedigraph<string> make_residual_graph(wedigraph<string> flow, wedigraph<string> network) {
+	wedigraph<string> residual_graph = [];
 	for_edge (e : flow) {
 		int forward = network.get_edge_weight(e.from(), e.to()) - e.weight();
 		int backward = e.weight();
@@ -37,19 +37,19 @@ wedigraph make_residual_graph(wedigraph flow, wedigraph network) {
 	return residual_graph;
 }
 
-wedigraph edmonds_karp(wedigraph network, node source, node sink) {
+wedigraph<string> edmonds_karp(wedigraph<string> network, node<string> source, node<string> sink) {
 	!~ The argument “network” contains the capacities as weights on edges.
 	   Flow is represented with a graph exactly equivalent to network, but 
 	   with the flow on each edge as the weight instead of the capacity.
 	   First, set up initial flow of 0 on every edge. ~!
-	wedigraph flow = [];
+	wedigraph<string> flow = [];
 	for_edge (e : network) {
 		flow.add_edge(e.from(), e.to(), 0);
 	}
 	bool has_path = true;
 	while (has_path) {
-		wedigraph residual = make_residual_graph(flow, network);
-		map<node> parents;
+		wedigraph<string> residual = make_residual_graph(flow, network);
+		map<node<string>> parents;
 		!~ Find shortest s-t path with BFS. ~!
 		bfs (n : residual ; source) {
 			for_node (neighbor : residual.neighbors(n)) {
@@ -62,8 +62,8 @@ wedigraph edmonds_karp(wedigraph network, node source, node sink) {
 		if (!parents.contains(sink)) {
 			has_path = false;
 		} else {
-			wedigraph path = [];
-			node i = sink;
+			wedigraph<string> path = [];
+			node<string> i = sink;
 			while (i != source) {
 				path.add_edge(parents.get(i), i, residual.get_edge_weight(parents.get(i), i));
 				i = parents.get(i);
@@ -75,12 +75,12 @@ wedigraph edmonds_karp(wedigraph network, node source, node sink) {
 }
 
 int main() {
-	wedigraph network = [s:1 -{20}-> u:2 -{10}-> t:3 <-{20}- v:4 <-{10}- s ;
-	                     u -{30}-> v];
+	wedigraph<string> network = [s:"s" -{20}-> u:"u" -{10}-> t:"t" <-{20}- v:"v" <-{10}- s ;
+	                             u -{30}-> v];
 	prints("network");
 	printg_wd(network);
 
-	wedigraph max_flow = edmonds_karp(network, s, t);
+	wedigraph<string> max_flow = edmonds_karp(network, s, t);
 	prints("max flow");
 	printg_wd(max_flow);
 

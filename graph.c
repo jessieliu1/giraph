@@ -1049,11 +1049,11 @@ void print_data(void *graph_ptr) {
 	struct graph *g = (struct graph *) graph_ptr;
 	struct vertex_list_node *vertex = g->head;
 	while (vertex) {
-		printf("vertex: %d\n", *(int *) vertex->data);
+		printf("vertex: %s\n", (char *) vertex->data);
 		printf("adjacencies:");
 		struct adj_list_node *adjacency = vertex->adjacencies;
 		while (adjacency) {
-			printf("(%d, weight: %d) ", *(int *) adjacency->vertex->data, adjacency->weight);
+			printf("(%s, weight: %d) ", (char *) adjacency->vertex->data, adjacency->weight);
 			adjacency = adjacency->next;
 		}
 		printf("\n");
