@@ -140,6 +140,7 @@ and check_binop e1 op e2 env =
             (match t1, t2 with
                 Int, Int        -> SBinop(s1, op, s2, Bool)
               | Bool, Bool    -> SBinop(s1, op, s2, Bool)
+              | Float, Float  -> SBinop(s1, op, s2, Bool)
               | Node, Node    -> SBinop(s1, op, s2, Bool)
               | _             -> report_bad_binop t1 op t2
                  (* TODO: add string compare? *)

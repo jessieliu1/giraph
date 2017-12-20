@@ -2,6 +2,16 @@
 #include <string.h>
 #include <stdlib.h>
 
+/* so we can cast void *'s to floats/ints without triggering undefined behavior */
+union extract_float {
+    float vf;
+    void *vp;
+};
+union extract_int {
+    int vi;
+    void *vp;
+};
+
 /* Terminology-wise, we've painted ourselves into a corner here. 
    Elsewhere in in this project, "node" refers to a single node in a graph.
    That is NOT true in this file. In this file, "vertex" refers to a node in
@@ -169,7 +179,9 @@ int contains_key(void *map_in, int *key) {
 /* The following functions implement put() for the built-in types in giraph. */
 
 void put_int(void *map_in, int *key, int value) {
-	put(map_in, key, (void *) value);
+	union extract_int ei;
+	ei.vi = value;
+	put(map_in, key, ei.vp);
 }
 
 void put_int_ptr(void *map_in, int *key, int *value) {
@@ -180,18 +192,18 @@ void put_char_ptr(void *map_in, int *key, char *value) {
 	put(map_in, key, (void *) value);
 }
 
-
-
-/* TODO: implement
 void put_float(void *map_in, int *key, float value) {
-	put(map_in, key, (void *) value);
+	union extract_float ef;
+	ef.vf = value;
+	put(map_in, key, ef.vp);
 }
-*/
 
 /* The following functions implement get() for the built-in types in giraph. */
 
 int get_int(void *map_in, int *key) {
-	return (int) get(map_in, key);
+	union extract_int ei;
+	ei.vp = get(map_in, key);
+	return ei.vi;
 }
 
 int *get_int_ptr(void *map_in, int *key) {
@@ -202,11 +214,12 @@ char *get_char_ptr(void *map_in, int *key) {
 	return (char *) get(map_in, key);
 }
 
-/* TODO: implement
-int get_float(void *map_in, int *key) {
-	return (float) get(map_in, key);
+float get_float(void *map_in, int *key) {
+	union extract_float ef;
+	ef.vp = get(map_in, key);
+	return ef.vf;
 }
-*/
+
 
 
 

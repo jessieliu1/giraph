@@ -203,10 +203,8 @@ let translate (globals, functions) =
   let map_put_char_ptr_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; str_t |] in
   let map_put_char_ptr_func = L.declare_function "put_char_ptr" map_put_char_ptr_t the_module in
 
-
-  (* TODO: implement
   let map_put_float_t = L.function_type void_t [| void_ptr_t ; i32_ptr_t ; float_t |] in
-  let map_put_float_func = L.declare_function "put_float" map_put_float_t the_module in *)
+  let map_put_float_func = L.declare_function "put_float" map_put_float_t the_module in
 
   let map_get_void_ptr_t = L.function_type void_ptr_t [| void_ptr_t ; i32_ptr_t |] in
   let map_get_void_ptr_func = L.declare_function "get" map_get_void_ptr_t the_module in
@@ -221,10 +219,8 @@ let translate (globals, functions) =
   let map_get_char_ptr_t = L.function_type str_t [| void_ptr_t ; i32_ptr_t |] in
   let map_get_char_ptr_func = L.declare_function "get_char_ptr" map_get_char_ptr_t the_module in
 
-
-  (* TODO: implement
   let map_get_float_t = L.function_type float_t [| void_ptr_t ; i32_ptr_t |] in
-  let map_get_float_func = L.declare_function "get_float" map_get_float_t the_module in *)
+  let map_get_float_func = L.declare_function "get_float" map_get_float_t the_module in
 
   let print_graph_t = L.function_type void_t [| void_ptr_t |] in
   let print_graph_func = L.declare_function "print_data" print_graph_t the_module in
@@ -348,27 +344,43 @@ let translate (globals, functions) =
       | S.SId (s,_) -> L.build_load (lookup vars s) s builder
       | S.SString_Lit s -> L.build_global_stringptr s "str" builder
       | S.SFloat_Lit f -> L.const_float float_t f
-      | S.SBinop (e1, op, e2, _) -> (* TODO: check if this works already on floats *)
+      | S.SBinop (e1, op, e2, _) ->
         let e1' = expr vars builder e1
         and e2' = expr vars builder e2 in
-        (match op with
-           A.Add     -> L.build_add
-         | A.Sub     -> L.build_sub
-         | A.Mult    -> L.build_mul
-         | A.Div     -> L.build_sdiv
-         | A.Mod     -> L.build_srem
-         | A.And     -> L.build_and
-         | A.Or      -> L.build_or
-         | A.Eq      -> L.build_icmp L.Icmp.Eq
-         | A.Neq     -> L.build_icmp L.Icmp.Ne
-         | A.Less    -> L.build_icmp L.Icmp.Slt
-         | A.Leq     -> L.build_icmp L.Icmp.Sle
-         | A.Greater -> L.build_icmp L.Icmp.Sgt
-         | A.Geq     -> L.build_icmp L.Icmp.Sge) e1' e2' "tmp" builder
+        let e_type = get_sexpr_type e1 in
+        (match e_type with
+         | A.Float -> (match op with
+               A.Add     -> L.build_fadd
+             | A.Sub     -> L.build_fsub
+             | A.Mult    -> L.build_fmul
+             | A.Div     -> L.build_fdiv
+             | A.Mod     -> L.build_frem (* TODO: look what this actually means *)
+             | A.And     -> L.build_and
+             | A.Or      -> L.build_or
+             | A.Eq      -> L.build_fcmp L.Fcmp.Oeq
+             | A.Neq     -> L.build_fcmp L.Fcmp.One
+             | A.Less    -> L.build_fcmp L.Fcmp.Olt
+             | A.Leq     -> L.build_fcmp L.Fcmp.Ole
+             | A.Greater -> L.build_fcmp L.Fcmp.Ogt
+             | A.Geq     -> L.build_fcmp L.Fcmp.Oge) e1' e2' "tmp" builder
+         | _ -> (match op with
+               A.Add     -> L.build_add
+             | A.Sub     -> L.build_sub
+             | A.Mult    -> L.build_mul
+             | A.Div     -> L.build_sdiv
+             | A.Mod     -> L.build_srem
+             | A.And     -> L.build_and
+             | A.Or      -> L.build_or
+             | A.Eq      -> L.build_icmp L.Icmp.Eq
+             | A.Neq     -> L.build_icmp L.Icmp.Ne
+             | A.Less    -> L.build_icmp L.Icmp.Slt
+             | A.Leq     -> L.build_icmp L.Icmp.Sle
+             | A.Greater -> L.build_icmp L.Icmp.Sgt
+             | A.Geq     -> L.build_icmp L.Icmp.Sge) e1' e2' "tmp" builder)
       | S.SUnop(op, e, _) ->
         let e' = expr vars builder e in
         (match op with
-           A.Neg     -> L.build_neg
+           A.Neg     -> if ((get_sexpr_type e) = A.Float) then L.build_fneg else L.build_neg
          | A.Not     -> L.build_not) e' "tmp" builder
       | S.SAssign(id, e, _) -> let e' = expr vars builder e in
         ignore (L.build_store e' (lookup vars id) builder); e'
@@ -521,7 +533,7 @@ let translate (globals, functions) =
             | A.Node -> map_put_int_ptr_func
             | A.String -> map_put_char_ptr_func
             | A.Bool -> map_put_int_func
-            (* TODO: implement | A.Float -> map_put_float_func *)
+            | A.Float -> map_put_float_func
             | _ -> map_put_void_ptr_func) in
         let value = if (value_type = A.Bool) then
             L.build_intcast value i32_t "tmp_intcast" builder
@@ -539,7 +551,7 @@ let translate (globals, functions) =
             | A.Node -> map_get_int_ptr_func
             | A.String -> map_get_char_ptr_func
             | A.Bool -> map_get_int_func
-            (* TODO: implement | A.Float -> map_get_float_func *)
+            | A.Float -> map_get_float_func
             | _ -> map_get_void_ptr_func) in
         let ret = L.build_call which_func [| map_ptr ; node_ptr |] "tmp_get" builder in
         if (value_type = A.Bool) then
