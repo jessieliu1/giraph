@@ -1152,6 +1152,52 @@ void print_unweighted_char_ptr(void *graph_ptr) {
 	printf("\n");
 }
 
+char *get_bool_str(int val) {
+	if (val) {
+		return "true";
+	} else {
+		return "false";
+	}
+}
+
+void print_bool(void *graph_ptr) {
+	struct graph *g = (struct graph *) graph_ptr;
+	struct vertex_list_node *vertex = g->head;
+	while (vertex) {
+		printf("vertex: %s\n", get_bool_str(((union data_type *) vertex->data)->i));
+		printf("adjacencies: ");
+		struct adj_list_node *adjacency = vertex->adjacencies;
+		while (adjacency) {
+			printf("(%s, weight: %d) ",
+				   get_bool_str(((union data_type *) adjacency->vertex->data)->i),
+				   adjacency->weight);
+			adjacency = adjacency->next;
+		}
+		printf("\n");
+		vertex = vertex->next;
+	}
+	printf("\n");
+}
+
+void print_unweighted_bool(void *graph_ptr) {
+	struct graph *g = (struct graph *) graph_ptr;
+	struct vertex_list_node *vertex = g->head;
+	while (vertex) {
+		printf("vertex: %s\n", get_bool_str(((union data_type *) vertex->data)->i));
+		printf("adjacencies: ");
+		struct adj_list_node *adjacency = vertex->adjacencies;
+		while (adjacency) {
+			printf("%s ",
+				   get_bool_str(((union data_type *) adjacency->vertex->data)->i));
+			adjacency = adjacency->next;
+		}
+		printf("\n");
+		vertex = vertex->next;
+	}
+	printf("\n");
+}
+
+
 
 //////////////////////// TESTING ////////////////////////
 

@@ -1,0 +1,1 @@
+Fatal error: exception Failure("print cannot be called on graphs with generic data types")

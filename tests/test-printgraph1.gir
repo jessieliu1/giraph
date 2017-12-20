@@ -1,0 +1,22 @@
+int main() {
+	{
+		graph<bool> g = [A:true --  B:false];
+		g.print();
+	}
+
+	{
+		digraph<float> g = [A:1.0 -> B:1.5 <-> C:100.6];
+		g.print();
+	}
+
+	{
+		wegraph<int> g = [A:1 -{6}- B:2 -{100}- C:3];
+		g.print();
+	}
+
+	{
+		wedigraph<string> g = [A:"we" -{6}-> B:"out" <-{100}-> C:"here"];
+		g.print();
+	}
+	return 0;
+}

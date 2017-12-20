@@ -1,0 +1,26 @@
+vertex: true
+adjacencies: false 
+vertex: false
+adjacencies: true 
+
+vertex: 1.000000
+adjacencies: 1.500000 
+vertex: 1.500000
+adjacencies: 100.599998 
+vertex: 100.599998
+adjacencies: 1.500000 
+
+vertex: 1
+adjacencies: (2, weight: 6) 
+vertex: 2
+adjacencies: (1, weight: 6) (3, weight: 100) 
+vertex: 3
+adjacencies: (2, weight: 100) 
+
+vertex: we
+adjacencies: (out, weight: 6) 
+vertex: out
+adjacencies: (here, weight: 100) 
+vertex: here
+adjacencies: (out, weight: 100) 
+

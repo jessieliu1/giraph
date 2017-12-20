@@ -154,6 +154,9 @@ let translate (globals, functions) =
   let print_float_t = L.function_type void_t [| void_ptr_t |] in
   let print_float_func = L.declare_function "print_float" print_float_t the_module in
 
+  let print_bool_t = L.function_type void_t [| void_ptr_t |] in
+  let print_bool_func = L.declare_function "print_bool" print_bool_t the_module in
+
   let print_char_ptr_t = L.function_type void_t [| void_ptr_t |] in
   let print_char_ptr_func = L.declare_function "print_char_ptr" print_char_ptr_t the_module in
 
@@ -165,6 +168,9 @@ let translate (globals, functions) =
 
   let print_unweighted_char_ptr_t = L.function_type void_t [| void_ptr_t |] in
   let print_unweighted_char_ptr_func = L.declare_function "print_unweighted_char_ptr" print_unweighted_char_ptr_t the_module in
+
+  let print_unweighted_bool_t = L.function_type void_t [| void_ptr_t |] in
+  let print_unweighted_bool_func = L.declare_function "print_unweighted_bool" print_unweighted_bool_t the_module in
   
   (* Declare functions that will be called for bfs and dfs on graphs*)
   let find_vertex_t = L.function_type void_ptr_t [| void_ptr_t ; void_ptr_t |] in
@@ -437,9 +443,14 @@ let translate (globals, functions) =
                                                | _ -> A.Void) in
         let set_data type_func (node, data)  =
           L.build_call type_func [| (get_data_ptr node) ; (expr vars builder data) |] "" builder in
+        let set_data_bool (node, data) =
+          let data_bool = L.build_intcast (expr vars builder data) i32_t "tmp_intcast" builder in
+          L.build_call set_data_int_func [| (get_data_ptr node) ; data_bool |] "" builder
+        in
+          
         let set_all_data = (match data_type with
               A.Int -> List.map (set_data set_data_int_func) nodes_init
-            (* TODO: implement bools*)
+            | A.Bool -> List.map set_data_bool nodes_init
             | A.Float -> List.map (set_data set_data_float_func) nodes_init
             | A.String -> List.map (set_data set_data_char_ptr_func) nodes_init
             | _ -> List.map (set_data set_data_void_ptr_func) nodes_init)
@@ -465,22 +476,30 @@ let translate (globals, functions) =
         let data_ptr = expr vars builder node_expr in
         let data_type = (match (get_sexpr_type node_expr) with A.Node(t) -> t) in
         let get_data_func = (match data_type with
-              A.Int -> get_data_int_func
-            (* TODO: implement bools*)
+              A.Int | A.Bool -> get_data_int_func
             | A.Float -> get_data_float_func
             | A.String -> get_data_char_ptr_func
             | _ -> get_data_void_ptr_func) in
-        L.build_call get_data_func [| data_ptr |] "tmp_data" builder
-      | S.SMethod (node_expr, "set_data", [data], _) ->
+        let ret = L.build_call get_data_func [| data_ptr |] "tmp_data" builder in
+        if (data_type = A.Bool) then
+          (L.build_icmp L.Icmp.Ne ret (L.const_int i32_t 0) "tmp_booldata" builder)
+        else
+          ret
+      | S.SMethod (node_expr, "set_data", [data_expr], _) ->
         let data_ptr = expr vars builder node_expr in
         let data_type = (match (get_sexpr_type node_expr) with A.Node(t) -> t) in
+        let new_data = expr vars builder data_expr in
+        let new_data = if (data_type = A.Bool) then
+            L.build_intcast new_data i32_t "tmp_intcast" builder
+          else
+            new_data
+        in
         let set_data_func = (match data_type with
-              A.Int -> set_data_int_func
-            (* TODO: implement bools*)
+              A.Int | A.Bool -> set_data_int_func
             | A.Float -> set_data_float_func
             | A.String -> set_data_char_ptr_func
             | _ -> set_data_void_ptr_func) in
-        L.build_call set_data_func [| data_ptr ; (expr vars builder data) |] "" builder
+        L.build_call set_data_func [| data_ptr ; new_data |] "" builder
 
       (* edge methods *)
       | S.SMethod (edge_expr, "from", [], _) ->
@@ -504,14 +523,14 @@ let translate (globals, functions) =
         let graph_ptr = expr vars builder graph_expr in
         let graph_type = get_sexpr_type graph_expr in
         let print_func = (match graph_type with
-              A.Graph(A.Int) | A.Digraph(A.Int)
-            | A.Graph(A.Bool) | A.Digraph(A.Bool) -> print_unweighted_int_func
-            | A.Wegraph(A.Int) | A.Wedigraph(A.Int)
-            | A.Wegraph(A.Bool) | A.Wedigraph(A.Bool) -> print_int_func
+              A.Graph(A.Int) | A.Digraph(A.Int) -> print_unweighted_int_func
+            | A.Wegraph(A.Int) | A.Wedigraph(A.Int) -> print_int_func
             | A.Graph(A.Float) | A.Digraph(A.Float) -> print_unweighted_float_func
             | A.Wegraph(A.Float) | A.Wedigraph(A.Float) -> print_float_func
             | A.Graph(A.String) | A.Digraph(A.String) -> print_unweighted_char_ptr_func
             | A.Wegraph(A.String) | A.Wedigraph(A.String) -> print_char_ptr_func
+            | A.Graph(A.Bool) | A.Digraph(A.Bool) -> print_unweighted_bool_func
+            | A.Wegraph(A.Bool) | A.Wedigraph(A.Bool) -> print_bool_func
           ) in
         L.build_call print_func [| graph_ptr |] "" builder
       | S.SMethod (graph_expr, "add_node", [node_expr], _) ->

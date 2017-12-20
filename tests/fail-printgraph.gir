@@ -1,0 +1,6 @@
+int main() {
+	graph<int> g = [A:4];
+	graph<graph<int>> g2 = [B:g];
+	g2.print();
+	return 0;
+}
