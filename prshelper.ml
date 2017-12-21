@@ -1,3 +1,8 @@
+(* Authors: 
+Seth Benjamin sjb2190
+Jennifer Bi jb3495
+*)
+
 let merge_graph_exprs (n1, e1, n_i1) (n2, e2, n_i2) =
   (* essentially, take the union of node/edge/node_init lists. *)
   let add_if_missing list elem = if (List.mem elem list) then

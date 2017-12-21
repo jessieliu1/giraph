@@ -1,3 +1,9 @@
+(* Authors: 
+Seth Benjamin sjb2190
+Jennifer Bi jb3495
+Jessie Liu jll2219
+*)
+
 (* Semantically checked AST *)
 
 open Ast

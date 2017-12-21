@@ -1,3 +1,9 @@
+(* Authors: 
+Daniel Benett deb2174
+Seth Benjamin sjb2190
+Jennifer Bi jb3495
+Jessie Liu jll2219
+*)
 (* Ocammllex scanner for giraph *)
 { open Parser }
 

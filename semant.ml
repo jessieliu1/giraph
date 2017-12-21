@@ -1,3 +1,9 @@
+(* Authors: 
+Daniel Benett deb2174
+Seth Benjamin sjb2190
+Jennifer Bi jb3495
+Jessie Liu jll2219
+*)
 open Ast
 open Sast
 open Exception

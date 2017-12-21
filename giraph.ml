@@ -1,5 +1,13 @@
+(* Authors: 
+Daniel Benett deb2174
+Seth Benjamin sjb2190
+Jennifer Bi jb3495
+Jessie Liu jll2219
+*)
+
 (* Top-level of the Giraph compiler: scan & parse the input,
-   check the resulting AST, generate LLVM IR, and dump the module *)
+   check the resulting AST and generate SAST, generate LLVM IR, 
+   and dump the module *)
 
 module StringMap = Map.Make(String)
 

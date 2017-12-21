@@ -1,3 +1,9 @@
+(* Authors: 
+Daniel Benett deb2174
+Seth Benjamin sjb2190
+Jennifer Bi jb3495
+Jessie Liu jll2219
+*)
 type binop = Add | Sub | Mult | Div | Mod | Eq | Neq | 
              Less | Leq | Greater | Geq | And | Or
 
