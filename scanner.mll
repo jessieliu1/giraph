@@ -51,8 +51,6 @@ rule token = parse
   | "digraph" { DIGRAPH }
   | "wedigraph" { WEDIGRAPH }
   | "map" { MAP }
-  | "break" { BREAK }
-  | "continue" { CONTINUE }
   | "return" { RETURN }
   | "void" { VOID }
 
